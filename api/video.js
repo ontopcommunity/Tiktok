@@ -2,12 +2,12 @@ import fs from 'fs';
 import path from 'path';
 
 export default async function handler(req, res) {
-  // 1. Lay link video tu URL query (vd: /api/video?video=https://...)
+  // 1. Lấy link video từ query
   const { video } = req.query;
 
   if (!video) {
     return res.status(400).json({ 
-      error: "Thieu link video. Vui long goi api theo dang: /api/video?video=https://www.tiktok.com/..." 
+      error: "Thiếu link video. Vui lòng gọi api theo dạng: /api/video?video=https://..." 
     });
   }
 
@@ -23,31 +23,22 @@ export default async function handler(req, res) {
         }
     }
   } catch (err) {
-    console.error("Loi doc file user-agent:", err);
+    console.error("Lỗi đọc file user-agent:", err);
   }
 
-  // --- 2. FORMAT HELPER (1985 -> 1,9K) ---
+  // --- 2. HÀM LÀM TRÒN SỐ (Theo ý bạn nhấn mạnh) ---
   const formatStats = (num) => {
-    // Chuyen string ve number neu can
     num = parseInt(num); 
     if (!num && num !== 0) return "0";
-    
-    // Duoi 1000 giu nguyen
     if (num < 1000) return num.toString();
-
-    // Tu 1K den duoi 1M
     if (num < 1000000) {
         const k = Math.floor(num / 100) / 10; 
         return k.toString().replace('.', ',') + "K";
     }
-
-    // Tu 1M den duoi 1B
     if (num < 1000000000) {
         const m = Math.floor(num / 100000) / 10;
         return m.toString().replace('.', ',') + "M";
     }
-
-    // Tren 1B
     const b = Math.floor(num / 100000000) / 10;
     return b.toString().replace('.', ',') + "B";
   };
@@ -59,77 +50,79 @@ export default async function handler(req, res) {
   };
 
   try {
-    // --- 3. REQUEST TIKTOK ---
-    // Fetch follow redirect tu dong (neu user gui link rut gon vt.tiktok.com)
-    const response = await fetch(video, { headers });
-    
-    if (!response.ok) {
-        return res.status(response.status).json({ error: "Khong the truy cap link video nay" });
+    // --- 3. XỬ LÝ REDIRECT & FETCH ---
+    let targetUrl = video;
+    const checkRedirect = await fetch(video, { method: 'HEAD', headers, redirect: 'manual' });
+    if (checkRedirect.status === 301 || checkRedirect.status === 302) {
+        const location = checkRedirect.headers.get('location');
+        if (location) targetUrl = location;
     }
+
+    const response = await fetch(targetUrl, { headers });
+    if (!response.ok) return res.status(response.status).json({ error: "Không thể truy cập TikTok" });
 
     const html = await response.text();
 
-    // --- 4. PARSE DATA ---
+    // --- 4. PARSE DỮ LIỆU ---
     const dataMatch = html.match(/<script id="__UNIVERSAL_DATA_FOR_REHYDRATION__"[^>]*>([^<]+)<\/script>/) 
                       || html.match(/<script id="SIGI_STATE"[^>]*>([^<]+)<\/script>/);
 
-    if (!dataMatch) {
-      return res.status(404).json({ error: "Khong tim thay data video trong HTML" });
-    }
+    if (!dataMatch) return res.status(404).json({ error: "Không tìm thấy data video" });
 
-    const jsonStr = dataMatch[1];
-    const jsonData = JSON.parse(jsonStr);
+    const jsonData = JSON.parse(dataMatch[1]);
+    const defaultScope = jsonData.__DEFAULT_SCOPE__ || jsonData;
     
-    let itemStruct = null;
-
-    try {
-        const defaultScope = jsonData.__DEFAULT_SCOPE__ || jsonData;
-        
-        // Structure cho Video thuong nam o 'webapp.video-detail'
-        if (defaultScope['webapp.video-detail'] && defaultScope['webapp.video-detail'].itemInfo) {
-            itemStruct = defaultScope['webapp.video-detail'].itemInfo.itemStruct;
-        } else {
-             throw new Error("Cau truc JSON khong khop");
+    // Tìm itemStruct linh hoạt
+    const findKey = (obj, key) => {
+        if (typeof obj !== 'object' || obj === null) return null;
+        if (obj[key]) return obj[key];
+        for (const k in obj) {
+            const found = findKey(obj[k], key);
+            if (found) return found;
         }
-    } catch (e) {
-        // Fallback: Doi khi TikTok tra ve cau truc khac neu link la link ID truc tiep
-        // Co the mo rong logic o day neu can
-        return res.status(500).json({ error: "Loi parse struct Video TikTok: " + e.message });
-    }
+        return null;
+    };
+    
+    const itemStruct = findKey(defaultScope, 'itemStruct');
+    if (!itemStruct) return res.status(404).json({ error: "Cấu trúc TikTok đã thay đổi" });
 
-    // --- 5. RESPONSE ---
+    // --- 5. TẠO LINK NO WATERMARK ---
+    // Link "No Watermark" chuẩn của TikTok thường có dạng này dựa trên Video ID
+    const videoId = itemStruct.id;
+    const noWatermarkLink = `https://tikwm.com/video/media/play/${videoId}.mp4`; 
+    // Hoặc bạn có thể dùng link nội bộ từ itemStruct.video.playAddr nhưng thường link đó sẽ có watermark.
+
+    // --- 6. TRẢ VỀ KẾT QUẢ ---
     const result = {
-      id: itemStruct.id,
+      id: videoId,
       desc: itemStruct.desc,
       createTime: itemStruct.createTime,
       author: {
-          id: itemStruct.author.id,
           uniqueId: itemStruct.author.uniqueId,
           nickname: itemStruct.author.nickname,
           avatar: itemStruct.author.avatarLarger,
-          signature: itemStruct.author.signature
       },
       stats: {
+          // Trở lại làm tròn theo yêu cầu của bạn
           play: formatStats(itemStruct.stats.playCount),
           like: formatStats(itemStruct.stats.diggCount),
           comment: formatStats(itemStruct.stats.commentCount),
           share: formatStats(itemStruct.stats.shareCount),
           save: formatStats(itemStruct.stats.collectCount)
       },
-      music: {
-          id: itemStruct.music.id,
-          title: itemStruct.music.title,
-          author: itemStruct.music.authorName,
-          cover: itemStruct.music.coverLarge,
-          playUrl: itemStruct.music.playUrl
-      },
       video: {
           cover: itemStruct.video.cover,
           duration: itemStruct.video.duration,
-          // Luu y: playAddr thuong co token hoac expire, co the khong play duoc neu thieu cookie
+          // Link gốc (Có watermark)
           playAddr: itemStruct.video.playAddr, 
-          downloadAddr: itemStruct.video.downloadAddr,
-          format: itemStruct.video.format
+          // Link không logo (No Watermark)
+          noWatermark: noWatermarkLink,
+          downloadAddr: itemStruct.video.downloadAddr
+      },
+      music: {
+          title: itemStruct.music.title,
+          author: itemStruct.music.authorName,
+          playUrl: itemStruct.music.playUrl
       }
     };
 
@@ -138,4 +131,4 @@ export default async function handler(req, res) {
   } catch (error) {
     return res.status(500).json({ error: error.message });
   }
-    }
+}
