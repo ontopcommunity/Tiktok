@@ -1,6 +1,7 @@
-// api/index.js
+import fs from 'fs';
+import path from 'path';
+
 export default async function handler(req, res) {
-  // 1. Lay username tu URL
   const { username } = req.query;
 
   if (!username) {
@@ -9,16 +10,41 @@ export default async function handler(req, res) {
     });
   }
 
-  // 2. Gia lap trinh duyet
+  // --- 1. RANDOM USER AGENT ---
+  let userAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36"; 
+  try {
+    const filePath = path.join(process.cwd(), 'user-agents.txt');
+    if (fs.existsSync(filePath)) {
+        const fileContent = fs.readFileSync(filePath, 'utf8');
+        const agents = fileContent.split('\n').filter(line => line.trim() !== '');
+        if (agents.length > 0) {
+            userAgent = agents[Math.floor(Math.random() * agents.length)].trim();
+        }
+    }
+  } catch (err) {
+    console.error("Loi doc file user-agent:", err);
+  }
+
+  // --- 2. FORMAT HELPER (20100 -> 20,1K) ---
+  const formatStats = (num) => {
+    if (!num && num !== 0) return "0";
+    const formatted = new Intl.NumberFormat('en-US', {
+        notation: "compact",
+        compactDisplay: "short",
+        maximumFractionDigits: 1 
+    }).format(num);
+    return formatted.replace('.', ',');
+  };
+
   const headers = {
-    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36",
-    "Referer": "https://www.tiktok.com/"
+    "User-Agent": userAgent,
+    "Referer": "https://www.tiktok.com/",
+    "Accept-Language": "en-US,en;q=0.9"
   };
 
   try {
+    // --- 3. REQUEST TIKTOK ---
     const targetUrl = `https://www.tiktok.com/@${username}`;
-    
-    // 3. Goi request den TikTok
     const response = await fetch(targetUrl, { headers });
     
     if (!response.ok) {
@@ -27,15 +53,14 @@ export default async function handler(req, res) {
 
     const html = await response.text();
 
-    // 4. Tim du lieu JSON trong HTML (Regex)
+    // --- 4. PARSE DATA ---
     const dataMatch = html.match(/<script id="__UNIVERSAL_DATA_FOR_REHYDRATION__"[^>]*>([^<]+)<\/script>/) 
                       || html.match(/<script id="SIGI_STATE"[^>]*>([^<]+)<\/script>/);
 
     if (!dataMatch) {
-      return res.status(404).json({ error: "Khong tim thay du lieu trong HTML" });
+      return res.status(404).json({ error: "Khong tim thay data trong HTML" });
     }
 
-    // 5. Parse JSON
     const jsonStr = dataMatch[1];
     const jsonData = JSON.parse(jsonStr);
     
@@ -44,14 +69,19 @@ export default async function handler(req, res) {
 
     try {
         const defaultScope = jsonData.__DEFAULT_SCOPE__ || jsonData;
-        const userModule = defaultScope['webapp.user-detail'];
-        userInfo = userModule.userInfo.user;
-        stats = userModule.userInfo.stats;
+        // Logic uu tien cau truc moi nhat
+        if (defaultScope['webapp.user-detail'] && defaultScope['webapp.user-detail'].userInfo) {
+            userInfo = defaultScope['webapp.user-detail'].userInfo.user;
+            stats = defaultScope['webapp.user-detail'].userInfo.stats;
+        } else {
+             // Fallback
+             throw new Error("Cau truc JSON khong khop");
+        }
     } catch (e) {
-        return res.status(500).json({ error: "Cau truc TikTok da thay doi, khong parse duoc" });
+        return res.status(500).json({ error: "Loi parse struct TikTok" });
     }
 
-    // 6. Tra ve ket qua
+    // --- 5. RESPONSE ---
     const result = {
       id: userInfo.id,
       uniqueId: userInfo.uniqueId,
@@ -60,10 +90,10 @@ export default async function handler(req, res) {
       bio: userInfo.signature,
       verified: userInfo.verified,
       stats: {
-          follower: stats.followerCount,
-          following: stats.followingCount,
-          heart: stats.heartCount,
-          video: stats.videoCount
+          follower: formatStats(stats.followerCount),
+          following: formatStats(stats.followingCount),
+          heart: formatStats(stats.heartCount),
+          video: formatStats(stats.videoCount)
       }
     };
 
@@ -72,4 +102,4 @@ export default async function handler(req, res) {
   } catch (error) {
     return res.status(500).json({ error: error.message });
   }
-      }
+          }
