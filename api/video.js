@@ -26,7 +26,7 @@ export default async function handler(req, res) {
     console.error("Lỗi đọc file user-agent:", err);
   }
 
-  // --- 2. HÀM LÀM TRÒN SỐ (Theo ý bạn nhấn mạnh) ---
+  // --- 2. HÀM LÀM TRÒN SỐ (1985 -> 1,9K) ---
   const formatStats = (num) => {
     num = parseInt(num); 
     if (!num && num !== 0) return "0";
@@ -59,7 +59,8 @@ export default async function handler(req, res) {
     }
 
     const response = await fetch(targetUrl, { headers });
-    if (!response.ok) return res.status(response.status).json({ error: "Không thể truy cập TikTok" });
+    // Trả về status Die nếu không truy cập được
+    if (!response.ok) return res.status(404).json({ status: "Die", error: "Tài khoản hoặc video không tồn tại" });
 
     const html = await response.text();
 
@@ -67,12 +68,11 @@ export default async function handler(req, res) {
     const dataMatch = html.match(/<script id="__UNIVERSAL_DATA_FOR_REHYDRATION__"[^>]*>([^<]+)<\/script>/) 
                       || html.match(/<script id="SIGI_STATE"[^>]*>([^<]+)<\/script>/);
 
-    if (!dataMatch) return res.status(404).json({ error: "Không tìm thấy data video" });
+    if (!dataMatch) return res.status(404).json({ status: "Die", error: "Không tìm thấy data video" });
 
     const jsonData = JSON.parse(dataMatch[1]);
     const defaultScope = jsonData.__DEFAULT_SCOPE__ || jsonData;
     
-    // Tìm itemStruct linh hoạt
     const findKey = (obj, key) => {
         if (typeof obj !== 'object' || obj === null) return null;
         if (obj[key]) return obj[key];
@@ -84,16 +84,15 @@ export default async function handler(req, res) {
     };
     
     const itemStruct = findKey(defaultScope, 'itemStruct');
-    if (!itemStruct) return res.status(404).json({ error: "Cấu trúc TikTok đã thay đổi" });
+    if (!itemStruct) return res.status(404).json({ status: "Die", error: "Cấu trúc TikTok đã thay đổi" });
 
     // --- 5. TẠO LINK NO WATERMARK ---
-    // Link "No Watermark" chuẩn của TikTok thường có dạng này dựa trên Video ID
     const videoId = itemStruct.id;
     const noWatermarkLink = `https://tikwm.com/video/media/play/${videoId}.mp4`; 
-    // Hoặc bạn có thể dùng link nội bộ từ itemStruct.video.playAddr nhưng thường link đó sẽ có watermark.
 
     // --- 6. TRẢ VỀ KẾT QUẢ ---
     const result = {
+      status: "Live",
       id: videoId,
       desc: itemStruct.desc,
       createTime: itemStruct.createTime,
@@ -101,9 +100,9 @@ export default async function handler(req, res) {
           uniqueId: itemStruct.author.uniqueId,
           nickname: itemStruct.author.nickname,
           avatar: itemStruct.author.avatarLarger,
+          verified: itemStruct.author.verified
       },
       stats: {
-          // Trở lại làm tròn theo yêu cầu của bạn
           play: formatStats(itemStruct.stats.playCount),
           like: formatStats(itemStruct.stats.diggCount),
           comment: formatStats(itemStruct.stats.commentCount),
@@ -113,22 +112,21 @@ export default async function handler(req, res) {
       video: {
           cover: itemStruct.video.cover,
           duration: itemStruct.video.duration,
-          // Link gốc (Có watermark)
           playAddr: itemStruct.video.playAddr, 
-          // Link không logo (No Watermark)
           noWatermark: noWatermarkLink,
           downloadAddr: itemStruct.video.downloadAddr
-      },
-      music: {
-          title: itemStruct.music.title,
-          author: itemStruct.music.authorName,
-          playUrl: itemStruct.music.playUrl
       }
     };
+
+    // Logic kiểm tra Livestream (Chỉ hiện nếu đang Live)
+    const isLive = itemStruct.author.isLive || (itemStruct.author.roomId && itemStruct.author.roomId !== "0");
+    if (isLive) {
+        result.live_status = "Đang Livestream 🔴";
+    }
 
     return res.status(200).json(result);
 
   } catch (error) {
-    return res.status(500).json({ error: error.message });
+    return res.status(500).json({ status: "Error", error: error.message });
   }
 }
