@@ -1,14 +1,8 @@
 {
   "name": "tiktok-api",
   "version": "1.0.0",
-  "scripts": {
-    "start": "node api/index.js"
-  },
+  "type": "module",
   "dependencies": {
     "node-fetch": "^3.3.0"
   }
 }
-{
-  "type": "module"
-}
-
