@@ -6,14 +6,15 @@
   }
 }
 {
+  "version": 2,
   "rewrites": [
-    { 
-      "source": "/tiktok=:username", 
-      "destination": "/api?username=:username" 
+    {
+      "source": "/tiktok=:username",
+      "destination": "/api?username=:username"
     },
-    { 
-      "source": "/video=:video*", 
-      "destination": "/api/video?video=:video*" 
+    {
+      "source": "/video=:video*",
+      "destination": "/api/video?video=:video*"
     }
   ]
 }
