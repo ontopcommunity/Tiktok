@@ -7,7 +7,7 @@ export default async function handler(req, res) {
 
   if (!username) {
     return res.status(400).json({ 
-      error: "Thieu username. Vui long goi api theo dang: /api?username=id_tiktok" 
+      error: "Thieu username. Vui long goi api theo dang: /tiktok=id_tiktok" 
     });
   }
 
@@ -100,7 +100,7 @@ export default async function handler(req, res) {
       }
     };
 
-    // Logic kiểm tra Livestream (Nếu ko live sẽ không hiện)
+    // Logic livestream (Ẩn nếu ko Live)
     const isLive = userInfo.isLive || (userInfo.roomId && userInfo.roomId !== "0");
     if (isLive) {
         result.live_status = "Đang Livestream 🔴";
@@ -108,7 +108,5 @@ export default async function handler(req, res) {
 
     return res.status(200).json(result);
 
-  } catch (error) {
-    return res.status(500).json({ status: "Error", error: error.message });
-  }
+  } catch (error) { return res.status(500).json({ status: "Error", error: error.message }); }
 }
