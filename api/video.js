@@ -7,7 +7,7 @@ export default async function handler(req, res) {
 
   if (!video) {
     return res.status(400).json({ 
-      error: "Thiếu link video. Vui lòng gọi api theo dạng: /api/video?video=https://..." 
+      error: "Thiếu link video. Vui lòng gọi api theo dạng: /video=https://..." 
     });
   }
 
@@ -22,9 +22,7 @@ export default async function handler(req, res) {
             userAgent = agents[Math.floor(Math.random() * agents.length)].trim();
         }
     }
-  } catch (err) {
-    console.error("Lỗi đọc file user-agent:", err);
-  }
+  } catch (err) { console.error("Lỗi đọc file user-agent:", err); }
 
   // --- 2. HÀM LÀM TRÒN SỐ (1985 -> 1,9K) ---
   const formatStats = (num) => {
@@ -59,7 +57,6 @@ export default async function handler(req, res) {
     }
 
     const response = await fetch(targetUrl, { headers });
-    // Trả về status Die nếu không truy cập được
     if (!response.ok) return res.status(404).json({ status: "Die", error: "Tài khoản hoặc video không tồn tại" });
 
     const html = await response.text();
@@ -118,7 +115,7 @@ export default async function handler(req, res) {
       }
     };
 
-    // Logic kiểm tra Livestream (Chỉ hiện nếu đang Live)
+    // Logic livestream (Ẩn nếu ko Live)
     const isLive = itemStruct.author.isLive || (itemStruct.author.roomId && itemStruct.author.roomId !== "0");
     if (isLive) {
         result.live_status = "Đang Livestream 🔴";
@@ -126,7 +123,5 @@ export default async function handler(req, res) {
 
     return res.status(200).json(result);
 
-  } catch (error) {
-    return res.status(500).json({ status: "Error", error: error.message });
-  }
+  } catch (error) { return res.status(500).json({ status: "Error", error: error.message }); }
 }
