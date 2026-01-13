@@ -3,9 +3,9 @@ import path from 'path';
 
 export default async function handler(req, res) {
   const { user } = req.query;
-  if (!user) return res.status(400).json({ error: "Thieu user" });
+  if (!user) return res.status(400).json({ error: "Thiếu user" });
 
-  // --- 1. RANDOM USER AGENT (Dùng lại của bạn) ---
+  // --- 1. RANDOM USER AGENT ---
   let userAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"; 
   try {
     const filePath = path.join(process.cwd(), 'user-agents.txt');
@@ -14,9 +14,8 @@ export default async function handler(req, res) {
         const agents = fileContent.split('\n').filter(line => line.trim() !== '');
         if (agents.length > 0) userAgent = agents[Math.floor(Math.random() * agents.length)].trim();
     }
-  } catch (err) { console.error("Loi user-agent:", err); }
+  } catch (err) { console.error("Lỗi đọc user-agent:", err); }
 
-  // --- 2. HÀM LÀM TRÒN SỐ CHUẨN (Giữ nguyên của bạn) ---
   const formatStats = (num) => {
     num = parseInt(num);
     if (!num || isNaN(num)) return "0";
@@ -26,26 +25,34 @@ export default async function handler(req, res) {
   };
 
   try {
-    const response = await fetch(`https://www.facebook.com/${user}`, { headers: { "User-Agent": userAgent } });
+    const headers = { 
+      "User-Agent": userAgent,
+      "Accept-Language": "vi-VN,vi;q=0.9",
+      // QUAN TRỌNG: Bạn dán Cookie vào đây để lấy được 100% số liệu thực
+      "Cookie": "datr=xxxx; sb=xxxx; c_user=xxxx; xs=xxxx;" 
+    };
+
+    const response = await fetch(`https://www.facebook.com/${user}`, { headers });
     if (!response.ok) return res.status(404).json({ status: "Die" });
 
     const html = await response.text();
     
-    // --- 3. QUÉT DỮ LIỆU THỰC TẾ ---
-    const fbIdMatch = html.match(/"entity_id":"(\d+)"/) || html.match(/"userID":"(\d+)"/);
+    // --- 2. QUÉT DỮ LIỆU TỪ NHIỀU NGUỒN TRONG HTML ---
+    const fbId = html.match(/"entity_id":"(\d+)"/) || html.match(/"userID":"(\d+)"/) || html.match(/"profile_id":(\d+)/);
     
-    // Tìm số follower và bạn bè trong JSON ẩn của Facebook
-    const followerMatch = html.match(/"follower_count":(\d+)/) || html.match(/"subscriber_count":(\d+)/);
-    const friendMatch = html.match(/"friend_count":(\d+)/) || html.match(/"friends":.*?count":(\d+)/);
+    // Quét số Follower (Dùng cho cả Fanpage và Profile)
+    const follower = html.match(/"follower_count":(\d+)/) || html.match(/(\d+) người theo dõi/);
+    // Quét số Bạn bè
+    const friends = html.match(/"friend_count":(\d+)/) || html.match(/(\d+) bạn bè/);
 
     const result = {
       status: "Live",
-      id: fbIdMatch ? fbIdMatch[1] : user,
+      id: fbId ? fbId[1] : user,
       nickname: html.match(/<title>(.*?)<\/title>/) ? html.match(/<title>(.*?)<\/title>/)[1].split(" | ")[0] : "User",
       avatar: html.match(/property="og:image" content="(.*?)"/) ? html.match(/property="og:image" content="(.*?)"/)[1].replace(/&amp;/g, '&') : "",
       stats: { 
-        follower: formatStats(followerMatch ? followerMatch[1] : 0), 
-        friends: formatStats(friendMatch ? friendMatch[1] : 0) 
+        follower: formatStats(follower ? follower[1] : 0), 
+        friends: formatStats(friends ? friends[1] : 0) 
       }
     };
 
