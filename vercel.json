@@ -5,3 +5,9 @@
     }
   }
 }
+{
+  "rewrites": [
+    { "source": "/tiktok=:username", "destination": "/api?username=:username" },
+    { "source": "/video=:video*", "destination": "/api/video?video=:video*" }
+  ]
+}
