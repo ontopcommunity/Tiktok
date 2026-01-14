@@ -3,105 +3,127 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ONTOP API - Siêu Hệ Thống TikTok</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <title>ONTOP - VIP API PREMIUM</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        :root { --primary: #00f2ea; --secondary: #ff0050; --glass: rgba(255, 255, 255, 0.1); }
-        body { margin: 0; font-family: 'Inter', sans-serif; background: #000; color: white; min-height: 100vh; overflow-x: hidden; }
-        .bg-animate { position: fixed; top: 0; width: 100%; height: 100%; z-index: -1; background: radial-gradient(circle at 50% 50%, #1a1a2e 0%, #000 100%); }
-        
+        :root { --neon-blue: #00f2ea; --neon-pink: #ff0050; --gold: #ffcc00; --bg-dark: #020205; }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { background: var(--bg-dark); font-family: 'Orbitron', sans-serif; color: white; height: 100vh; overflow: hidden; display: flex; align-items: center; justify-content: center; }
+
+        /* Hiệu ứng Background Hạt */
+        #canvas-bg { position: fixed; top: 0; left: 0; z-index: -1; width: 100%; height: 100%; }
+
+        /* Donate Button VIP */
+        .donate-corner { position: fixed; top: 25px; right: 25px; z-index: 500; }
+        .btn-donate { background: linear-gradient(135deg, #ffd700, #ff8c00); border: none; padding: 12px 25px; border-radius: 8px; font-weight: 800; cursor: pointer; color: #000; display: flex; align-items: center; gap: 8px; box-shadow: 0 0 20px rgba(255, 215, 0, 0.4); text-transform: uppercase; font-size: 0.8rem; }
+        .btn-donate:hover { transform: scale(1.05); box-shadow: 0 0 30px var(--gold); }
+
         /* Popup QC */
-        #popup { position: fixed; inset: 0; background: rgba(0,0,0,0.9); z-index: 9999; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(15px); }
-        .popup-card { background: var(--glass); border: 1px solid var(--primary); padding: 40px; border-radius: 25px; text-align: center; max-width: 450px; box-shadow: 0 0 50px rgba(0, 242, 234, 0.2); animation: scaleUp 0.4s ease; }
-        .popup-card h2 { font-size: 2rem; color: var(--primary); margin-bottom: 15px; }
-        .btn-start { background: var(--primary); border: none; padding: 12px 40px; border-radius: 50px; font-weight: 800; cursor: pointer; transition: 0.3s; margin-top: 20px; }
+        #popup-ad { position: fixed; inset: 0; background: rgba(0,0,0,0.95); z-index: 1000; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(20px); }
+        .popup-box { background: rgba(255,255,255,0.02); border: 1px solid var(--neon-blue); padding: 50px; border-radius: 20px; text-align: center; max-width: 500px; box-shadow: 0 0 50px rgba(0,242,234,0.2); animation: fadeInUp 0.6s ease; }
+        .btn-access { background: var(--neon-blue); color: #000; border: none; padding: 15px 40px; border-radius: 5px; font-weight: 900; cursor: pointer; margin-top: 30px; letter-spacing: 2px; }
 
-        /* Container chính */
-        .container { max-width: 1000px; margin: 0 auto; padding: 50px 20px; display: none; }
-        header { text-align: center; margin-bottom: 60px; }
-        header h1 { font-size: 4rem; text-transform: uppercase; letter-spacing: 5px; background: linear-gradient(to right, var(--primary), var(--secondary)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin: 0; }
-        .intro-text { font-size: 1.1rem; opacity: 0.7; max-width: 600px; margin: 20px auto; line-height: 1.8; }
+        /* Giao diện chính */
+        .main-container { display: none; width: 100%; max-width: 1000px; text-align: center; z-index: 10; animation: fadeIn 1s; }
+        .header-logo { font-size: 4.5rem; font-weight: 900; background: linear-gradient(to bottom, #fff, #444); -webkit-background-clip: text; -webkit-text-fill-color: transparent; filter: drop-shadow(0 0 10px rgba(255,255,255,0.3)); letter-spacing: 15px; margin-bottom: 5px; }
+        .sub-title { font-size: 0.7rem; letter-spacing: 8px; color: var(--neon-blue); margin-bottom: 50px; text-transform: uppercase; }
 
-        /* API Cards */
-        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; margin-bottom: 50px; }
-        .card { background: var(--glass); border: 1px solid rgba(255,255,255,0.1); border-radius: 20px; padding: 30px; backdrop-filter: blur(10px); transition: 0.4s; }
-        .card:hover { border-color: var(--primary); transform: translateY(-10px); }
-        .card h3 { color: var(--primary); margin-top: 0; display: flex; align-items: center; gap: 10px; }
-        input { width: 100%; padding: 15px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.2); background: rgba(0,0,0,0.5); color: white; margin: 15px 0; box-sizing: border-box; }
-        .action-btn { width: 100%; padding: 15px; border-radius: 12px; border: none; font-weight: bold; cursor: pointer; transition: 0.3s; text-transform: uppercase; }
-        .btn-p { background: var(--primary); color: black; }
-        .btn-v { background: var(--secondary); color: white; }
+        /* API Cards nhỏ gọn & VIP */
+        .api-selection { display: flex; justify-content: center; gap: 30px; }
+        .mini-card { width: 280px; height: 320px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 15px; display: flex; flex-direction: column; align-items: center; justify-content: center; text-decoration: none; color: white; position: relative; overflow: hidden; transition: 0.4s; }
+        .mini-card::before { content: ''; position: absolute; bottom: 0; left: 0; width: 100%; height: 3px; background: var(--neon-blue); transform: scaleX(0); transition: 0.4s; }
+        .mini-card:hover { background: rgba(255,255,255,0.07); transform: translateY(-10px); border-color: var(--neon-blue); }
+        .mini-card:hover::before { transform: scaleX(1); }
+        .mini-card i { font-size: 3rem; margin-bottom: 20px; color: #fff; }
+        .mini-card h3 { font-size: 1.2rem; letter-spacing: 2px; margin-bottom: 10px; }
+        .mini-card span { font-size: 0.7rem; opacity: 0.4; text-transform: uppercase; }
 
-        /* Result View */
-        #result { margin-top: 40px; padding: 30px; background: var(--glass); border-radius: 20px; display: none; animation: fadeIn 0.5s; border-left: 5px solid var(--primary); }
-        pre { white-space: pre-wrap; word-wrap: break-word; font-size: 0.9rem; color: #00f2ea; }
+        /* Modal Donate */
+        #donate-modal { position: fixed; inset: 0; background: rgba(0,0,0,0.9); z-index: 2000; display: none; align-items: center; justify-content: center; backdrop-filter: blur(10px); }
+        .qr-frame { background: #fff; padding: 25px; border-radius: 15px; text-align: center; color: #000; width: 320px; }
+        .qr-frame img { width: 100%; border-radius: 10px; margin-bottom: 10px; }
 
-        @keyframes scaleUp { from { opacity:0; transform: scale(0.7); } to { opacity:1; transform: scale(1); } }
-        @keyframes fadeIn { from { opacity:0; transform: translateY(20px); } to { opacity:1; transform: translateY(0); } }
+        @keyframes fadeInUp { from { opacity:0; transform: translateY(40px); } to { opacity:1; transform: translateY(0); } }
+        @keyframes fadeIn { from { opacity:0; } to { opacity:1; } }
     </style>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;900&display=swap" rel="stylesheet">
 </head>
 <body>
-    <div class="bg-animate"></div>
+    <canvas id="canvas-bg"></canvas>
 
-    <div id="popup">
-        <div class="popup-card">
-            <h2><i class="fas fa-rocket"></i> ONTOP API V1</h2>
-            <p>Hệ thống trích xuất dữ liệu TikTok chuyên nghiệp. <br>Không giới hạn - Không Watermark!</p>
-            <button class="btn-start" onclick="startApp()">TRUY CẬP NGAY</button>
+    <div class="donate-corner">
+        <button class="btn-donate" onclick="toggleDonate(true)">
+            <i class="fas fa-crown"></i> VIP DONATE
+        </button>
+    </div>
+
+    <div id="donate-modal" onclick="toggleDonate(false)">
+        <div class="qr-frame" onclick="event.stopPropagation()">
+            <small style="color: #666;">MB BANK - CAO NHAT MINH</small>
+            <img src="https://img.vietqr.io/image/MB-1234210929-compact2.png?amount=0&addInfo=Donate%20ONTOP&accountName=CAO%20NHAT%20MINH" alt="VietQR">
+            <h3 style="margin: 5px 0;">1234210929</h3>
+            <p style="font-size: 0.7rem;">Cảm ơn sự đóng góp của bạn!</p>
         </div>
     </div>
 
-    <div class="container" id="main">
-        <header>
-            <h1>ONTOP COMMUNITY</h1>
-            <p class="intro-text">Chúng tôi cung cấp giải pháp API TikTok đỉnh cao, hỗ trợ nhà phát triển tối ưu hóa ứng dụng với dữ liệu sạch và tốc độ phản hồi siêu tốc.</p>
-        </header>
-
-        <div class="grid">
-            <div class="card">
-                <h3><i class="fas fa-user-circle"></i> CHECK PROFILE</h3>
-                <input type="text" id="userInput" placeholder="Nhập username TikTok...">
-                <button class="action-btn btn-p" onclick="callApi('/api?username=')">Lấy Thông Tin</button>
-            </div>
-            <div class="card">
-                <h3><i class="fas fa-video"></i> VIDEO NO-WM</h3>
-                <input type="text" id="videoInput" placeholder="Dán link video TikTok...">
-                <button class="action-btn btn-v" onclick="callApi('/api/video?video=')">Lấy Link Video</button>
-            </div>
+    <div id="popup-ad">
+        <div class="popup-box">
+            <h2 style="letter-spacing: 5px;">ONTOP SYSTEM <span style="color: var(--neon-blue);">V1</span></h2>
+            <p style="opacity: 0.5; margin-top: 15px; font-size: 0.9rem;">Hệ thống API TikTok trích xuất dữ liệu không dấu vết. <br>Đỉnh cao công nghệ Scraper 2026.</p>
+            <button class="btn-access" onclick="enterSystem()">KHỞI CHẠY HỆ THỐNG</button>
         </div>
+    </div>
 
-        <div id="result">
-            <h4 style="margin: 0 0 15px 0; color: #fff;"><i class="fas fa-code"></i> DỮ LIỆU KẾT QUẢ:</h4>
-            <pre id="jsonOutput"></pre>
+    <div class="main-container" id="main-ui">
+        <h1 class="header-logo">ONTOP</h1>
+        <div class="sub-title">Premium API Gateway</div>
+
+        <div class="api-selection">
+            <a href="profile-api.html" class="mini-card">
+                <i class="fas fa-user-shield"></i>
+                <h3>PROFILE</h3>
+                <span>Crawler Information</span>
+            </a>
+            <a href="video-api.html" class="mini-card" style="border-bottom-color: var(--neon-pink);">
+                <i class="fas fa-file-video" style="color: var(--neon-pink);"></i>
+                <h3 style="color: var(--neon-pink);">VIDEO</h3>
+                <span>No-Watermark Extract</span>
+            </a>
         </div>
+        
+        <p style="margin-top: 60px; font-size: 0.6rem; opacity: 0.3; letter-spacing: 3px;">ENCRYPTED CONNECTION : ACTIVE</p>
     </div>
 
     <script>
-        function startApp() {
-            document.getElementById('popup').style.display = 'none';
-            document.getElementById('main').style.display = 'block';
+        // Hiệu ứng hạt background
+        const canvas = document.getElementById('canvas-bg');
+        const ctx = canvas.getContext('2d');
+        let points = [];
+        function init() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            for(let i=0; i<80; i++) points.push({x: Math.random()*canvas.width, y: Math.random()*canvas.height, vx: Math.random()-0.5, vy: Math.random()-0.5});
+        }
+        function animate() {
+            ctx.clearRect(0,0,canvas.width, canvas.height);
+            ctx.fillStyle = "rgba(0, 242, 234, 0.2)";
+            points.forEach(p => {
+                p.x += p.vx; p.y += p.vy;
+                if(p.x<0 || p.x>canvas.width) p.vx *= -1;
+                if(p.y<0 || p.y>canvas.height) p.vy *= -1;
+                ctx.beginPath(); ctx.arc(p.x, p.y, 1, 0, Math.PI*2); ctx.fill();
+            });
+            requestAnimationFrame(animate);
+        }
+        init(); animate();
+
+        function enterSystem() {
+            document.getElementById('popup-ad').style.display = 'none';
+            document.getElementById('main-ui').style.display = 'block';
         }
 
-        async function callApi(endpoint) {
-            const input = endpoint.includes('video') ? document.getElementById('videoInput').value : document.getElementById('userInput').value;
-            if(!input) return alert('Vui lòng nhập dữ liệu!');
-
-            const resDiv = document.getElementById('result');
-            const output = document.getElementById('jsonOutput');
-            
-            output.innerText = "Đang lấy dữ liệu...";
-            resDiv.style.display = 'block';
-
-            try {
-                const response = await fetch(endpoint + encodeURIComponent(input));
-                const data = await response.json();
-                output.innerText = JSON.stringify(data, null, 4);
-                
-                // Hiệu ứng cuộn xuống kết quả
-                resDiv.scrollIntoView({ behavior: 'smooth' });
-            } catch (error) {
-                output.innerText = "Lỗi: " + error.message;
-            }
+        function toggleDonate(show) {
+            document.getElementById('donate-modal').style.display = show ? 'flex' : 'none';
         }
     </script>
 </body>
