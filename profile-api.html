@@ -3,110 +3,75 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ONTOP - Profile Intelligence VIP</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <title>Dashboard Profile VIP</title>
     <style>
-        :root { --p: #00f2ea; --bg: #050505; --card: rgba(255, 255, 255, 0.03); }
-        * { box-sizing: border-box; font-family: 'Inter', sans-serif; }
-        body { margin: 0; background: var(--bg); color: white; display: flex; height: 100vh; overflow: hidden; }
+        :root { --p: #00f2ea; --bg: #050505; }
+        body { margin: 0; background: var(--bg); color: white; font-family: 'Inter', sans-serif; display: flex; flex-direction: row; height: 100vh; }
         
-        /* Sidebar */
-        .sidebar { width: 350px; background: rgba(255,255,255,0.01); border-right: 1px solid rgba(255,255,255,0.1); padding: 30px; display: flex; flex-direction: column; }
-        .logo { font-size: 1.8rem; font-weight: 900; color: var(--p); text-decoration: none; letter-spacing: 5px; margin-bottom: 40px; }
-        .input-group { margin-bottom: 25px; }
-        label { font-size: 0.7rem; opacity: 0.5; text-transform: uppercase; letter-spacing: 2px; }
-        input { width: 100%; padding: 15px; background: #111; border: 1px solid #222; border-radius: 12px; color: white; margin-top: 8px; }
-        .btn { width: 100%; padding: 15px; background: var(--p); border: none; border-radius: 12px; font-weight: 800; cursor: pointer; color: #000; margin-top: 10px; }
+        .sidebar { width: 350px; border-right: 1px solid rgba(255,255,255,0.1); padding: 30px; display: flex; flex-direction: column; overflow-y: auto; }
+        .main { flex: 1; padding: 20px; display: flex; flex-direction: column; gap: 20px; overflow-y: auto; }
         
-        .api-link-status { margin-top: auto; padding: 15px; background: rgba(0, 242, 234, 0.05); border: 1px dashed var(--p); border-radius: 12px; font-size: 0.75rem; word-break: break-all; }
+        input { width: 100%; padding: 15px; background: #111; border: 1px solid #333; border-radius: 10px; color: white; margin: 10px 0; }
+        .btn { width: 100%; padding: 15px; background: var(--p); border: none; font-weight: bold; border-radius: 10px; cursor: pointer; }
 
-        /* Main View */
-        .main { flex: 1; display: grid; grid-template-rows: 1fr 300px; gap: 20px; padding: 20px; overflow: hidden; }
-        .ui-display { background: var(--card); border-radius: 25px; border: 1px solid rgba(255,255,255,0.05); padding: 40px; overflow-y: auto; }
-        .json-display { background: #000; border-radius: 25px; border: 1px solid rgba(255,255,255,0.1); padding: 25px; overflow-y: auto; position: relative; }
+        .profile-card { background: rgba(255,255,255,0.03); border: 1px solid var(--p); padding: 30px; border-radius: 20px; display: flex; align-items: center; gap: 30px; flex-wrap: wrap; }
+        .avatar { width: 150px; height: 150px; border-radius: 50%; border: 3px solid var(--p); }
+        .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 15px; width: 100%; }
+        .s-item { background: #111; padding: 15px; border-radius: 10px; text-align: center; }
         
-        /* Profile UI Elements */
-        .profile-top { display: flex; align-items: center; gap: 30px; margin-bottom: 40px; }
-        .avatar-frame { width: 180px; height: 180px; border-radius: 50%; border: 3px solid var(--p); padding: 8px; box-shadow: 0 0 30px rgba(0,242,234,0.2); }
-        .avatar-frame img { width: 100%; height: 100%; border-radius: 50%; object-fit: cover; }
-        .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; }
-        .stat-card { background: rgba(255,255,255,0.02); padding: 20px; border-radius: 20px; text-align: center; }
-        .stat-card span { font-size: 0.7rem; opacity: 0.4; display: block; margin-bottom: 5px; }
-        .stat-card b { font-size: 1.5rem; color: var(--p); }
+        .json-box { background: #000; padding: 20px; border-radius: 15px; border: 1px solid #222; font-family: monospace; color: var(--p); font-size: 0.8rem; overflow-x: auto; }
 
-        pre { margin: 0; color: #00f2ea; font-family: 'Consolas', monospace; font-size: 0.85rem; }
-        .live-badge { display: inline-block; padding: 5px 15px; border-radius: 50px; background: #ff0050; color: white; font-size: 0.7rem; font-weight: bold; margin-top: 10px; }
+        /* RESPONSIVE MOBILE */
+        @media (max-width: 900px) {
+            body { flex-direction: column; }
+            .sidebar { width: 100%; border-right: none; border-bottom: 1px solid #333; }
+            .avatar { width: 100px; height: 100px; margin: 0 auto; }
+            .profile-card { text-align: center; justify-content: center; }
+        }
     </style>
 </head>
 <body>
     <div class="sidebar">
-        <a href="index.html" class="logo">ONTOP</a>
-        <div class="input-group">
-            <label>Tên người dùng</label>
-            <input type="text" id="userInput" placeholder="ví dụ: cristiano">
-            <button class="btn" onclick="fetchData()">TRUY VẤN PROFILE</button>
-        </div>
-        <div class="api-link-status">
-            <b style="color: var(--p)">API URL:</b><br>
-            <span id="apiUrl">N/A</span>
-        </div>
+        <a href="index.html" style="color:var(--p); text-decoration:none">← HOME</a>
+        <h2 style="margin-top:20px">PROFILE SETTINGS</h2>
+        <input type="text" id="userInput" placeholder="Nhập username...">
+        <button class="btn" onclick="fetchData()">QUÉT DỮ LIỆU</button>
+        <div id="url" style="font-size:0.6rem; opacity:0.4; margin-top:20px; word-break:break-all"></div>
     </div>
-
     <div class="main">
-        <div class="ui-display" id="uiArea">
-            <div id="welcome"><h1>Vui lòng nhập Username hoặc sử dụng tham số URL</h1></div>
-            <div id="content" style="display: none;">
-                <div class="profile-top">
-                    <div class="avatar-frame"><img id="avt" src=""></div>
-                    <div>
-                        <h1 id="nick" style="margin:0; font-size: 2.5rem;">Nickname</h1>
-                        <p id="bio" style="opacity:0.6; margin: 10px 0;">Bio info...</p>
-                        <div id="liveTag"></div>
-                    </div>
-                </div>
-                <div class="stats-grid">
-                    <div class="stat-card"><span>Followers</span><b id="s-f">-</b></div>
-                    <div class="stat-card"><span>Following</span><b id="s-fg">-</b></div>
-                    <div class="stat-card"><span>Hearts</span><b id="s-h">-</b></div>
-                    <div class="stat-card"><span>Videos</span><b id="s-v">-</b></div>
-                </div>
+        <div class="profile-card" id="res" style="display:none">
+            <img id="avt" class="avatar">
+            <div>
+                <h1 id="nick" style="margin:0">Nickname</h1>
+                <p id="bio" style="opacity:0.6"></p>
+                <div id="live" style="color:red; font-weight:bold"></div>
+            </div>
+            <div class="stats">
+                <div class="s-item"><small>Followers</small><br><b id="sf">-</b></div>
+                <div class="s-item"><small>Hearts</small><br><b id="sh">-</b></div>
+                <div class="s-item"><small>Videos</small><br><b id="sv">-</b></div>
             </div>
         </div>
-        <div class="json-display">
-            <h4 style="margin: 0 0 10px 0; color: var(--p); font-size: 0.7rem;">RAW DATA RESPONSE</h4>
-            <pre id="jsonOut">// Chờ dữ liệu...</pre>
-        </div>
+        <div class="json-box"><pre id="jsonOut">// Dữ liệu thô JSON</pre></div>
     </div>
-
     <script>
-        // Auto-Route logic
-        window.onload = () => {
-            const u = new URLSearchParams(window.location.search).get('username');
-            if(u) { document.getElementById('userInput').value = u; fetchData(u); }
-        };
-
-        async function fetchData(direct) {
-            const user = direct || document.getElementById('userInput').value;
-            if(!user) return;
-            document.getElementById('apiUrl').innerText = window.location.origin + "/api?username=" + user;
-            
-            try {
-                const r = await fetch(`/api?username=${user}`);
-                const d = await r.json();
-                document.getElementById('jsonOut').innerText = JSON.stringify(d, null, 4);
-                if(d.status === "Live") {
-                    document.getElementById('welcome').style.display = 'none';
-                    document.getElementById('content').style.display = 'block';
-                    document.getElementById('avt').src = d.avatar;
-                    document.getElementById('nick').innerText = d.nickname;
-                    document.getElementById('bio').innerText = d.bio || "Không có tiểu sử";
-                    document.getElementById('s-f').innerText = d.stats.follower;
-                    document.getElementById('s-fg').innerText = d.stats.following;
-                    document.getElementById('s-h').innerText = d.stats.heart;
-                    document.getElementById('s-v').innerText = d.stats.video;
-                    document.getElementById('liveTag').innerHTML = d.live_status ? `<span class="live-badge">${d.live_status}</span>` : "";
-                }
-            } catch(e) { document.getElementById('jsonOut').innerText = "Lỗi kết nối API"; }
+        window.onload = () => { const u = new URLSearchParams(window.location.search).get('username'); if(u) fetchData(u); };
+        async function fetchData(u) {
+            const user = u || document.getElementById('userInput').value; if(!user) return;
+            document.getElementById('url').innerText = window.location.origin + "/api?username=" + user;
+            const r = await fetch(`/api?username=${user}`);
+            const d = await r.json();
+            document.getElementById('jsonOut').innerText = JSON.stringify(d, null, 4);
+            if(d.status === "Live") {
+                document.getElementById('res').style.display = 'flex';
+                document.getElementById('avt').src = d.avatar;
+                document.getElementById('nick').innerText = d.nickname;
+                document.getElementById('bio').innerText = d.bio || "";
+                document.getElementById('sf').innerText = d.stats.follower;
+                document.getElementById('sh').innerText = d.stats.heart;
+                document.getElementById('sv').innerText = d.stats.video;
+                document.getElementById('live').innerText = d.live_status || "";
+            }
         }
     </script>
 </body>
