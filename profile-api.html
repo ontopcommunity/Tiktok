@@ -3,110 +3,110 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ONTOP - API PROFILE TIKTOK</title>
+    <title>ONTOP - Profile Intelligence VIP</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        :root { --p: #00f2ea; --bg: #020205; --card: rgba(255, 255, 255, 0.02); }
-        body { margin: 0; background: var(--bg); font-family: 'Inter', sans-serif; color: white; display: flex; height: 100vh; overflow: hidden; }
+        :root { --p: #00f2ea; --bg: #050505; --card: rgba(255, 255, 255, 0.03); }
+        * { box-sizing: border-box; font-family: 'Inter', sans-serif; }
+        body { margin: 0; background: var(--bg); color: white; display: flex; height: 100vh; overflow: hidden; }
         
-        /* Sidebar VIP */
-        .sidebar { width: 380px; background: rgba(255,255,255,0.01); border-right: 1px solid rgba(255,255,255,0.05); padding: 40px 30px; display: flex; flex-direction: column; backdrop-filter: blur(20px); }
-        .logo-text { font-size: 1.5rem; font-weight: 900; letter-spacing: 5px; color: var(--p); margin-bottom: 40px; text-decoration: none; }
-        input { width: 100%; padding: 18px; background: #000; border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; color: white; margin-bottom: 20px; font-family: 'Inter'; }
-        .btn-call { width: 100%; padding: 18px; background: var(--p); border: none; border-radius: 12px; font-weight: 900; cursor: pointer; color: #000; letter-spacing: 1px; }
-        .api-link-box { margin-top: auto; padding: 15px; background: rgba(0,242,234,0.05); border-radius: 10px; font-size: 0.7rem; color: var(--p); word-break: break-all; border: 1px dashed var(--p); }
+        /* Sidebar */
+        .sidebar { width: 350px; background: rgba(255,255,255,0.01); border-right: 1px solid rgba(255,255,255,0.1); padding: 30px; display: flex; flex-direction: column; }
+        .logo { font-size: 1.8rem; font-weight: 900; color: var(--p); text-decoration: none; letter-spacing: 5px; margin-bottom: 40px; }
+        .input-group { margin-bottom: 25px; }
+        label { font-size: 0.7rem; opacity: 0.5; text-transform: uppercase; letter-spacing: 2px; }
+        input { width: 100%; padding: 15px; background: #111; border: 1px solid #222; border-radius: 12px; color: white; margin-top: 8px; }
+        .btn { width: 100%; padding: 15px; background: var(--p); border: none; border-radius: 12px; font-weight: 800; cursor: pointer; color: #000; margin-top: 10px; }
+        
+        .api-link-status { margin-top: auto; padding: 15px; background: rgba(0, 242, 234, 0.05); border: 1px dashed var(--p); border-radius: 12px; font-size: 0.75rem; word-break: break-all; }
 
-        /* Main Display */
-        .main { flex: 1; padding: 40px; overflow-y: auto; display: flex; flex-direction: column; gap: 30px; }
-        .glass-panel { background: var(--card); border: 1px solid rgba(255,255,255,0.05); border-radius: 30px; padding: 40px; }
+        /* Main View */
+        .main { flex: 1; display: grid; grid-template-rows: 1fr 300px; gap: 20px; padding: 20px; overflow: hidden; }
+        .ui-display { background: var(--card); border-radius: 25px; border: 1px solid rgba(255,255,255,0.05); padding: 40px; overflow-y: auto; }
+        .json-display { background: #000; border-radius: 25px; border: 1px solid rgba(255,255,255,0.1); padding: 25px; overflow-y: auto; position: relative; }
         
-        .profile-header { display: flex; gap: 40px; align-items: center; margin-bottom: 40px; }
-        .avatar-box { width: 220px; height: 220px; border-radius: 50%; border: 4px solid var(--p); padding: 10px; box-shadow: 0 0 30px rgba(0,242,234,0.2); }
-        .avatar-box img { width: 100%; height: 100%; border-radius: 50%; object-fit: cover; }
-        
+        /* Profile UI Elements */
+        .profile-top { display: flex; align-items: center; gap: 30px; margin-bottom: 40px; }
+        .avatar-frame { width: 180px; height: 180px; border-radius: 50%; border: 3px solid var(--p); padding: 8px; box-shadow: 0 0 30px rgba(0,242,234,0.2); }
+        .avatar-frame img { width: 100%; height: 100%; border-radius: 50%; object-fit: cover; }
         .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; }
-        .stat-item { background: rgba(255,255,255,0.03); padding: 25px; border-radius: 20px; text-align: center; border: 1px solid rgba(255,255,255,0.02); }
-        .stat-item span { display: block; font-size: 0.8rem; opacity: 0.4; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 1px; }
-        .stat-item b { font-size: 1.8rem; color: var(--p); }
+        .stat-card { background: rgba(255,255,255,0.02); padding: 20px; border-radius: 20px; text-align: center; }
+        .stat-card span { font-size: 0.7rem; opacity: 0.4; display: block; margin-bottom: 5px; }
+        .stat-card b { font-size: 1.5rem; color: var(--p); }
 
-        .json-viewer { background: #000; border-radius: 20px; padding: 30px; border: 1px solid rgba(255,255,255,0.05); font-family: 'Consolas', monospace; color: #00f2ea; font-size: 0.9rem; line-height: 1.6; }
-        #live-status { display: inline-block; padding: 5px 15px; border-radius: 50px; background: rgba(255,0,0,0.1); color: #ff0050; font-weight: bold; font-size: 0.8rem; margin-top: 10px; }
+        pre { margin: 0; color: #00f2ea; font-family: 'Consolas', monospace; font-size: 0.85rem; }
+        .live-badge { display: inline-block; padding: 5px 15px; border-radius: 50px; background: #ff0050; color: white; font-size: 0.7rem; font-weight: bold; margin-top: 10px; }
     </style>
 </head>
 <body>
     <div class="sidebar">
-        <a href="index.html" class="logo-text">ONTOP</a>
-        <h2 style="margin-bottom: 10px;">CONFIG API</h2>
-        <p style="opacity: 0.4; font-size: 0.8rem; margin-bottom: 30px;">Cấu hình trích xuất Profile thông minh</p>
-        
-        <input type="text" id="userInput" placeholder="Nhập username (ví dụ: zuck)">
-        <button class="btn-call" onclick="fetchProfile()">EXECUTE API</button>
-
-        <div class="api-link-box">
-            <b>CURRENT API URL:</b><br>
-            <span id="urlDisplay">Vui lòng nhập username...</span>
+        <a href="index.html" class="logo">ONTOP</a>
+        <div class="input-group">
+            <label>Tên người dùng</label>
+            <input type="text" id="userInput" placeholder="ví dụ: cristiano">
+            <button class="btn" onclick="fetchData()">TRUY VẤN PROFILE</button>
+        </div>
+        <div class="api-link-status">
+            <b style="color: var(--p)">API URL:</b><br>
+            <span id="apiUrl">N/A</span>
         </div>
     </div>
 
     <div class="main">
-        <div class="glass-panel" id="resultArea" style="display: none;">
-            <div class="profile-header">
-                <div class="avatar-box"><img id="avt" src=""></div>
-                <div>
-                    <h1 id="nick" style="font-size: 3rem; margin: 0;">Username</h1>
-                    <p id="bio" style="opacity: 0.6; margin: 15px 0;">Tiểu sử người dùng...</p>
-                    <div id="live-status"></div>
+        <div class="ui-display" id="uiArea">
+            <div id="welcome"><h1>Vui lòng nhập Username hoặc sử dụng tham số URL</h1></div>
+            <div id="content" style="display: none;">
+                <div class="profile-top">
+                    <div class="avatar-frame"><img id="avt" src=""></div>
+                    <div>
+                        <h1 id="nick" style="margin:0; font-size: 2.5rem;">Nickname</h1>
+                        <p id="bio" style="opacity:0.6; margin: 10px 0;">Bio info...</p>
+                        <div id="liveTag"></div>
+                    </div>
+                </div>
+                <div class="stats-grid">
+                    <div class="stat-card"><span>Followers</span><b id="s-f">-</b></div>
+                    <div class="stat-card"><span>Following</span><b id="s-fg">-</b></div>
+                    <div class="stat-card"><span>Hearts</span><b id="s-h">-</b></div>
+                    <div class="stat-card"><span>Videos</span><b id="s-v">-</b></div>
                 </div>
             </div>
-
-            <div class="stats-grid">
-                <div class="stat-item"><span>Followers</span><b id="s-follower">-</b></div>
-                <div class="stat-item"><span>Following</span><b id="s-following">-</b></div>
-                <div class="stat-item"><span>Hearts</span><b id="s-heart">-</b></div>
-                <div class="stat-item"><span>Videos</span><b id="s-video">-</b></div>
-            </div>
         </div>
-
-        <div class="glass-panel">
-            <h3 style="margin-bottom: 20px; color: var(--p);"><i class="fas fa-code"></i> RAW JSON DATA</h3>
-            <div class="json-viewer"><pre id="jsonOutput">// Đang chờ lệnh gọi API...</pre></div>
+        <div class="json-display">
+            <h4 style="margin: 0 0 10px 0; color: var(--p); font-size: 0.7rem;">RAW DATA RESPONSE</h4>
+            <pre id="jsonOut">// Chờ dữ liệu...</pre>
         </div>
     </div>
 
     <script>
-        // Logic AUTO-ROUTE: Khi vào link ?username=...
-        window.onload = function() {
-            const urlParams = new URLSearchParams(window.location.search);
-            const user = urlParams.get('username');
-            if(user) {
-                document.getElementById('userInput').value = user;
-                fetchProfile(user);
-            }
+        // Auto-Route logic
+        window.onload = () => {
+            const u = new URLSearchParams(window.location.search).get('username');
+            if(u) { document.getElementById('userInput').value = u; fetchData(u); }
         };
 
-        async function fetchProfile(directUser) {
-            const user = directUser || document.getElementById('userInput').value;
+        async function fetchData(direct) {
+            const user = direct || document.getElementById('userInput').value;
             if(!user) return;
-
-            document.getElementById('urlDisplay').innerText = window.location.origin + "/api?username=" + user;
-            document.getElementById('jsonOutput').innerText = "System: Requesting data...";
-
+            document.getElementById('apiUrl').innerText = window.location.origin + "/api?username=" + user;
+            
             try {
-                const res = await fetch(`/api?username=${user}`);
-                const d = await res.json();
-                document.getElementById('jsonOutput').innerText = JSON.stringify(d, null, 4);
-
+                const r = await fetch(`/api?username=${user}`);
+                const d = await r.json();
+                document.getElementById('jsonOut').innerText = JSON.stringify(d, null, 4);
                 if(d.status === "Live") {
-                    document.getElementById('resultArea').style.display = "block";
+                    document.getElementById('welcome').style.display = 'none';
+                    document.getElementById('content').style.display = 'block';
                     document.getElementById('avt').src = d.avatar;
                     document.getElementById('nick').innerText = d.nickname;
-                    document.getElementById('bio').innerText = d.bio || "Không có bio";
-                    document.getElementById('s-follower').innerText = d.stats.follower;
-                    document.getElementById('s-heart').innerText = d.stats.heart;
-                    document.getElementById('s-video').innerText = d.stats.video;
-                    document.getElementById('live-status').innerHTML = d.live_status ? `<i class="fas fa-circle"></i> ${d.live_status}` : "";
+                    document.getElementById('bio').innerText = d.bio || "Không có tiểu sử";
+                    document.getElementById('s-f').innerText = d.stats.follower;
+                    document.getElementById('s-fg').innerText = d.stats.following;
+                    document.getElementById('s-h').innerText = d.stats.heart;
+                    document.getElementById('s-v').innerText = d.stats.video;
+                    document.getElementById('liveTag').innerHTML = d.live_status ? `<span class="live-badge">${d.live_status}</span>` : "";
                 }
-            } catch (e) { document.getElementById('jsonOutput').innerText = "System Error: Connection failed."; }
+            } catch(e) { document.getElementById('jsonOut').innerText = "Lỗi kết nối API"; }
         }
     </script>
 </body>
