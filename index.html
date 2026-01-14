@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ONTOP API - Siêu Hệ Thống TikTok</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        :root { --primary: #00f2ea; --secondary: #ff0050; --glass: rgba(255, 255, 255, 0.1); }
+        body { margin: 0; font-family: 'Inter', sans-serif; background: #000; color: white; min-height: 100vh; overflow-x: hidden; }
+        .bg-animate { position: fixed; top: 0; width: 100%; height: 100%; z-index: -1; background: radial-gradient(circle at 50% 50%, #1a1a2e 0%, #000 100%); }
+        
+        /* Popup QC */
+        #popup { position: fixed; inset: 0; background: rgba(0,0,0,0.9); z-index: 9999; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(15px); }
+        .popup-card { background: var(--glass); border: 1px solid var(--primary); padding: 40px; border-radius: 25px; text-align: center; max-width: 450px; box-shadow: 0 0 50px rgba(0, 242, 234, 0.2); animation: scaleUp 0.4s ease; }
+        .popup-card h2 { font-size: 2rem; color: var(--primary); margin-bottom: 15px; }
+        .btn-start { background: var(--primary); border: none; padding: 12px 40px; border-radius: 50px; font-weight: 800; cursor: pointer; transition: 0.3s; margin-top: 20px; }
+
+        /* Container chính */
+        .container { max-width: 1000px; margin: 0 auto; padding: 50px 20px; display: none; }
+        header { text-align: center; margin-bottom: 60px; }
+        header h1 { font-size: 4rem; text-transform: uppercase; letter-spacing: 5px; background: linear-gradient(to right, var(--primary), var(--secondary)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin: 0; }
+        .intro-text { font-size: 1.1rem; opacity: 0.7; max-width: 600px; margin: 20px auto; line-height: 1.8; }
+
+        /* API Cards */
+        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; margin-bottom: 50px; }
+        .card { background: var(--glass); border: 1px solid rgba(255,255,255,0.1); border-radius: 20px; padding: 30px; backdrop-filter: blur(10px); transition: 0.4s; }
+        .card:hover { border-color: var(--primary); transform: translateY(-10px); }
+        .card h3 { color: var(--primary); margin-top: 0; display: flex; align-items: center; gap: 10px; }
+        input { width: 100%; padding: 15px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.2); background: rgba(0,0,0,0.5); color: white; margin: 15px 0; box-sizing: border-box; }
+        .action-btn { width: 100%; padding: 15px; border-radius: 12px; border: none; font-weight: bold; cursor: pointer; transition: 0.3s; text-transform: uppercase; }
+        .btn-p { background: var(--primary); color: black; }
+        .btn-v { background: var(--secondary); color: white; }
+
+        /* Result View */
+        #result { margin-top: 40px; padding: 30px; background: var(--glass); border-radius: 20px; display: none; animation: fadeIn 0.5s; border-left: 5px solid var(--primary); }
+        pre { white-space: pre-wrap; word-wrap: break-word; font-size: 0.9rem; color: #00f2ea; }
+
+        @keyframes scaleUp { from { opacity:0; transform: scale(0.7); } to { opacity:1; transform: scale(1); } }
+        @keyframes fadeIn { from { opacity:0; transform: translateY(20px); } to { opacity:1; transform: translateY(0); } }
+    </style>
+</head>
+<body>
+    <div class="bg-animate"></div>
+
+    <div id="popup">
+        <div class="popup-card">
+            <h2><i class="fas fa-rocket"></i> ONTOP API V1</h2>
+            <p>Hệ thống trích xuất dữ liệu TikTok chuyên nghiệp. <br>Không giới hạn - Không Watermark!</p>
+            <button class="btn-start" onclick="startApp()">TRUY CẬP NGAY</button>
+        </div>
+    </div>
+
+    <div class="container" id="main">
+        <header>
+            <h1>ONTOP COMMUNITY</h1>
+            <p class="intro-text">Chúng tôi cung cấp giải pháp API TikTok đỉnh cao, hỗ trợ nhà phát triển tối ưu hóa ứng dụng với dữ liệu sạch và tốc độ phản hồi siêu tốc.</p>
+        </header>
+
+        <div class="grid">
+            <div class="card">
+                <h3><i class="fas fa-user-circle"></i> CHECK PROFILE</h3>
+                <input type="text" id="userInput" placeholder="Nhập username TikTok...">
+                <button class="action-btn btn-p" onclick="callApi('/api?username=')">Lấy Thông Tin</button>
+            </div>
+            <div class="card">
+                <h3><i class="fas fa-video"></i> VIDEO NO-WM</h3>
+                <input type="text" id="videoInput" placeholder="Dán link video TikTok...">
+                <button class="action-btn btn-v" onclick="callApi('/api/video?video=')">Lấy Link Video</button>
+            </div>
+        </div>
+
+        <div id="result">
+            <h4 style="margin: 0 0 15px 0; color: #fff;"><i class="fas fa-code"></i> DỮ LIỆU KẾT QUẢ:</h4>
+            <pre id="jsonOutput"></pre>
+        </div>
+    </div>
+
+    <script>
+        function startApp() {
+            document.getElementById('popup').style.display = 'none';
+            document.getElementById('main').style.display = 'block';
+        }
+
+        async function callApi(endpoint) {
+            const input = endpoint.includes('video') ? document.getElementById('videoInput').value : document.getElementById('userInput').value;
+            if(!input) return alert('Vui lòng nhập dữ liệu!');
+
+            const resDiv = document.getElementById('result');
+            const output = document.getElementById('jsonOutput');
+            
+            output.innerText = "Đang lấy dữ liệu...";
+            resDiv.style.display = 'block';
+
+            try {
+                const response = await fetch(endpoint + encodeURIComponent(input));
+                const data = await response.json();
+                output.innerText = JSON.stringify(data, null, 4);
+                
+                // Hiệu ứng cuộn xuống kết quả
+                resDiv.scrollIntoView({ behavior: 'smooth' });
+            } catch (error) {
+                output.innerText = "Lỗi: " + error.message;
+            }
+        }
+    </script>
+</body>
+</html>
