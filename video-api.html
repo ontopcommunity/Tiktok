@@ -3,105 +3,97 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ONTOP - API VIDEO TIKTOK</title>
+    <title>ONTOP - Video Intelligence VIP</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        :root { --p: #ff0050; --s: #00f2ea; --bg: #020205; --card: rgba(255, 255, 255, 0.02); }
-        body { margin: 0; background: var(--bg); font-family: 'Inter', sans-serif; color: white; display: flex; height: 100vh; overflow: hidden; }
+        :root { --p: #ff0050; --s: #00f2ea; --bg: #050505; --card: rgba(255, 255, 255, 0.03); }
+        * { box-sizing: border-box; font-family: 'Inter', sans-serif; }
+        body { margin: 0; background: var(--bg); color: white; display: flex; height: 100vh; overflow: hidden; }
         
-        .sidebar { width: 380px; border-right: 1px solid rgba(255,255,255,0.05); padding: 40px 30px; display: flex; flex-direction: column; backdrop-filter: blur(20px); }
-        input { width: 100%; padding: 18px; background: #000; border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; color: white; margin-bottom: 20px; }
-        .btn-call { width: 100%; padding: 18px; background: var(--p); border: none; border-radius: 12px; font-weight: 900; cursor: pointer; color: white; }
+        .sidebar { width: 350px; border-right: 1px solid rgba(255,255,255,0.1); padding: 30px; display: flex; flex-direction: column; }
+        .logo { font-size: 1.8rem; font-weight: 900; color: var(--p); text-decoration: none; letter-spacing: 5px; margin-bottom: 40px; }
+        input { width: 100%; padding: 15px; background: #111; border: 1px solid #222; border-radius: 12px; color: white; margin-top: 8px; }
+        .btn { width: 100%; padding: 15px; background: var(--p); border: none; border-radius: 12px; font-weight: 800; cursor: pointer; color: white; margin-top: 10px; }
+        
+        .main { flex: 1; display: grid; grid-template-rows: 1fr 250px; gap: 20px; padding: 20px; overflow: hidden; }
+        .ui-display { background: var(--card); border-radius: 25px; border: 1px solid rgba(255,255,255,0.05); display: grid; grid-template-columns: 400px 1fr; gap: 30px; padding: 30px; overflow-y: auto; }
+        .json-display { background: #000; border-radius: 25px; border: 1px solid rgba(255,255,255,0.1); padding: 25px; overflow-y: auto; }
 
-        .main { flex: 1; padding: 40px; overflow-y: auto; display: grid; grid-template-columns: 450px 1fr; gap: 30px; }
-        .video-box { background: #000; border-radius: 30px; overflow: hidden; border: 1px solid rgba(255,255,255,0.1); height: 750px; position: relative; }
+        .video-box { background: #000; border-radius: 20px; overflow: hidden; height: 100%; border: 1px solid rgba(255,255,255,0.1); }
         video { width: 100%; height: 100%; object-fit: cover; }
         
-        .data-panel { display: flex; flex-direction: column; gap: 25px; }
-        .stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
-        .stat-card { background: var(--card); padding: 20px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.05); text-align: center; }
-        .stat-card b { font-size: 1.5rem; color: var(--s); }
-        
-        .json-viewer { background: #000; border-radius: 20px; padding: 25px; border: 1px solid rgba(255,255,255,0.05); font-family: 'Consolas', monospace; color: var(--s); font-size: 0.8rem; height: 300px; overflow-y: auto; }
-        .dl-box { padding: 20px; background: rgba(0,242,234,0.05); border: 1px dashed var(--s); border-radius: 15px; font-size: 0.75rem; word-break: break-all; }
+        .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 20px; }
+        .stat-card { background: rgba(0,0,0,0.5); padding: 15px; border-radius: 15px; border: 1px solid rgba(255,255,255,0.05); text-align: center; }
+        .stat-card b { color: var(--s); font-size: 1.2rem; }
+
+        pre { margin: 0; color: #00f2ea; font-size: 0.8rem; font-family: 'Consolas', monospace; }
+        .dl-link { padding: 15px; background: rgba(0, 242, 234, 0.05); border-radius: 10px; border: 1px dashed var(--s); font-size: 0.7rem; word-break: break-all; margin-top: 20px; }
     </style>
 </head>
 <body>
     <div class="sidebar">
-        <a href="index.html" style="font-size: 1.5rem; font-weight: 900; letter-spacing: 5px; color: var(--p); text-decoration: none; margin-bottom: 40px;">ONTOP</a>
-        <h2>VIDEO API</h2>
-        <input type="text" id="vInput" placeholder="Dán link video TikTok...">
-        <button class="btn-call" onclick="fetchVideo()">EXTRACT VIDEO</button>
-        
-        <div style="margin-top: auto; font-size: 0.7rem; opacity: 0.4;">
-            <b>ACTIVE LINK:</b><br>
-            <span id="urlDisplay">N/A</span>
+        <a href="index.html" class="logo">ONTOP</a>
+        <label>Link Video TikTok</label>
+        <input type="text" id="vInput" placeholder="Dán link video...">
+        <button class="btn" onclick="fetchVideo()">TRUY VẤN VIDEO</button>
+        <div style="margin-top:auto; font-size: 0.7rem; color: var(--s); word-break: break-all;">
+            <b>ENDPOINT:</b><br><span id="vUrl">N/A</span>
         </div>
     </div>
 
     <div class="main">
-        <div class="video-box">
-            <video id="player" controls poster=""></video>
-        </div>
-
-        <div class="data-panel">
-            <div style="background: var(--card); padding: 30px; border-radius: 25px; border: 1px solid var(--p);">
-                <div style="display: flex; align-items: center; gap: 15px; margin-bottom: 15px;">
-                    <img id="avt" src="https://via.placeholder.com/50" style="width: 50px; height: 50px; border-radius: 50%; border: 2px solid var(--s);">
-                    <h3 id="nick" style="margin: 0;">Author</h3>
+        <div class="ui-display">
+            <div class="video-box">
+                <video id="player" controls></video>
+            </div>
+            <div class="info-box">
+                <div style="display: flex; align-items: center; gap: 15px; margin-bottom: 20px;">
+                    <img id="vAvt" src="" style="width: 50px; height: 50px; border-radius: 50%; border: 2px solid var(--s);">
+                    <h3 id="vNick" style="margin:0">Author</h3>
                 </div>
-                <p id="desc" style="opacity: 0.7; font-size: 0.9rem;">Mô tả video...</p>
+                <p id="vDesc" style="opacity: 0.7; font-size: 0.9rem;">Mô tả video...</p>
+                <div class="stats-grid">
+                    <div class="stat-card"><span>LIKES</span><br><b id="v-l">-</b></div>
+                    <div class="stat-card"><span>VIEWS</span><br><b id="v-v">-</b></div>
+                    <div class="stat-card"><span>COMMENTS</span><br><b id="v-c">-</b></div>
+                    <div class="stat-card"><span>SHARES</span><br><b id="v-s">-</b></div>
+                </div>
+                <div class="dl-link"><b>NO-WATERMARK:</b><br><span id="vDl">-</span></div>
             </div>
-
-            <div class="stat-grid">
-                <div class="stat-card"><small>LIKES</small><br><b id="s-like">-</b></div>
-                <div class="stat-card"><small>VIEWS</small><br><b id="s-play">-</b></div>
-                <div class="stat-card"><small>COMMENTS</small><br><b id="s-comment">-</b></div>
-                <div class="stat-card"><small>SHARES</small><br><b id="s-share">-</b></div>
-            </div>
-
-            <div class="dl-box">
-                <b style="color: var(--s)">NO-WATERMARK LINK:</b><br>
-                <span id="dl-link">-</span>
-            </div>
-
-            <div class="json-viewer"><pre id="jsonOutput">// Raw JSON Data Area</pre></div>
+        </div>
+        <div class="json-display">
+            <pre id="vJson">// Raw JSON Data</pre>
         </div>
     </div>
 
     <script>
-        window.onload = function() {
-            const urlParams = new URLSearchParams(window.location.search);
-            const vLink = urlParams.get('video');
-            if(vLink) {
-                document.getElementById('vInput').value = vLink;
-                fetchVideo(vLink);
-            }
+        // Auto-Route logic
+        window.onload = () => {
+            const v = new URLSearchParams(window.location.search).get('video');
+            if(v) { document.getElementById('vInput').value = v; fetchVideo(v); }
         };
 
-        async function fetchVideo(directLink) {
-            const link = directLink || document.getElementById('vInput').value;
+        async function fetchVideo(direct) {
+            const link = direct || document.getElementById('vInput').value;
             if(!link) return;
-
-            document.getElementById('urlDisplay').innerText = window.location.origin + "/api/video?video=" + encodeURIComponent(link);
+            document.getElementById('vUrl').innerText = window.location.origin + "/api/video?video=" + encodeURIComponent(link);
 
             try {
-                const res = await fetch(`/api/video?video=${encodeURIComponent(link)}`);
-                const d = await res.json();
-                document.getElementById('jsonOutput').innerText = JSON.stringify(d, null, 4);
-
+                const r = await fetch(`/api/video?video=${encodeURIComponent(link)}`);
+                const d = await r.json();
+                document.getElementById('vJson').innerText = JSON.stringify(d, null, 4);
                 if(d.status === "Live") {
                     document.getElementById('player').src = d.video.noWatermark;
-                    document.getElementById('avt').src = d.author.avatar;
-                    document.getElementById('nick').innerText = d.author.nickname;
-                    document.getElementById('desc').innerText = d.desc;
-                    document.getElementById('s-like').innerText = d.stats.like;
-                    document.getElementById('s-play').innerText = d.stats.play;
-                    document.getElementById('s-comment').innerText = d.stats.comment;
-                    document.getElementById('s-share').innerText = d.stats.share;
-                    document.getElementById('dl-link').innerText = d.video.noWatermark;
+                    document.getElementById('vAvt').src = d.author.avatar;
+                    document.getElementById('vNick').innerText = d.author.nickname;
+                    document.getElementById('vDesc').innerText = d.desc;
+                    document.getElementById('v-l').innerText = d.stats.like;
+                    document.getElementById('v-v').innerText = d.stats.play;
+                    document.getElementById('v-c').innerText = d.stats.comment;
+                    document.getElementById('v-s').innerText = d.stats.share;
+                    document.getElementById('vDl').innerText = d.video.noWatermark;
                 }
-            } catch (e) { console.error(e); }
+            } catch(e) { document.getElementById('vJson').innerText = "Lỗi kết nối API"; }
         }
     </script>
 </body>
