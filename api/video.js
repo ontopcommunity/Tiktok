@@ -2,14 +2,8 @@ import fs from 'fs';
 import path from 'path';
 
 export default async function handler(req, res) {
-  // 1. Lấy link video từ query
   const { video } = req.query;
-
-  if (!video) {
-    return res.status(400).json({ 
-      error: "Thiếu link video. Vui lòng gọi api theo dạng: /video=https://..." 
-    });
-  }
+  if (!video) return res.status(400).json({ error: "Thieu link video" });
 
   // --- 1. RANDOM USER AGENT ---
   let userAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36"; 
@@ -18,54 +12,28 @@ export default async function handler(req, res) {
     if (fs.existsSync(filePath)) {
         const fileContent = fs.readFileSync(filePath, 'utf8');
         const agents = fileContent.split('\n').filter(line => line.trim() !== '');
-        if (agents.length > 0) {
-            userAgent = agents[Math.floor(Math.random() * agents.length)].trim();
-        }
+        if (agents.length > 0) userAgent = agents[Math.floor(Math.random() * agents.length)].trim();
     }
-  } catch (err) { console.error("Lỗi đọc file user-agent:", err); }
+  } catch (err) { console.error("Loi doc user-agent:", err); }
 
-  // --- 2. HÀM LÀM TRÒN SỐ (1985 -> 1,9K) ---
   const formatStats = (num) => {
-    num = parseInt(num); 
+    num = parseInt(num);
     if (!num && num !== 0) return "0";
     if (num < 1000) return num.toString();
-    if (num < 1000000) {
-        const k = Math.floor(num / 100) / 10; 
-        return k.toString().replace('.', ',') + "K";
-    }
-    if (num < 1000000000) {
-        const m = Math.floor(num / 100000) / 10;
-        return m.toString().replace('.', ',') + "M";
-    }
-    const b = Math.floor(num / 100000000) / 10;
-    return b.toString().replace('.', ',') + "B";
-  };
-
-  const headers = {
-    "User-Agent": userAgent,
-    "Referer": "https://www.tiktok.com/",
-    "Accept-Language": "en-US,en;q=0.9"
+    if (num < 1000000) return (Math.floor(num / 100) / 10).toString().replace('.', ',') + "K";
+    return (Math.floor(num / 100000) / 10).toString().replace('.', ',') + "M";
   };
 
   try {
-    // --- 3. XỬ LÝ REDIRECT & FETCH ---
     let targetUrl = video;
-    const checkRedirect = await fetch(video, { method: 'HEAD', headers, redirect: 'manual' });
-    if (checkRedirect.status === 301 || checkRedirect.status === 302) {
-        const location = checkRedirect.headers.get('location');
-        if (location) targetUrl = location;
-    }
-
-    const response = await fetch(targetUrl, { headers });
-    if (!response.ok) return res.status(404).json({ status: "Die", error: "Tài khoản hoặc video không tồn tại" });
+    const response = await fetch(targetUrl, { headers: { "User-Agent": userAgent } });
+    if (!response.ok) return res.status(404).json({ status: "Die", error: "Video khong ton tai" });
 
     const html = await response.text();
-
-    // --- 4. PARSE DỮ LIỆU ---
     const dataMatch = html.match(/<script id="__UNIVERSAL_DATA_FOR_REHYDRATION__"[^>]*>([^<]+)<\/script>/) 
                       || html.match(/<script id="SIGI_STATE"[^>]*>([^<]+)<\/script>/);
 
-    if (!dataMatch) return res.status(404).json({ status: "Die", error: "Không tìm thấy data video" });
+    if (!dataMatch) return res.status(404).json({ status: "Die" });
 
     const jsonData = JSON.parse(dataMatch[1]);
     const defaultScope = jsonData.__DEFAULT_SCOPE__ || jsonData;
@@ -80,48 +48,54 @@ export default async function handler(req, res) {
         return null;
     };
     
-    const itemStruct = findKey(defaultScope, 'itemStruct');
-    if (!itemStruct) return res.status(404).json({ status: "Die", error: "Cấu trúc TikTok đã thay đổi" });
+    const item = findKey(defaultScope, 'itemStruct');
+    if (!item) return res.status(404).json({ status: "Die" });
 
-    // --- 5. TẠO LINK NO WATERMARK ---
-    const videoId = itemStruct.id;
-    const noWatermarkLink = `https://tikwm.com/video/media/play/${videoId}.mp4`; 
-
-    // --- 6. TRẢ VỀ KẾT QUẢ ---
+    // --- NÂNG CẤP FULL THÔNG TIN VIDEO ---
     const result = {
       status: "Live",
-      id: videoId,
-      desc: itemStruct.desc,
-      createTime: itemStruct.createTime,
+      video_data: {
+          id: item.id,
+          description: item.desc,
+          createTime: item.createTime,
+          duration: item.video.duration,
+          ratio: item.video.ratio,
+          definition: item.video.definition,
+          hashtags: item.challenges?.map(c => c.title) || [],
+          mentions: item.contents?.filter(c => c.type === 1).map(c => c.userUniqueId) || []
+      },
       author: {
-          uniqueId: itemStruct.author.uniqueId,
-          nickname: itemStruct.author.nickname,
-          avatar: itemStruct.author.avatarLarger,
-          verified: itemStruct.author.verified
+          id: item.author.id,
+          uniqueId: item.author.uniqueId,
+          nickname: item.author.nickname,
+          avatar: item.author.avatarLarger,
+          verified: item.author.verified,
+          secUid: item.author.secUid
+      },
+      music: {
+          id: item.music.id,
+          title: item.music.title,
+          author: item.music.authorName,
+          playUrl: item.music.playUrl,
+          duration: item.music.duration,
+          cover: item.music.coverLarge
       },
       stats: {
-          play: formatStats(itemStruct.stats.playCount),
-          like: formatStats(itemStruct.stats.diggCount),
-          comment: formatStats(itemStruct.stats.commentCount),
-          share: formatStats(itemStruct.stats.shareCount),
-          save: formatStats(itemStruct.stats.collectCount)
+          play: formatStats(item.stats.playCount),
+          like: formatStats(item.stats.diggCount),
+          comment: formatStats(item.stats.commentCount),
+          share: formatStats(item.stats.shareCount),
+          save: formatStats(item.stats.collectCount),
+          raw: item.stats
       },
-      video: {
-          cover: itemStruct.video.cover,
-          duration: itemStruct.video.duration,
-          playAddr: itemStruct.video.playAddr, 
-          noWatermark: noWatermarkLink,
-          downloadAddr: itemStruct.video.downloadAddr
+      urls: {
+          cover: item.video.cover,
+          origin: item.video.playAddr,
+          no_watermark: `https://tikwm.com/video/media/play/${item.id}.mp4`,
+          download: item.video.downloadAddr
       }
     };
 
-    // Logic livestream (Ẩn nếu ko Live)
-    const isLive = itemStruct.author.isLive || (itemStruct.author.roomId && itemStruct.author.roomId !== "0");
-    if (isLive) {
-        result.live_status = "Đang Livestream 🔴";
-    }
-
     return res.status(200).json(result);
-
   } catch (error) { return res.status(500).json({ status: "Error", error: error.message }); }
 }
