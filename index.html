@@ -108,8 +108,7 @@
             successInfo.classList.add('hidden');
 
             try {
-                // GỌI TRỰC TIẾP VÀO API LOCAL CỦA BẠN
-                // Giả định file video.js của bạn đang chạy ở route /api/video
+                // Gọi vào API nội bộ
                 const apiUrl = `/api/video?video=${encodeURIComponent(urlInput)}`;
                 const response = await fetch(apiUrl);
                 
@@ -120,18 +119,28 @@
                     throw new Error(data.error || "Không tìm thấy dữ liệu âm thanh từ video này.");
                 }
 
-                const title = data.music.title || "tiktok_audio";
-                const author = data.music.author || "unknown";
+                // DỌN SẠCH MỌI DẤU VẾT CỦA .MP4
+                const rawTitle = data.music.title || "tiktok_audio";
+                const rawAuthor = data.music.author || "unknown";
+                
+                // Xoá chữ .mp4 nếu nó bị dính trong tên hoặc tác giả
+                const cleanTitle = rawTitle.replace(/\.mp4/gi, '').trim();
+                const cleanAuthor = rawAuthor.replace(/\.mp4/gi, '').trim();
+                
+                // Ép link nhạc thành .mp3
+                const playUrl = data.music.playUrl.replace(/\.mp4/gi, '.mp3');
                 const cover = data.music.cover || "";
-                const playUrl = data.music.playUrl; // Lấy link audio_mpeg nguyên bản
 
                 // Cập nhật thông tin lên UI
-                document.getElementById('musicTitle').textContent = title;
-                document.getElementById('musicAuthor').textContent = author;
+                document.getElementById('musicTitle').textContent = cleanTitle;
+                document.getElementById('musicAuthor').textContent = cleanAuthor;
                 if (cover) document.getElementById('musicCover').src = cover;
 
-                // Xử lý download ngầm và ép đuôi .mp3
-                await forceDownloadBlob(playUrl, `${title} - ${author}.mp3`);
+                // CHỈ ĐỊNH RÕ RÀNG TÊN FILE LÀ .MP3 VÀ KHÔNG CÓ GÌ KHÁC
+                const finalFileName = `${cleanTitle} - ${cleanAuthor}.mp3`;
+
+                // Xử lý download ngầm
+                await forceDownloadBlob(playUrl, finalFileName);
 
                 resultArea.classList.remove('hidden');
                 successInfo.classList.remove('hidden');
@@ -150,34 +159,35 @@
 
         async function forceDownloadBlob(url, filename) {
             try {
-                // Fetch luồng dữ liệu (bỏ qua cảnh báo CORS nếu TikTok cho phép cross-origin media)
                 const response = await fetch(url);
                 if (!response.ok) throw new Error("Mạng lỗi khi tải file nhạc");
                 
                 const blob = await response.blob();
-                
-                // Khởi tạo URL ảo cho Blob
                 const blobUrl = window.URL.createObjectURL(blob);
                 
-                // Tạo thẻ <a> để kích hoạt event download trên trình duyệt
                 const a = document.createElement('a');
                 a.style.display = 'none';
                 a.href = blobUrl;
-                a.download = filename; // Ép lưu với tên file có đuôi .mp3
+                a.download = filename; // Sẽ tải xuống với tên file .mp3 chuẩn
                 
                 document.body.appendChild(a);
                 a.click();
                 
-                // Thu hồi bộ nhớ
                 setTimeout(() => {
                     window.URL.revokeObjectURL(blobUrl);
                     document.body.removeChild(a);
                 }, 1000);
 
             } catch (err) {
-                console.warn("Lỗi fetch Blob ngầm, chuyển sang cách mở tab dự phòng:", err);
-                alert("Bảo mật trình duyệt chặn tải tự động. Hệ thống sẽ mở file gốc, hãy nhấn Ctrl+S (hoặc giữ vào thanh phát nhạc chọn 'Tải xuống') để lưu nhé!");
-                window.open(url, '_blank');
+                console.warn("Lỗi fetch Blob ngầm:", err);
+                // Nếu bị lỗi mạng do CORS, tải trực tiếp bằng thẻ a
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = filename;
+                a.target = '_blank';
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
             }
         }
     </script>
