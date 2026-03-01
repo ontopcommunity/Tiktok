@@ -76,7 +76,7 @@ export default async function handler(req, res) {
           id: item.music.id,
           title: item.music.title,
           author: item.music.authorName,
-          playUrl: item.music.playUrl,
+          playUrl: item.music.playUrl ? item.music.playUrl.replace(/\.mp4/g, '.mp3') : item.music.playUrl,
           duration: item.music.duration,
           cover: item.music.coverLarge
       },
