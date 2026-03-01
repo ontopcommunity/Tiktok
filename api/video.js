@@ -76,7 +76,8 @@ export default async function handler(req, res) {
           id: item.music.id,
           title: item.music.title,
           author: item.music.authorName,
-          playUrl: item.music.playUrl ? item.music.playUrl.replace(/\.mp4/g, '.mp3') : item.music.playUrl,
+          // Đã đổi sang link lấy MP3 trực tiếp từ tikwm
+          playUrl: `https://tikwm.com/video/music/${item.id}.mp3`,
           duration: item.music.duration,
           cover: item.music.coverLarge
       },
