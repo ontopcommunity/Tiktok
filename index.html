@@ -3,79 +3,183 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ONTOP - Ultra Responsive VIP</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <title>Tải Âm Thanh TikTok MP3</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
-        :root { --p: #00f2ea; --s: #ff0050; --bg: #020205; }
-        body { margin: 0; background: var(--bg); font-family: 'Inter', sans-serif; color: white; min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 20px; }
-        
-        /* Popup & Donate VIP */
-        .btn-donate { position: fixed; top: 20px; right: 20px; background: linear-gradient(135deg, #ffd700, #ff8c00); border: none; padding: 10px 20px; border-radius: 8px; font-weight: 800; cursor: pointer; z-index: 100; font-size: 0.8rem; }
-        #popup { position: fixed; inset: 0; background: rgba(0,0,0,0.95); z-index: 1000; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(15px); padding: 20px; }
-        .popup-box { border: 1px solid var(--p); padding: 30px; border-radius: 20px; text-align: center; max-width: 400px; width: 100%; }
-
-        /* Main UI */
-        .home-container { display: none; width: 100%; max-width: 1000px; text-align: center; animation: fadeIn 0.8s; }
-        .logo { font-size: clamp(2.5rem, 8vw, 4.5rem); font-weight: 900; letter-spacing: 10px; margin-bottom: 40px; }
-        
-        /* Grid Tự Điều Chỉnh */
-        .selection-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; margin-top: 30px; }
-        .mini-card { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.1); border-radius: 20px; padding: 40px 20px; text-decoration: none; color: white; transition: 0.3s; }
-        .mini-card:hover { border-color: var(--p); transform: translateY(-10px); background: rgba(255,255,255,0.07); }
-        .mini-card i { font-size: 3rem; margin-bottom: 20px; color: var(--p); }
-
-        /* Modal Donate */
-        #donate-modal { position: fixed; inset: 0; background: rgba(0,0,0,0.9); z-index: 2000; display: none; align-items: center; justify-content: center; padding: 20px; }
-        .qr-frame { background: white; padding: 20px; border-radius: 15px; width: 100%; max-width: 320px; text-align: center; color: black; }
-        .qr-frame img { width: 100%; border-radius: 10px; }
-
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
-        
-        /* Mobile Fix */
-        @media (max-width: 600px) {
-            .logo { letter-spacing: 5px; }
-            .btn-donate { padding: 8px 15px; font-size: 0.7rem; }
+        body {
+            background: linear-gradient(135deg, #0f172a 0%, #1e1e24 100%);
+            min-height: 100vh;
+            color: white;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        .glass-card {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.4);
+        }
+        .tiktok-btn {
+            background: linear-gradient(45deg, #fe2c55, #25f4ee);
+            transition: all 0.3s ease;
+        }
+        .tiktok-btn:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(254, 44, 85, 0.5);
+        }
+        .loader {
+            border: 3px solid rgba(255,255,255,0.2);
+            border-radius: 50%;
+            border-top: 3px solid white;
+            width: 20px;
+            height: 20px;
+            animation: spin 1s linear infinite;
+            display: inline-block;
+            vertical-align: middle;
+            margin-right: 8px;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
         }
     </style>
 </head>
-<body>
-    <button class="btn-donate" onclick="toggleDonate(true)"><i class="fas fa-crown"></i> VIP DONATE</button>
+<body class="flex items-center justify-center p-4">
 
-    <div id="popup">
-        <div class="popup-box">
-            <h2>ONTOP SYSTEM</h2>
-            <p style="opacity: 0.5; font-size: 0.9rem; margin-top: 10px;">Hệ thống API TikTok Đa Nền Tảng.</p>
-            <button onclick="enter()" style="background:var(--p); border:none; padding:12px 30px; border-radius:5px; margin-top:20px; font-weight:900; cursor:pointer;">KHỞI CHẠY</button>
+    <div class="glass-card w-full max-w-lg rounded-2xl p-8 text-center">
+        <div class="mb-8">
+            <i class="fa-brands fa-tiktok text-5xl mb-4" style="color: #25f4ee; filter: drop-shadow(2px 0px 0px #fe2c55);"></i>
+            <h1 class="text-3xl font-bold tracking-tight">Tải Nhạc TikTok MP3</h1>
+            <p class="text-gray-400 mt-2 text-sm">Dán link video để convert và tải trực tiếp âm thanh</p>
         </div>
-    </div>
 
-    <div id="donate-modal" onclick="toggleDonate(false)">
-        <div class="qr-frame" onclick="event.stopPropagation()">
-            <img src="https://img.vietqr.io/image/MB-1234210929-compact2.png?amount=0&addInfo=Donate%20ONTOP&accountName=CAO%20NHAT%20MINH">
-            <h3 style="margin-top:10px">CAO NHAT MINH</h3>
-            <p>MB BANK: 1234210929</p>
+        <div class="space-y-4">
+            <input type="text" id="videoUrl" 
+                class="w-full px-5 py-4 rounded-xl bg-gray-800 bg-opacity-60 border border-gray-600 focus:border-[#25f4ee] outline-none text-white placeholder-gray-400 transition-all"
+                placeholder="Dán link TikTok vào đây...">
+            
+            <button id="downloadBtn" onclick="processVideo()" class="tiktok-btn w-full font-bold text-white py-4 rounded-xl flex justify-center items-center">
+                <span id="btnText"><i class="fa-solid fa-download mr-2"></i> Lấy & Tải MP3</span>
+                <span id="loading" class="hidden"><div class="loader"></div> Đang trích xuất...</span>
+            </button>
         </div>
-    </div>
 
-    <div class="home-container" id="main">
-        <h1 class="logo">ONTOP</h1>
-        <div class="selection-grid">
-            <a href="profile-api.html" class="mini-card">
-                <i class="fas fa-user-shield"></i>
-                <h2>PROFILE</h2>
-                <span style="opacity:0.4; font-size:0.7rem;">CRAWLER INFO</span>
-            </a>
-            <a href="video-api.html" class="mini-card" style="border-bottom: 3px solid var(--s)">
-                <i class="fas fa-video" style="color:var(--s)"></i>
-                <h2 style="color:var(--s)">VIDEO</h2>
-                <span style="opacity:0.4; font-size:0.7rem;">NO-WATERMARK</span>
-            </a>
+        <div id="resultArea" class="mt-6 hidden text-left bg-gray-900 bg-opacity-70 p-4 rounded-xl border border-gray-700">
+            <div id="errorMessage" class="hidden text-red-400 text-sm flex items-center">
+                <i class="fa-solid fa-circle-exclamation mr-2"></i> <span id="errorText">Lỗi!</span>
+            </div>
+            
+            <div id="successInfo" class="hidden">
+                <div class="flex items-center space-x-4">
+                    <img id="musicCover" src="" alt="Cover" class="w-16 h-16 rounded-lg object-cover border border-gray-600">
+                    <div class="flex-1 min-w-0">
+                        <h3 id="musicTitle" class="font-bold text-white truncate">Tên nhạc</h3>
+                        <p id="musicAuthor" class="text-xs text-gray-400 mt-1 truncate">Tác giả</p>
+                        <p class="text-xs text-green-400 mt-1 font-semibold"><i class="fa-solid fa-check"></i> Đã đóng gói file MP3</p>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 
     <script>
-        function enter() { document.getElementById('popup').style.display = 'none'; document.getElementById('main').style.display = 'block'; }
-        function toggleDonate(s) { document.getElementById('donate-modal').style.display = s ? 'flex' : 'none'; }
+        async function processVideo() {
+            const urlInput = document.getElementById('videoUrl').value.trim();
+            const btnText = document.getElementById('btnText');
+            const loading = document.getElementById('loading');
+            const downloadBtn = document.getElementById('downloadBtn');
+            const resultArea = document.getElementById('resultArea');
+            const errorMessage = document.getElementById('errorMessage');
+            const successInfo = document.getElementById('successInfo');
+            const errorText = document.getElementById('errorText');
+
+            if (!urlInput) {
+                alert("Vui lòng dán link video TikTok!");
+                return;
+            }
+
+            // Cập nhật UI sang trạng thái loading
+            btnText.classList.add('hidden');
+            loading.classList.remove('hidden');
+            downloadBtn.disabled = true;
+            downloadBtn.classList.add('opacity-60', 'cursor-not-allowed');
+            resultArea.classList.add('hidden');
+            errorMessage.classList.add('hidden');
+            successInfo.classList.add('hidden');
+
+            try {
+                // GỌI TRỰC TIẾP VÀO API LOCAL CỦA BẠN
+                // Giả định file video.js của bạn đang chạy ở route /api/video
+                const apiUrl = `/api/video?video=${encodeURIComponent(urlInput)}`;
+                const response = await fetch(apiUrl);
+                
+                if (!response.ok) throw new Error("Máy chủ API không phản hồi.");
+                const data = await response.json();
+
+                if (data.status !== "Live" || !data.music || !data.music.playUrl) {
+                    throw new Error(data.error || "Không tìm thấy dữ liệu âm thanh từ video này.");
+                }
+
+                const title = data.music.title || "tiktok_audio";
+                const author = data.music.author || "unknown";
+                const cover = data.music.cover || "";
+                const playUrl = data.music.playUrl; // Lấy link audio_mpeg nguyên bản
+
+                // Cập nhật thông tin lên UI
+                document.getElementById('musicTitle').textContent = title;
+                document.getElementById('musicAuthor').textContent = author;
+                if (cover) document.getElementById('musicCover').src = cover;
+
+                // Xử lý download ngầm và ép đuôi .mp3
+                await forceDownloadBlob(playUrl, `${title} - ${author}.mp3`);
+
+                resultArea.classList.remove('hidden');
+                successInfo.classList.remove('hidden');
+
+            } catch (error) {
+                resultArea.classList.remove('hidden');
+                errorMessage.classList.remove('hidden');
+                errorText.textContent = error.message;
+            } finally {
+                btnText.classList.remove('hidden');
+                loading.classList.add('hidden');
+                downloadBtn.disabled = false;
+                downloadBtn.classList.remove('opacity-60', 'cursor-not-allowed');
+            }
+        }
+
+        async function forceDownloadBlob(url, filename) {
+            try {
+                // Fetch luồng dữ liệu (bỏ qua cảnh báo CORS nếu TikTok cho phép cross-origin media)
+                const response = await fetch(url);
+                if (!response.ok) throw new Error("Mạng lỗi khi tải file nhạc");
+                
+                const blob = await response.blob();
+                
+                // Khởi tạo URL ảo cho Blob
+                const blobUrl = window.URL.createObjectURL(blob);
+                
+                // Tạo thẻ <a> để kích hoạt event download trên trình duyệt
+                const a = document.createElement('a');
+                a.style.display = 'none';
+                a.href = blobUrl;
+                a.download = filename; // Ép lưu với tên file có đuôi .mp3
+                
+                document.body.appendChild(a);
+                a.click();
+                
+                // Thu hồi bộ nhớ
+                setTimeout(() => {
+                    window.URL.revokeObjectURL(blobUrl);
+                    document.body.removeChild(a);
+                }, 1000);
+
+            } catch (err) {
+                console.warn("Lỗi fetch Blob ngầm, chuyển sang cách mở tab dự phòng:", err);
+                alert("Bảo mật trình duyệt chặn tải tự động. Hệ thống sẽ mở file gốc, hãy nhấn Ctrl+S (hoặc giữ vào thanh phát nhạc chọn 'Tải xuống') để lưu nhé!");
+                window.open(url, '_blank');
+            }
+        }
     </script>
 </body>
 </html>
