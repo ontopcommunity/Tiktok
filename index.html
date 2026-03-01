@@ -7,9 +7,9 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
-        body { background: #0f172a; min-height: 100vh; color: white; font-family: Arial, sans-serif; }
-        .tiktok-btn { background: #fe2c55; transition: opacity 0.2s; }
-        .tiktok-btn:hover:not(:disabled) { opacity: 0.9; }
+        body { background: #0f172a; min-height: 100vh; color: white; font-family: 'Segoe UI', sans-serif; }
+        .tiktok-btn { background: linear-gradient(45deg, #fe2c55, #25f4ee); transition: all 0.2s; }
+        .tiktok-btn:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(254,44,85,0.4); }
         .loader {
             border: 3px solid rgba(255,255,255,0.2); border-top: 3px solid white;
             border-radius: 50%; width: 20px; height: 20px;
@@ -20,24 +20,30 @@
 </head>
 <body class="flex items-center justify-center p-4">
 
-    <div class="w-full max-w-lg bg-gray-800 rounded-xl p-8 shadow-2xl">
-        <h1 class="text-2xl font-bold text-center mb-6">Tải Nhạc TikTok MP3</h1>
+    <div class="w-full max-w-lg bg-gray-800 rounded-2xl p-8 shadow-2xl border border-gray-700">
+        <div class="text-center mb-6">
+            <i class="fa-brands fa-tiktok text-4xl mb-3" style="color: #25f4ee; filter: drop-shadow(2px 0px 0px #fe2c55);"></i>
+            <h1 class="text-2xl font-bold">Tải Nhạc TikTok MP3</h1>
+            <p class="text-gray-400 text-sm mt-1">Tải thẳng âm thanh không qua trang trung gian</p>
+        </div>
 
         <div class="space-y-4">
             <input type="text" id="videoUrl" 
-                class="w-full px-4 py-3 rounded bg-gray-900 border border-gray-700 text-white outline-none focus:border-[#25f4ee]"
+                class="w-full px-4 py-4 rounded-xl bg-gray-900 border border-gray-600 text-white outline-none focus:border-[#25f4ee] transition-all"
                 placeholder="Dán link video TikTok vào đây...">
             
-            <button id="downloadBtn" onclick="processVideo()" class="tiktok-btn w-full font-bold text-white py-3 rounded flex justify-center items-center">
-                <span id="btnText"><i class="fa-solid fa-download mr-2"></i> Trích xuất & Tải MP3</span>
-                <span id="loading" class="hidden"><div class="loader"></div> Đang xử lý tải về...</span>
+            <button id="downloadBtn" onclick="processVideo()" class="tiktok-btn w-full font-bold text-white py-4 rounded-xl flex justify-center items-center">
+                <span id="btnText"><i class="fa-solid fa-download mr-2"></i> Tải Âm Thanh</span>
+                <span id="loading" class="hidden"><div class="loader"></div> Đang tải xuống...</span>
             </button>
         </div>
 
-        <div id="resultArea" class="mt-6 hidden bg-gray-900 p-4 rounded border border-gray-700 text-sm">
-            <div id="errorMessage" class="hidden text-red-500"></div>
-            <div id="successInfo" class="hidden text-green-400">
-                <i class="fa-solid fa-check mr-1"></i> Đã tải xuống file nhạc (.mp3) thành công!
+        <div id="resultArea" class="mt-6 hidden bg-gray-900 p-4 rounded-xl border border-gray-700 text-sm">
+            <div id="errorMessage" class="hidden text-red-400 flex items-center">
+                <i class="fa-solid fa-circle-exclamation mr-2"></i> <span id="errorText"></span>
+            </div>
+            <div id="successInfo" class="hidden text-green-400 flex items-center">
+                <i class="fa-solid fa-circle-check mr-2"></i> <span>Đã tải thẳng file MP3 về máy!</span>
             </div>
         </div>
     </div>
@@ -51,10 +57,11 @@
             const resultArea = document.getElementById('resultArea');
             const errorMessage = document.getElementById('errorMessage');
             const successInfo = document.getElementById('successInfo');
+            const errorText = document.getElementById('errorText');
 
             if (!urlInput) return alert("Vui lòng dán link video!");
 
-            // Đổi giao diện sang trạng thái đang tải
+            // Bật trạng thái loading
             btnText.classList.add('hidden');
             loading.classList.remove('hidden');
             downloadBtn.disabled = true;
@@ -63,81 +70,79 @@
             successInfo.classList.add('hidden');
 
             try {
-                // Gọi tới API của bạn
+                // Gọi API của bạn
                 const apiUrl = `https://tiktokvippro.vercel.app/api/video?video=${encodeURIComponent(urlInput)}`;
                 const response = await fetch(apiUrl);
                 const data = await response.json();
 
                 if (!data.music || !data.music.playUrl) {
-                    throw new Error("Không lấy được link âm thanh từ video này.");
+                    throw new Error("Không lấy được âm thanh từ video này.");
                 }
 
-                // 1. DỌN SẠCH CHỮ .MP4 Ở MỌI NƠI
-                const rawTitle = (data.music.title || "audio").replace(/\.mp4/gi, '').trim();
-                const rawAuthor = (data.music.author || "tiktok").replace(/\.mp4/gi, '').trim();
+                // Dọn sạch tên file (xoá đuôi .mp4 nếu vô tình dính)
+                const rawTitle = (data.music.title || "tiktok_audio").replace(/\.mp4/gi, '').trim();
+                const rawAuthor = (data.music.author || "unknown").replace(/\.mp4/gi, '').trim();
                 
-                // 2. CHỐT TÊN FILE CHỈ CÓ ĐUÔI .MP3
+                // Tên file chốt hạ chuẩn .mp3
                 const finalFileName = `${rawTitle} - ${rawAuthor}.mp3`;
-                
-                // 3. XỬ LÝ LINK NHẠC
-                const playUrl = data.music.playUrl.replace(/\.mp4/gi, '');
+                const playUrl = data.music.playUrl; // Lấy link MP3 của Tikwm
 
-                // Bắt đầu tải
-                await forceDownload(playUrl, finalFileName);
+                // Gọi hàm TẢI THẲNG
+                await forceDirectDownload(playUrl, finalFileName);
 
-                // Hiện thông báo thành công
+                // Báo thành công
                 resultArea.classList.remove('hidden');
                 successInfo.classList.remove('hidden');
 
             } catch (error) {
                 resultArea.classList.remove('hidden');
                 errorMessage.classList.remove('hidden');
-                errorMessage.textContent = "Lỗi: " + error.message;
+                errorText.textContent = error.message;
             } finally {
-                // Trả UI về ban đầu
+                // Tắt trạng thái loading
                 btnText.classList.remove('hidden');
                 loading.classList.add('hidden');
                 downloadBtn.disabled = false;
             }
         }
 
-        async function forceDownload(url, filename) {
+        // Hàm này đảm bảo tuyệt đối không mở tab mới, chỉ tải thẳng
+        async function forceDirectDownload(url, filename) {
             try {
-                // Thử kéo file về bộ nhớ trình duyệt qua một đường dẫn proxy ổn định hơn
-                const proxyUrl = 'https://corsproxy.io/?' + encodeURIComponent(url);
-                const res = await fetch(proxyUrl);
+                // Bước 1: Kéo trực tiếp dữ liệu âm thanh về RAM
+                let res = await fetch(url);
                 
-                if (!res.ok) throw new Error("Fetch failed");
-                
+                // Bước 2: Nếu bị chặn CORS, đi vòng qua proxy corsproxy.io để kéo dữ liệu
+                if (!res.ok) {
+                    res = await fetch('https://corsproxy.io/?' + encodeURIComponent(url));
+                }
+
+                if (!res.ok) throw new Error("Không thể kéo dữ liệu nhạc.");
+
                 const blob = await res.blob();
                 const blobUrl = URL.createObjectURL(blob);
                 
-                // Ép tải xuống qua thẻ a (Đảm bảo 100% tên file là .mp3)
+                // Bước 3: Tạo lệnh tải thẳng xuống ổ cứng
                 const a = document.createElement('a');
                 a.style.display = 'none';
                 a.href = blobUrl;
-                a.download = filename; 
+                a.download = filename; // Bắt buộc lưu đúng tên file và đuôi .mp3
                 
                 document.body.appendChild(a);
                 a.click();
                 
+                // Dọn dẹp bộ nhớ
                 setTimeout(() => {
                     URL.revokeObjectURL(blobUrl);
                     document.body.removeChild(a);
                 }, 1000);
 
             } catch (err) {
-                // Nếu proxy bị lỗi, thực hiện tải dự phòng tĩnh lặng (không văng lỗi đỏ lòm ra màn hình)
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = filename; // Vẫn chốt cứng đuôi .mp3
-                a.target = '_blank';
-                
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
+                console.error("Lỗi khi ép tải thẳng:", err);
+                throw new Error("Bảo mật mạng chặn tải ngầm. Vui lòng thử lại!");
             }
         }
     </script>
 </body>
 </html>
+
