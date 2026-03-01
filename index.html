@@ -27,7 +27,6 @@
             transform: translateY(-2px);
             box-shadow: 0 5px 20px rgba(254, 44, 85, 0.5);
         }
-        /* Hiệu ứng xoay của icon loading */
         .loader {
             border: 3px solid rgba(255,255,255,0.2);
             border-radius: 50%;
@@ -43,7 +42,6 @@
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
         }
-        /* Cắt chữ nếu quá dài */
         .line-clamp-1 {
             display: -webkit-box;
             -webkit-line-clamp: 1;
@@ -106,7 +104,7 @@
                 return;
             }
 
-            // 1. Chuyển UI sang trạng thái Loading
+            // Giao diện Loading
             btnText.classList.add('hidden');
             loading.classList.remove('hidden');
             downloadBtn.disabled = true;
@@ -116,7 +114,7 @@
             successInfo.classList.add('hidden');
 
             try {
-                // 2. Gọi API để lấy dữ liệu (API này đã được bạn cấu hình trả về link Tikwm)
+                // Gọi API
                 const apiUrl = `https://tiktokvippro.vercel.app/api/video?video=${encodeURIComponent(urlInput)}`;
                 const response = await fetch(apiUrl);
                 
@@ -127,39 +125,35 @@
                     throw new Error(data.error || "Không tìm thấy dữ liệu âm thanh từ video này.");
                 }
 
-                // 3. XÓA SẠCH ĐUÔI .MP4 Ở MỌI NƠI VÀ CẬP NHẬT UI
+                // Dọn sạch đuôi .mp4
                 const rawTitle = data.music.title || "tiktok_audio";
                 const rawAuthor = data.music.author || "unknown";
                 
                 const cleanTitle = rawTitle.replace(/\.mp4/gi, '').trim();
                 const cleanAuthor = rawAuthor.replace(/\.mp4/gi, '').trim();
                 const cover = data.music.cover || "";
-                
-                // Link lấy trực tiếp từ API (vốn dĩ đã là .mp3 từ tikwm)
                 const playUrl = data.music.playUrl.replace(/\.mp4/gi, '.mp3'); 
 
-                // Hiển thị thông tin nhạc lên giao diện đẹp mắt
+                // Hiển thị thông tin
                 document.getElementById('musicTitle').textContent = cleanTitle;
                 document.getElementById('musicAuthor').textContent = cleanAuthor;
                 if (cover) document.getElementById('musicCover').src = cover;
 
-                // 4. CHỐT CHẶN CUỐI CÙNG: ĐẶT TÊN FILE LUÔN LÀ .MP3
+                // Tên file .mp3
                 const finalFileName = `${cleanTitle} - ${cleanAuthor}.mp3`;
 
-                // 5. THỰC THI HÀM TẢI THẲNG VỀ MÁY
+                // TẢI THẲNG VỚI HỆ THỐNG PROXY DỰ PHÒNG
                 await forceDirectDownload(playUrl, finalFileName);
 
-                // Hiện UI báo thành công
+                // Hiện UI thành công
                 resultArea.classList.remove('hidden');
                 successInfo.classList.remove('hidden');
 
             } catch (error) {
-                // Báo lỗi nếu có trục trặc
                 resultArea.classList.remove('hidden');
                 errorMessage.classList.remove('hidden');
                 errorText.textContent = error.message;
             } finally {
-                // Tắt trạng thái loading, phục hồi nút bấm
                 btnText.classList.remove('hidden');
                 loading.classList.add('hidden');
                 downloadBtn.disabled = false;
@@ -167,38 +161,56 @@
             }
         }
 
-        // HÀM ÉP TẢI THẲNG (CẤM MỞ TAB MỚI)
+        // HÀM ÉP TẢI THẲNG (HỆ THỐNG DỰ PHÒNG CHỐNG LỖI MẠNG)
         async function forceDirectDownload(url, filename) {
-            try {
-                // Kéo dữ liệu qua proxy để chống lỗi CORS của trình duyệt, đảm bảo fetch thành công
-                const proxyUrl = 'https://corsproxy.io/?' + encodeURIComponent(url);
-                const response = await fetch(proxyUrl);
-                
-                if (!response.ok) throw new Error("Mạng lỗi khi kéo file nhạc");
-                
-                // Đóng gói thành Blob
-                const blob = await response.blob();
-                const blobUrl = window.URL.createObjectURL(blob);
-                
-                // Kích hoạt click ảo để trình duyệt bắt buộc lưu file thay vì phát nhạc
-                const a = document.createElement('a');
-                a.style.display = 'none';
-                a.href = blobUrl;
-                a.download = filename; // Tên file đã được chốt cứng là .mp3 ở trên
-                
-                document.body.appendChild(a);
-                a.click();
-                
-                // Dọn dẹp RAM
-                setTimeout(() => {
-                    window.URL.revokeObjectURL(blobUrl);
-                    document.body.removeChild(a);
-                }, 1000);
+            let blob = null;
 
-            } catch (err) {
-                console.error("Lỗi kéo file tĩnh lặng:", err);
-                throw new Error("Trình duyệt chặn kéo luồng. Vui lòng thử lại!");
+            // 1. Thử kéo trực tiếp (Đề phòng Tikwm mở CORS)
+            try {
+                let res = await fetch(url);
+                if (res.ok) blob = await res.blob();
+            } catch (e) { console.log("Direct fetch failed, trying proxies..."); }
+
+            // 2. Nếu kéo trực tiếp thất bại, dùng các proxy trung gian
+            if (!blob) {
+                const proxies = [
+                    `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
+                    `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(url)}`,
+                    `https://corsproxy.io/?${encodeURIComponent(url)}`
+                ];
+
+                for (let proxy of proxies) {
+                    try {
+                        let res = await fetch(proxy);
+                        if (res.ok) {
+                            blob = await res.blob();
+                            break; // Thành công là thoát vòng lặp ngay
+                        }
+                    } catch (e) {
+                        console.log(`Proxy failed, trying next...`);
+                    }
+                }
             }
+
+            // Nếu qua 3 trạm mà vẫn thất bại thì mới báo lỗi
+            if (!blob) {
+                throw new Error("Mạng đang quá tải, không thể tải thẳng ngầm. Hãy thử lại!");
+            }
+
+            // Xử lý đóng gói tải về
+            const blobUrl = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.style.display = 'none';
+            a.href = blobUrl;
+            a.download = filename; 
+            
+            document.body.appendChild(a);
+            a.click();
+            
+            setTimeout(() => {
+                window.URL.revokeObjectURL(blobUrl);
+                document.body.removeChild(a);
+            }, 1000);
         }
     </script>
 </body>
