@@ -25,7 +25,7 @@ export default async function handler(req, res) {
 
   try {
     const response = await fetch(`https://www.tiktok.com/@${username}`, { headers: { "User-Agent": userAgent } });
-    if (!response.ok) return res.status(404).json({ status: "Die", error: "Tài khoản không tồn tại" });
+    if (!response.ok) return res.status(404).json({ status: "Die", error: "Tài khoản không tồn tại hoặc bị chặn IP" });
 
     const html = await response.text();
     const dataMatch = html.match(/<script id="__UNIVERSAL_DATA_FOR_REHYDRATION__"[^>]*>([^<]+)<\/script>/) 
@@ -42,29 +42,26 @@ export default async function handler(req, res) {
     const u = userDetail.userInfo.user;
     const s = userDetail.userInfo.stats;
 
-    // --- BƯỚC 1: LẤY CHẮC CHẮN VIDEO TỪ HTML GỐC ---
+    // --- BƯỚC 1: LẤY CHẮC CHẮN VIDEO TỪ HTML GỐC (Cách mới) ---
     let allVideos = [];
     let currentCursor = cursor;
     let hasMoreData = true;
     let tikwmStatus = "Pending";
 
-    // Chỉ lấy từ HTML nếu đây là lần tải đầu tiên (cursor = 0)
     if (cursor == 0) {
         const itemModule = defaultScope['ItemModule'] || {};
-        const videoListIds = defaultScope['ItemList']?.['user-post']?.list || [];
-        
-        const htmlVideos = videoListIds.map(id => {
-            const v = itemModule[id];
-            if(!v) return null;
+        // Quét cạn toàn bộ Object thay vì phụ thuộc vào ItemList (TikTok hay giấu cái này)
+        const htmlVideos = Object.values(itemModule).map(v => {
+            if (!v || !v.id) return null;
             return {
                 caption: v.desc || "",
                 author: username,
                 stats: {
-                    play: formatStats(v.stats?.playCount),
-                    heart: formatStats(v.stats?.diggCount),
-                    comment: formatStats(v.stats?.commentCount),
-                    share: formatStats(v.stats?.shareCount),
-                    save: formatStats(v.stats?.collectCount)
+                    play: formatStats(v.stats?.playCount || 0),
+                    heart: formatStats(v.stats?.diggCount || 0),
+                    comment: formatStats(v.stats?.commentCount || 0),
+                    share: formatStats(v.stats?.shareCount || 0),
+                    save: formatStats(v.stats?.collectCount || 0)
                 },
                 link: `https://www.tiktok.com/@${username}/video/${v.id}`
             };
@@ -73,49 +70,62 @@ export default async function handler(req, res) {
         allVideos = [...htmlVideos];
     }
 
-    // --- BƯỚC 2: VÉT CẠN THÊM BẰNG TIKWM (Để lấy video cũ) ---
+    // --- BƯỚC 2: VÉT CẠN THÊM BẰNG TIKWM VỚI HEADER VƯỢT CLOUDFLARE ---
     const startTime = Date.now();
 
     while (hasMoreData) {
         if (Date.now() - startTime > 6500) {
-            break; // Ngắt sớm tránh timeout Vercel
+            tikwmStatus = "Stopped_To_Prevent_Timeout";
+            break; 
         }
 
         try {
-            const tikRes = await fetch(`https://www.tikwm.com/api/user/posts?unique_id=${username}&count=33&cursor=${currentCursor}`);
-            const tikData = await tikRes.json();
+            const tikRes = await fetch(`https://tikwm.com/api/user/posts?unique_id=${username}&count=33&cursor=${currentCursor}`, {
+                headers: {
+                    "User-Agent": userAgent,
+                    "Accept": "application/json, text/plain, */*",
+                    "Referer": "https://tikwm.com/"
+                }
+            });
+            
+            const textData = await tikRes.text();
+            
+            try {
+                const tikData = JSON.parse(textData);
+                if (tikData && tikData.code === 0 && tikData.data && tikData.data.videos) {
+                    tikwmStatus = "Success";
+                    const parsedVideos = tikData.data.videos.map(v => ({
+                        caption: v.title || "",
+                        author: username,
+                        stats: {
+                            play: formatStats(v.play_count),
+                            heart: formatStats(v.digg_count),
+                            comment: formatStats(v.comment_count),
+                            share: formatStats(v.share_count),
+                            save: formatStats(v.download_count)
+                        },
+                        link: `https://www.tiktok.com/@${username}/video/${v.video_id}`
+                    }));
 
-            if (tikData && tikData.code === 0 && tikData.data && tikData.data.videos) {
-                tikwmStatus = "Success";
-                const parsedVideos = tikData.data.videos.map(v => ({
-                    caption: v.title || "",
-                    author: username,
-                    stats: {
-                        play: formatStats(v.play_count),
-                        heart: formatStats(v.digg_count),
-                        comment: formatStats(v.comment_count),
-                        share: formatStats(v.share_count),
-                        save: formatStats(v.download_count)
-                    },
-                    link: `https://www.tiktok.com/@${username}/video/${v.video_id}`
-                }));
+                    parsedVideos.forEach(pv => {
+                        if (!allVideos.some(av => av.link === pv.link)) {
+                            allVideos.push(pv);
+                        }
+                    });
 
-                // Lọc trùng lặp (tránh việc TikWM trả về video đã có ở Bước 1)
-                parsedVideos.forEach(pv => {
-                    if (!allVideos.some(av => av.link === pv.link)) {
-                        allVideos.push(pv);
-                    }
-                });
-
-                currentCursor = tikData.data.cursor;
-                hasMoreData = tikData.data.hasMore;
-            } else {
-                // TikWM báo lỗi hoặc hết video
-                tikwmStatus = tikData?.msg || "Failed_or_End";
+                    currentCursor = tikData.data.cursor;
+                    hasMoreData = tikData.data.hasMore;
+                } else {
+                    tikwmStatus = tikData?.msg || "No_More_Videos_Or_Limit";
+                    hasMoreData = false;
+                }
+            } catch (jsonErr) {
+                // Lỗi xảy ra khi TikWM trả về nguyên cái bảng HTML chặn bot của Cloudflare
+                tikwmStatus = `Blocked_By_Cloudflare (HTTP ${tikRes.status})`;
                 hasMoreData = false;
             }
         } catch (err) {
-            tikwmStatus = "Error_Fetch";
+            tikwmStatus = `Network_Error: ${err.message}`;
             hasMoreData = false;
         }
     }
@@ -140,7 +150,7 @@ export default async function handler(req, res) {
           video: formatStats(s.videoCount),
           friend: formatStats(s.friendCount)
       },
-      debug_tikwm: tikwmStatus, // Hiện trạng thái TikWM để bạn dễ debug nếu lỗi
+      debug_tikwm: tikwmStatus, 
       video_retrieved_count: allVideos.length,
       has_more_videos: hasMoreData,
       next_cursor: currentCursor,
@@ -158,3 +168,4 @@ export default async function handler(req, res) {
     return res.status(200).json(result);
   } catch (error) { return res.status(500).json({ status: "Error", error: error.message }); }
 }
+
