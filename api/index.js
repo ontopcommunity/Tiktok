@@ -2,7 +2,6 @@ import fs from 'fs';
 import path from 'path';
 
 export default async function handler(req, res) {
-  // Thêm tham số cursor để có thể phân trang nếu kênh có quá nhiều video
   const { username, cursor = 0 } = req.query; 
   if (!username) return res.status(400).json({ error: "Thiếu username" });
 
@@ -25,7 +24,6 @@ export default async function handler(req, res) {
   };
 
   try {
-    // 1. LẤY THÔNG TIN PROFILE CHUẨN TỪ TIKTOK
     const response = await fetch(`https://www.tiktok.com/@${username}`, { headers: { "User-Agent": userAgent } });
     if (!response.ok) return res.status(404).json({ status: "Die", error: "Tài khoản không tồn tại" });
 
@@ -44,24 +42,51 @@ export default async function handler(req, res) {
     const u = userDetail.userInfo.user;
     const s = userDetail.userInfo.stats;
 
-    // 2. VÉT CẠN VIDEO BẰNG VÒNG LẶP (Chống Timeout Vercel)
-    const startTime = Date.now();
+    // --- BƯỚC 1: LẤY CHẮC CHẮN VIDEO TỪ HTML GỐC ---
     let allVideos = [];
     let currentCursor = cursor;
     let hasMoreData = true;
+    let tikwmStatus = "Pending";
+
+    // Chỉ lấy từ HTML nếu đây là lần tải đầu tiên (cursor = 0)
+    if (cursor == 0) {
+        const itemModule = defaultScope['ItemModule'] || {};
+        const videoListIds = defaultScope['ItemList']?.['user-post']?.list || [];
+        
+        const htmlVideos = videoListIds.map(id => {
+            const v = itemModule[id];
+            if(!v) return null;
+            return {
+                caption: v.desc || "",
+                author: username,
+                stats: {
+                    play: formatStats(v.stats?.playCount),
+                    heart: formatStats(v.stats?.diggCount),
+                    comment: formatStats(v.stats?.commentCount),
+                    share: formatStats(v.stats?.shareCount),
+                    save: formatStats(v.stats?.collectCount)
+                },
+                link: `https://www.tiktok.com/@${username}/video/${v.id}`
+            };
+        }).filter(Boolean);
+        
+        allVideos = [...htmlVideos];
+    }
+
+    // --- BƯỚC 2: VÉT CẠN THÊM BẰNG TIKWM (Để lấy video cũ) ---
+    const startTime = Date.now();
 
     while (hasMoreData) {
-        // Cầu dao an toàn: Nếu chạy quá 7.5 giây thì tự động dừng để Vercel không sập (Giới hạn Vercel là 10s)
-        if (Date.now() - startTime > 7500) {
-            break; 
+        if (Date.now() - startTime > 6500) {
+            break; // Ngắt sớm tránh timeout Vercel
         }
 
         try {
-            // Gọi API tikwm để bypass X-Bogus của TikTok
             const tikRes = await fetch(`https://www.tikwm.com/api/user/posts?unique_id=${username}&count=33&cursor=${currentCursor}`);
             const tikData = await tikRes.json();
 
             if (tikData && tikData.code === 0 && tikData.data && tikData.data.videos) {
+                tikwmStatus = "Success";
                 const parsedVideos = tikData.data.videos.map(v => ({
                     caption: v.title || "",
                     author: username,
@@ -75,19 +100,27 @@ export default async function handler(req, res) {
                     link: `https://www.tiktok.com/@${username}/video/${v.video_id}`
                 }));
 
-                allVideos = allVideos.concat(parsedVideos);
+                // Lọc trùng lặp (tránh việc TikWM trả về video đã có ở Bước 1)
+                parsedVideos.forEach(pv => {
+                    if (!allVideos.some(av => av.link === pv.link)) {
+                        allVideos.push(pv);
+                    }
+                });
+
                 currentCursor = tikData.data.cursor;
                 hasMoreData = tikData.data.hasMore;
             } else {
+                // TikWM báo lỗi hoặc hết video
+                tikwmStatus = tikData?.msg || "Failed_or_End";
                 hasMoreData = false;
             }
         } catch (err) {
-            console.error("Lỗi khi cào video phân trang:", err);
-            break;
+            tikwmStatus = "Error_Fetch";
+            hasMoreData = false;
         }
     }
 
-    // 3. TỔNG HỢP KẾT QUẢ
+    // --- 3. TỔNG HỢP KẾT QUẢ ---
     const result = {
       status: "Live",
       author: {
@@ -107,9 +140,10 @@ export default async function handler(req, res) {
           video: formatStats(s.videoCount),
           friend: formatStats(s.friendCount)
       },
-      video_retrieved_count: allVideos.length, // Báo cáo số lượng đã cào được trong lần gọi này
-      has_more_videos: hasMoreData, // Nếu true, nghĩa là kênh vẫn còn video nhưng phải phanh lại vì sợ timeout
-      next_cursor: currentCursor, // Truyền cái này vào URL lần sau để cào tiếp
+      debug_tikwm: tikwmStatus, // Hiện trạng thái TikWM để bạn dễ debug nếu lỗi
+      video_retrieved_count: allVideos.length,
+      has_more_videos: hasMoreData,
+      next_cursor: currentCursor,
       videos: allVideos 
     };
 
