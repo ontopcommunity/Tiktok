@@ -88,11 +88,11 @@
                 </div>
 
                 <div class="flex flex-col sm:flex-row gap-3 mt-4">
-                    <a id="btn-download-nowm" href="#" target="_blank" 
+                    <a id="btn-download-nowm" href="#" 
                         class="flex-1 bg-pink-500 hover:bg-pink-600 text-white font-semibold py-3 px-4 rounded-lg flex items-center justify-center gap-2 transition shadow-md">
                         <i class="fa-solid fa-download"></i> Tải Video (Không Logo)
                     </a>
-                    <a id="btn-download-music" href="#" target="_blank" 
+                    <a id="btn-download-music" href="#" 
                         class="sm:w-auto bg-gray-800 hover:bg-gray-900 text-white font-semibold py-3 px-4 rounded-lg flex items-center justify-center gap-2 transition shadow-md">
                         <i class="fa-solid fa-music"></i> Tải Nhạc
                     </a>
@@ -103,8 +103,24 @@
     </div>
 
     <script>
-        // Lưu trữ description để copy
         let currentDescription = "";
+
+        // Cơ chế tạo tên file tự động theo yêu cầu: (ID Chủ)_(GiờPhútGiây)_(NgàyThángNăm)_(ID Video)
+        function generateCustomFileName(authorId, videoId) {
+            const now = new Date();
+            
+            const hours = String(now.getHours()).padStart(2, '0');
+            const minutes = String(now.getMinutes()).padStart(2, '0');
+            const seconds = String(now.getSeconds()).padStart(2, '0');
+            const timeStr = `${hours}${minutes}${seconds}`;
+            
+            const day = String(now.getDate()).padStart(2, '0');
+            const month = String(now.getMonth() + 1).padStart(2, '0');
+            const year = now.getFullYear();
+            const dateStr = `${day}${month}${year}`;
+            
+            return `${authorId}_${timeStr}_${dateStr}_${videoId}`;
+        }
 
         async function fetchVideoData() {
             const linkInput = document.getElementById('tiktok-link').value.trim();
@@ -113,7 +129,6 @@
             const loading = document.getElementById('loading');
             const fetchBtn = document.getElementById('fetch-btn');
 
-            // Reset UI
             errorMsg.classList.add('hidden');
             resultContainer.classList.add('hidden');
             
@@ -122,14 +137,13 @@
                 return;
             }
 
-            // Bật loading
             loading.classList.remove('hidden');
             fetchBtn.disabled = true;
             fetchBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Đang xử lý`;
             fetchBtn.classList.add('opacity-70', 'cursor-not-allowed');
 
             try {
-                // Gọi API
+                // Sử dụng thẳng link API gốc của bạn
                 const apiUrl = `https://tiktokvippro.vercel.app/api/video?video=${encodeURIComponent(linkInput)}`;
                 const response = await fetch(apiUrl);
                 
@@ -137,18 +151,15 @@
                 
                 const data = await response.json();
 
-                // Kiểm tra dữ liệu hợp lệ
                 if (data.status !== "Live" || !data.video_data) {
                     throw new Error("Không thể lấy thông tin video. Link có thể không hợp lệ hoặc video ở chế độ riêng tư.");
                 }
 
-                // Cập nhật giao diện với dữ liệu trả về
                 renderData(data);
 
             } catch (error) {
                 showError(error.message);
             } finally {
-                // Tắt loading
                 loading.classList.add('hidden');
                 fetchBtn.disabled = false;
                 fetchBtn.innerHTML = `Lấy dữ liệu`;
@@ -157,37 +168,85 @@
         }
 
         function renderData(data) {
-            // Author
             document.getElementById('author-avatar').src = data.author.avatar;
             document.getElementById('author-nickname').innerText = data.author.nickname;
             document.getElementById('author-id').innerText = `@${data.author.uniqueId}`;
 
-            // Stats
             document.getElementById('stat-play').innerText = data.stats.play;
             document.getElementById('stat-like').innerText = data.stats.like;
             document.getElementById('stat-comment').innerText = data.stats.comment;
             document.getElementById('stat-share').innerText = data.stats.share;
 
-            // Music Info
             document.getElementById('music-info').innerText = `${data.music.title} - ${data.music.author}`;
             
-            // Đã thay đổi: Truyền link video vào Trình phát video (có dùng ảnh bìa làm poster)
+            // Xử lý trình phát video trực tiếp
             const videoPlayer = document.getElementById('main-video-player');
             const videoSource = document.getElementById('video-source');
             videoPlayer.poster = data.urls.cover;
             videoSource.src = data.urls.no_watermark;
             videoPlayer.load();
 
-            // Description
             currentDescription = data.video_data.description;
             document.getElementById('video-desc').innerText = currentDescription || "Video này không có mô tả.";
 
-            // Nút Tải về
-            document.getElementById('btn-download-nowm').href = data.urls.no_watermark;
-            document.getElementById('btn-download-music').href = data.music.playUrl;
+            // Cơ chế tải file và gán sự kiện Onclick
+            const authorId = data.author.id;
+            const videoId = data.video_data.id;
+            
+            const btnVideo = document.getElementById('btn-download-nowm');
+            const btnMusic = document.getElementById('btn-download-music');
 
-            // Hiển thị khung kết quả
+            btnVideo.onclick = (e) => {
+                e.preventDefault(); // Ngăn trình duyệt nhảy trang
+                const filename = generateCustomFileName(authorId, videoId) + '.mp4';
+                forceDownload(data.urls.no_watermark, filename, 'btn-download-nowm');
+            };
+
+            btnMusic.onclick = (e) => {
+                e.preventDefault();
+                const filename = generateCustomFileName(authorId, videoId) + '.mp3';
+                forceDownload(data.music.playUrl, filename, 'btn-download-music');
+            };
+
             document.getElementById('result-container').classList.remove('hidden');
+        }
+
+        // Hàm ép tải dữ liệu thô (Blob) để đổi được tên file
+        async function forceDownload(url, filename, buttonId) {
+            const btn = document.getElementById(buttonId);
+            const originalHTML = btn.innerHTML;
+            
+            // Đổi UI báo hiệu đang tải
+            btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Đang tải...`;
+            btn.style.pointerEvents = 'none';
+            btn.classList.add('opacity-70');
+
+            try {
+                const response = await fetch(url);
+                if (!response.ok) throw new Error('Fetch failed');
+                
+                const blob = await response.blob();
+                const downloadUrl = window.URL.createObjectURL(blob);
+                
+                const a = document.createElement('a');
+                a.style.display = 'none';
+                a.href = downloadUrl;
+                a.download = filename; 
+                document.body.appendChild(a);
+                a.click();
+                
+                window.URL.revokeObjectURL(downloadUrl);
+                document.body.removeChild(a);
+            } catch (error) {
+                console.error("Lỗi tải Blob:", error);
+                // Nếu fetch() bị từ chối bởi CORS của server chứa video, mở tab mới cho chắc
+                window.open(url, '_blank');
+            } finally {
+                // Khôi phục nút
+                btn.innerHTML = originalHTML;
+                btn.style.pointerEvents = 'auto';
+                btn.classList.remove('opacity-70');
+            }
         }
 
         function showError(message) {
@@ -198,7 +257,6 @@
 
         function copyDescription() {
             if (!currentDescription) return;
-            
             navigator.clipboard.writeText(currentDescription).then(() => {
                 alert("Đã sao chép nội dung video!");
             }).catch(err => {
