@@ -3,216 +3,202 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tải Âm Thanh TikTok MP3</title>
+    <title>TikTok Video Downloader & Info</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        body {
-            background: linear-gradient(135deg, #0f172a 0%, #1e1e24 100%);
-            min-height: 100vh;
-            color: white;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        /* Custom scrollbar cho phần mô tả nếu quá dài */
+        .desc-box::-webkit-scrollbar {
+            width: 6px;
         }
-        .glass-card {
-            background: rgba(255, 255, 255, 0.05);
-            backdrop-filter: blur(12px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.4);
-        }
-        .tiktok-btn {
-            background: linear-gradient(45deg, #fe2c55, #25f4ee);
-            transition: all 0.3s ease;
-        }
-        .tiktok-btn:hover:not(:disabled) {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 20px rgba(254, 44, 85, 0.5);
-        }
-        .loader {
-            border: 3px solid rgba(255,255,255,0.2);
-            border-radius: 50%;
-            border-top: 3px solid white;
-            width: 20px;
-            height: 20px;
-            animation: spin 1s linear infinite;
-            display: inline-block;
-            vertical-align: middle;
-            margin-right: 8px;
-        }
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-        .line-clamp-1 {
-            display: -webkit-box;
-            -webkit-line-clamp: 1;
-            -webkit-box-orient: vertical;  
-            overflow: hidden;
+        .desc-box::-webkit-scrollbar-thumb {
+            background-color: #cbd5e1;
+            border-radius: 4px;
         }
     </style>
 </head>
-<body class="flex items-center justify-center p-4">
+<body class="bg-gray-100 min-h-screen font-sans text-gray-800 flex flex-col items-center py-10 px-4">
 
-    <div class="glass-card w-full max-w-lg rounded-2xl p-8 text-center">
-        <div class="mb-8">
-            <i class="fa-brands fa-tiktok text-5xl mb-4" style="color: #25f4ee; filter: drop-shadow(2px 0px 0px #fe2c55);"></i>
-            <h1 class="text-3xl font-bold tracking-tight">Tải Nhạc TikTok MP3</h1>
-            <p class="text-gray-400 mt-2 text-sm">Dán link video để tải thẳng âm thanh gốc (chuẩn MP3)</p>
-        </div>
+    <div class="text-center mb-8 w-full max-w-2xl">
+        <h1 class="text-3xl md:text-4xl font-bold text-gray-900 mb-2">
+            <i class="fa-brands fa-tiktok text-black mr-2"></i>TikTok Downloader
+        </h1>
+        <p class="text-gray-600">Dán link video TikTok vào bên dưới để lấy thông tin và tải về</p>
+    </div>
 
-        <div class="space-y-4">
-            <input type="text" id="videoUrl" 
-                class="w-full px-5 py-4 rounded-xl bg-gray-800 bg-opacity-60 border border-gray-600 focus:border-[#25f4ee] outline-none text-white placeholder-gray-400 transition-all"
-                placeholder="Dán link TikTok vào đây...">
+    <div class="w-full max-w-2xl bg-white rounded-xl shadow-md p-4 mb-8 flex flex-col sm:flex-row gap-3">
+        <input type="text" id="tiktok-link" placeholder="https://vt.tiktok.com/..." 
+            class="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition">
+        <button id="fetch-btn" onclick="fetchVideoData()" 
+            class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-lg transition flex items-center justify-center gap-2 min-w-[120px]">
+            <span>Lấy dữ liệu</span>
+        </button>
+    </div>
+
+    <div id="loading" class="hidden text-center mb-8">
+        <i class="fa-solid fa-spinner fa-spin text-3xl text-blue-600 mb-2"></i>
+        <p class="text-gray-500">Đang xử lý dữ liệu, vui lòng đợi...</p>
+    </div>
+
+    <div id="error-msg" class="hidden w-full max-w-2xl bg-red-100 text-red-700 p-4 rounded-lg mb-8 text-center border border-red-200">
+    </div>
+
+    <div id="result-container" class="hidden w-full max-w-4xl bg-white rounded-2xl shadow-lg overflow-hidden">
+        <div class="flex flex-col md:flex-row">
             
-            <button id="downloadBtn" onclick="processVideo()" class="tiktok-btn w-full font-bold text-white py-4 rounded-xl flex justify-center items-center">
-                <span id="btnText"><i class="fa-solid fa-download mr-2"></i> Trích xuất & Tải MP3</span>
-                <span id="loading" class="hidden"><div class="loader"></div> Đang xử lý tải thẳng...</span>
-            </button>
-        </div>
-
-        <div id="resultArea" class="mt-6 hidden text-left bg-gray-900 bg-opacity-70 p-4 rounded-xl border border-gray-700">
-            <div id="errorMessage" class="hidden text-red-400 text-sm flex items-center">
-                <i class="fa-solid fa-circle-exclamation mr-2"></i> <span id="errorText">Lỗi!</span>
+            <div class="w-full md:w-2/5 bg-gray-900 flex items-center justify-center relative min-h-[300px]">
+                <img id="video-cover" src="" alt="Video Cover" class="w-full h-full object-contain max-h-[500px]">
+                <div class="absolute inset-0 bg-black bg-opacity-30 flex items-center justify-center pointer-events-none">
+                    <i class="fa-solid fa-play text-white text-5xl opacity-80"></i>
+                </div>
             </div>
-            
-            <div id="successInfo" class="hidden">
-                <div class="flex items-center space-x-4">
-                    <img id="musicCover" src="" alt="Cover" class="w-16 h-16 rounded-lg object-cover border border-gray-600">
-                    <div class="flex-1 min-w-0">
-                        <h3 id="musicTitle" class="font-bold text-white line-clamp-1">Tên nhạc</h3>
-                        <p id="musicAuthor" class="text-xs text-gray-400 mt-1 line-clamp-1">Tác giả</p>
-                        <p class="text-xs text-green-400 mt-2 font-semibold"><i class="fa-solid fa-circle-check"></i> Đã tải thẳng file MP3 về máy</p>
+
+            <div class="w-full md:w-3/5 p-6 flex flex-col justify-between">
+                <div>
+                    <div class="flex items-center gap-4 mb-6 pb-4 border-b border-gray-100">
+                        <img id="author-avatar" src="" alt="Avatar" class="w-14 h-14 rounded-full border-2 border-gray-200 object-cover">
+                        <div>
+                            <h3 id="author-nickname" class="font-bold text-lg text-gray-900"></h3>
+                            <p id="author-id" class="text-sm text-gray-500"></p>
+                        </div>
+                    </div>
+
+                    <div class="flex flex-wrap gap-4 mb-6 text-sm text-gray-600">
+                        <div class="flex items-center gap-1 bg-gray-100 px-3 py-1.5 rounded-full"><i class="fa-solid fa-play text-gray-500"></i> <span id="stat-play"></span></div>
+                        <div class="flex items-center gap-1 bg-gray-100 px-3 py-1.5 rounded-full"><i class="fa-solid fa-heart text-red-500"></i> <span id="stat-like"></span></div>
+                        <div class="flex items-center gap-1 bg-gray-100 px-3 py-1.5 rounded-full"><i class="fa-solid fa-comment text-blue-500"></i> <span id="stat-comment"></span></div>
+                        <div class="flex items-center gap-1 bg-gray-100 px-3 py-1.5 rounded-full"><i class="fa-solid fa-share text-green-500"></i> <span id="stat-share"></span></div>
+                    </div>
+
+                    <div class="flex items-center gap-2 mb-4 text-sm font-medium text-gray-700 bg-gray-50 p-3 rounded-lg border border-gray-100">
+                        <i class="fa-solid fa-music text-purple-500"></i>
+                        <span id="music-info" class="truncate"></span>
+                    </div>
+
+                    <div class="mb-6 relative">
+                        <h4 class="font-semibold text-gray-800 mb-2">Nội dung video:</h4>
+                        <div class="bg-gray-50 p-4 rounded-lg border border-gray-200 relative group">
+                            <p id="video-desc" class="text-gray-700 text-sm whitespace-pre-wrap desc-box max-h-32 overflow-y-auto pr-8"></p>
+                            <button onclick="copyDescription()" title="Copy nội dung"
+                                class="absolute top-2 right-2 text-gray-400 hover:text-blue-600 transition p-2 bg-white rounded-md shadow-sm border border-gray-100">
+                                <i class="fa-regular fa-copy"></i>
+                            </button>
+                        </div>
                     </div>
                 </div>
+
+                <div class="flex flex-col sm:flex-row gap-3 mt-4">
+                    <a id="btn-download-nowm" href="#" target="_blank" 
+                        class="flex-1 bg-pink-500 hover:bg-pink-600 text-white font-semibold py-3 px-4 rounded-lg flex items-center justify-center gap-2 transition shadow-md">
+                        <i class="fa-solid fa-download"></i> Tải Video (Không Logo)
+                    </a>
+                    <a id="btn-download-music" href="#" target="_blank" 
+                        class="sm:w-auto bg-gray-800 hover:bg-gray-900 text-white font-semibold py-3 px-4 rounded-lg flex items-center justify-center gap-2 transition shadow-md">
+                        <i class="fa-solid fa-music"></i> Tải Nhạc
+                    </a>
+                </div>
+
             </div>
         </div>
     </div>
 
     <script>
-        async function processVideo() {
-            const urlInput = document.getElementById('videoUrl').value.trim();
-            const btnText = document.getElementById('btnText');
-            const loading = document.getElementById('loading');
-            const downloadBtn = document.getElementById('downloadBtn');
-            const resultArea = document.getElementById('resultArea');
-            const errorMessage = document.getElementById('errorMessage');
-            const successInfo = document.getElementById('successInfo');
-            const errorText = document.getElementById('errorText');
+        // Lưu trữ description để copy
+        let currentDescription = "";
 
-            if (!urlInput) {
-                alert("Vui lòng dán link video TikTok!");
+        async function fetchVideoData() {
+            const linkInput = document.getElementById('tiktok-link').value.trim();
+            const errorMsg = document.getElementById('error-msg');
+            const resultContainer = document.getElementById('result-container');
+            const loading = document.getElementById('loading');
+            const fetchBtn = document.getElementById('fetch-btn');
+
+            // Reset UI
+            errorMsg.classList.add('hidden');
+            resultContainer.classList.add('hidden');
+            
+            if (!linkInput) {
+                showError("Vui lòng nhập đường dẫn video TikTok!");
                 return;
             }
 
-            // Giao diện Loading
-            btnText.classList.add('hidden');
+            // Bật loading
             loading.classList.remove('hidden');
-            downloadBtn.disabled = true;
-            downloadBtn.classList.add('opacity-60', 'cursor-not-allowed');
-            resultArea.classList.add('hidden');
-            errorMessage.classList.add('hidden');
-            successInfo.classList.add('hidden');
+            fetchBtn.disabled = true;
+            fetchBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Đang xử lý`;
+            fetchBtn.classList.add('opacity-70', 'cursor-not-allowed');
 
             try {
                 // Gọi API
-                const apiUrl = `https://tiktokvippro.vercel.app/api/video?video=${encodeURIComponent(urlInput)}`;
+                const apiUrl = `https://tiktokvippro.vercel.app/api/video?video=${encodeURIComponent(linkInput)}`;
                 const response = await fetch(apiUrl);
                 
-                if (!response.ok) throw new Error("Máy chủ API không phản hồi.");
+                if (!response.ok) throw new Error("Lỗi kết nối đến API");
+                
                 const data = await response.json();
 
-                if (!data.music || !data.music.playUrl) {
-                    throw new Error(data.error || "Không tìm thấy dữ liệu âm thanh từ video này.");
+                // Kiểm tra dữ liệu hợp lệ
+                if (data.status !== "Live" || !data.video_data) {
+                    throw new Error("Không thể lấy thông tin video. Link có thể không hợp lệ hoặc video ở chế độ riêng tư.");
                 }
 
-                // Dọn sạch đuôi .mp4
-                const rawTitle = data.music.title || "tiktok_audio";
-                const rawAuthor = data.music.author || "unknown";
-                
-                const cleanTitle = rawTitle.replace(/\.mp4/gi, '').trim();
-                const cleanAuthor = rawAuthor.replace(/\.mp4/gi, '').trim();
-                const cover = data.music.cover || "";
-                const playUrl = data.music.playUrl.replace(/\.mp4/gi, '.mp3'); 
-
-                // Hiển thị thông tin
-                document.getElementById('musicTitle').textContent = cleanTitle;
-                document.getElementById('musicAuthor').textContent = cleanAuthor;
-                if (cover) document.getElementById('musicCover').src = cover;
-
-                // Tên file .mp3
-                const finalFileName = `${cleanTitle} - ${cleanAuthor}.mp3`;
-
-                // TẢI THẲNG VỚI HỆ THỐNG PROXY DỰ PHÒNG
-                await forceDirectDownload(playUrl, finalFileName);
-
-                // Hiện UI thành công
-                resultArea.classList.remove('hidden');
-                successInfo.classList.remove('hidden');
+                // Cập nhật giao diện với dữ liệu trả về
+                renderData(data);
 
             } catch (error) {
-                resultArea.classList.remove('hidden');
-                errorMessage.classList.remove('hidden');
-                errorText.textContent = error.message;
+                showError(error.message);
             } finally {
-                btnText.classList.remove('hidden');
+                // Tắt loading
                 loading.classList.add('hidden');
-                downloadBtn.disabled = false;
-                downloadBtn.classList.remove('opacity-60', 'cursor-not-allowed');
+                fetchBtn.disabled = false;
+                fetchBtn.innerHTML = `Lấy dữ liệu`;
+                fetchBtn.classList.remove('opacity-70', 'cursor-not-allowed');
             }
         }
 
-        // HÀM ÉP TẢI THẲNG (HỆ THỐNG DỰ PHÒNG CHỐNG LỖI MẠNG)
-        async function forceDirectDownload(url, filename) {
-            let blob = null;
+        function renderData(data) {
+            // Author
+            document.getElementById('author-avatar').src = data.author.avatar;
+            document.getElementById('author-nickname').innerText = data.author.nickname;
+            document.getElementById('author-id').innerText = `@${data.author.uniqueId}`;
 
-            // 1. Thử kéo trực tiếp (Đề phòng Tikwm mở CORS)
-            try {
-                let res = await fetch(url);
-                if (res.ok) blob = await res.blob();
-            } catch (e) { console.log("Direct fetch failed, trying proxies..."); }
+            // Stats
+            document.getElementById('stat-play').innerText = data.stats.play;
+            document.getElementById('stat-like').innerText = data.stats.like;
+            document.getElementById('stat-comment').innerText = data.stats.comment;
+            document.getElementById('stat-share').innerText = data.stats.share;
 
-            // 2. Nếu kéo trực tiếp thất bại, dùng các proxy trung gian
-            if (!blob) {
-                const proxies = [
-                    `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
-                    `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(url)}`,
-                    `https://corsproxy.io/?${encodeURIComponent(url)}`
-                ];
+            // Music & Cover
+            document.getElementById('music-info').innerText = `${data.music.title} - ${data.music.author}`;
+            document.getElementById('video-cover').src = data.urls.cover;
 
-                for (let proxy of proxies) {
-                    try {
-                        let res = await fetch(proxy);
-                        if (res.ok) {
-                            blob = await res.blob();
-                            break; // Thành công là thoát vòng lặp ngay
-                        }
-                    } catch (e) {
-                        console.log(`Proxy failed, trying next...`);
-                    }
-                }
-            }
+            // Description
+            currentDescription = data.video_data.description;
+            document.getElementById('video-desc').innerText = currentDescription || "Video này không có mô tả.";
 
-            // Nếu qua 3 trạm mà vẫn thất bại thì mới báo lỗi
-            if (!blob) {
-                throw new Error("Mạng đang quá tải, không thể tải thẳng ngầm. Hãy thử lại!");
-            }
+            // Nút Tải về
+            document.getElementById('btn-download-nowm').href = data.urls.no_watermark;
+            document.getElementById('btn-download-music').href = data.music.playUrl;
 
-            // Xử lý đóng gói tải về
-            const blobUrl = window.URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.style.display = 'none';
-            a.href = blobUrl;
-            a.download = filename; 
+            // Hiển thị khung kết quả
+            document.getElementById('result-container').classList.remove('hidden');
+        }
+
+        function showError(message) {
+            const errorMsg = document.getElementById('error-msg');
+            errorMsg.innerText = message;
+            errorMsg.classList.remove('hidden');
+        }
+
+        function copyDescription() {
+            if (!currentDescription) return;
             
-            document.body.appendChild(a);
-            a.click();
-            
-            setTimeout(() => {
-                window.URL.revokeObjectURL(blobUrl);
-                document.body.removeChild(a);
-            }, 1000);
+            navigator.clipboard.writeText(currentDescription).then(() => {
+                alert("Đã sao chép nội dung video!");
+            }).catch(err => {
+                alert("Có lỗi xảy ra khi sao chép: " + err);
+            });
         }
     </script>
 </body>
 </html>
-
