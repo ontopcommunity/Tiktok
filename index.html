@@ -105,8 +105,8 @@
     <script>
         let currentDescription = "";
 
-        // Cơ chế tạo tên file tự động theo yêu cầu: (ID Chủ)_(GiờPhútGiây)_(NgàyThángNăm)_(ID Video)
-        function generateCustomFileName(authorId, videoId) {
+        // Cơ chế tạo tên file tự động theo yêu cầu: (Tên ID Chủ) (GiờPhútGiây) (NgàyThángNăm) (ID Video)
+        function generateCustomFileName(authorUniqueId, videoId) {
             const now = new Date();
             
             const hours = String(now.getHours()).padStart(2, '0');
@@ -119,7 +119,8 @@
             const year = now.getFullYear();
             const dateStr = `${day}${month}${year}`;
             
-            return `${authorId}_${timeStr}_${dateStr}_${videoId}`;
+            // Thay dấu _ bằng khoảng trắng
+            return `${authorUniqueId} ${timeStr} ${dateStr} ${videoId}`;
         }
 
         async function fetchVideoData() {
@@ -189,8 +190,8 @@
             currentDescription = data.video_data.description;
             document.getElementById('video-desc').innerText = currentDescription || "Video này không có mô tả.";
 
-            // Cơ chế tải file và gán sự kiện Onclick
-            const authorId = data.author.id;
+            // Lấy tên ID chủ kênh (uniqueId) thay vì số ID hệ thống
+            const authorUniqueId = data.author.uniqueId;
             const videoId = data.video_data.id;
             
             const btnVideo = document.getElementById('btn-download-nowm');
@@ -198,13 +199,13 @@
 
             btnVideo.onclick = (e) => {
                 e.preventDefault(); // Ngăn trình duyệt nhảy trang
-                const filename = generateCustomFileName(authorId, videoId) + '.mp4';
+                const filename = generateCustomFileName(authorUniqueId, videoId) + '.mp4';
                 forceDownload(data.urls.no_watermark, filename, 'btn-download-nowm');
             };
 
             btnMusic.onclick = (e) => {
                 e.preventDefault();
-                const filename = generateCustomFileName(authorId, videoId) + '.mp3';
+                const filename = generateCustomFileName(authorUniqueId, videoId) + '.mp3';
                 forceDownload(data.music.playUrl, filename, 'btn-download-music');
             };
 
