@@ -47,10 +47,10 @@
         <div class="flex flex-col md:flex-row">
             
             <div class="w-full md:w-2/5 bg-gray-900 flex items-center justify-center relative min-h-[300px]">
-                <img id="video-cover" src="" alt="Video Cover" class="w-full h-full object-contain max-h-[500px]">
-                <div class="absolute inset-0 bg-black bg-opacity-30 flex items-center justify-center pointer-events-none">
-                    <i class="fa-solid fa-play text-white text-5xl opacity-80"></i>
-                </div>
+                <video id="main-video-player" controls autoplay loop playsinline class="w-full h-full max-h-[500px] bg-black">
+                    <source id="video-source" src="" type="video/mp4">
+                    Trình duyệt của bạn không hỗ trợ thẻ video.
+                </video>
             </div>
 
             <div class="w-full md:w-3/5 p-6 flex flex-col justify-between">
@@ -168,9 +168,15 @@
             document.getElementById('stat-comment').innerText = data.stats.comment;
             document.getElementById('stat-share').innerText = data.stats.share;
 
-            // Music & Cover
+            // Music Info
             document.getElementById('music-info').innerText = `${data.music.title} - ${data.music.author}`;
-            document.getElementById('video-cover').src = data.urls.cover;
+            
+            // Đã thay đổi: Truyền link video vào Trình phát video (có dùng ảnh bìa làm poster)
+            const videoPlayer = document.getElementById('main-video-player');
+            const videoSource = document.getElementById('video-source');
+            videoPlayer.poster = data.urls.cover;
+            videoSource.src = data.urls.no_watermark;
+            videoPlayer.load();
 
             // Description
             currentDescription = data.video_data.description;
