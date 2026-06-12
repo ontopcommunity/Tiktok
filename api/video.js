@@ -51,6 +51,20 @@ export default async function handler(req, res) {
     const item = findKey(defaultScope, 'itemStruct');
     if (!item) return res.status(404).json({ status: "Die" });
 
+    // --- BẢN VÁ: GỌI API TIKWM ĐỂ LẤY LINK THẬT ---
+    let noWatermarkUrl = "";
+    let mp3Url = "";
+    try {
+        const tikwmRes = await fetch(`https://www.tikwm.com/api/?url=${video}`);
+        const tikwmData = await tikwmRes.json();
+        if (tikwmData && tikwmData.code === 0) {
+            noWatermarkUrl = tikwmData.data.play;
+            mp3Url = tikwmData.data.music;
+        }
+    } catch (e) {
+        console.error("Lỗi gọi API TikWM:", e);
+    }
+
     // --- NÂNG CẤP FULL THÔNG TIN VIDEO ---
     const result = {
       status: "Live",
@@ -76,8 +90,8 @@ export default async function handler(req, res) {
           id: item.music.id,
           title: item.music.title,
           author: item.music.authorName,
-          // Đã đổi sang link lấy MP3 trực tiếp từ tikwm
-          playUrl: `https://tikwm.com/video/music/${item.id}.mp3`,
+          // Đã sửa: Lấy link MP3 thật từ API, dự phòng link gốc của TikTok
+          playUrl: mp3Url || item.music.playUrl,
           duration: item.music.duration,
           cover: item.music.coverLarge
       },
@@ -92,7 +106,8 @@ export default async function handler(req, res) {
       urls: {
           cover: item.video.cover,
           origin: item.video.playAddr,
-          no_watermark: `https://tikwm.com/video/media/play/${item.id}.mp4`,
+          // Đã sửa: Lấy link không logo từ API, dự phòng link playAddr của TikTok
+          no_watermark: noWatermarkUrl || item.video.playAddr,
           download: item.video.downloadAddr
       }
     };
