@@ -3,119 +3,200 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TikTok Studio Pro | All-in-One</title>
+    <title>TikTok Studio Pro | Dark Space</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
         
         body {
             font-family: 'Plus Jakarta Sans', sans-serif;
-            background: linear-gradient(135deg, #fdfbfb 0%, #ebedee 100%);
-            color: #1a1a1a;
+            background-color: #020617; /* Slate 950 - Dark Base */
+            color: #f8fafc;
             overflow-x: hidden;
         }
 
-        /* Tùy chỉnh thanh cuộn tinh tế */
-        ::-webkit-scrollbar { width: 5px; height: 5px; }
-        ::-webkit-scrollbar-thumb { background-color: #cbd5e1; border-radius: 10px; }
+        /* Thanh cuộn Dark Mode */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #0f172a; }
+        ::-webkit-scrollbar-thumb { background-color: #334155; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background-color: #475569; }
 
-        /* Hiệu ứng kính (Glassmorphism) - KHÔNG VIỀN */
-        .glass-panel {
-            background: rgba(255, 255, 255, 0.75);
-            backdrop-filter: blur(16px);
-            -webkit-backdrop-filter: blur(16px);
-            box-shadow: 0 10px 40px -10px rgba(0,0,0,0.05);
-            border: none; 
+        /* Dark Glassmorphism */
+        .glass-dark {
+            background: rgba(30, 41, 59, 0.6);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
         }
 
-        /* Animations */
-        @keyframes fadeUp {
-            from { opacity: 0; transform: translateY(20px); }
-            to { opacity: 1; transform: translateY(0); }
+        /* Animations Siêu Mượt */
+        @keyframes fadeUpIn {
+            0% { opacity: 0; transform: translateY(30px) scale(0.95); }
+            100% { opacity: 1; transform: translateY(0) scale(1); }
         }
-        .animate-fade-up { animation: fadeUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+        .animate-fade-up { animation: fadeUpIn 0.7s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
         
         @keyframes blob {
             0% { transform: translate(0px, 0px) scale(1); }
-            33% { transform: translate(30px, -50px) scale(1.1); }
-            66% { transform: translate(-20px, 20px) scale(0.9); }
+            33% { transform: translate(40px, -60px) scale(1.2); }
+            66% { transform: translate(-30px, 30px) scale(0.8); }
             100% { transform: translate(0px, 0px) scale(1); }
         }
-        .animate-blob { animation: blob 7s infinite; }
+        .animate-blob { animation: blob 10s infinite alternate; }
         .animation-delay-2000 { animation-delay: 2s; }
+        .animation-delay-4000 { animation-delay: 4s; }
 
-        /* Style Tab */
-        .tab-btn { position: relative; padding-bottom: 0.5rem; transition: color 0.3s ease; }
-        .tab-btn::after {
-            content: ''; position: absolute; bottom: 0; left: 0; width: 0%; height: 2px;
-            background-color: #000; transition: width 0.3s ease;
+        /* Glow Effects */
+        .glow-btn:hover {
+            box-shadow: 0 0 20px rgba(236, 72, 153, 0.6), 0 0 40px rgba(139, 92, 246, 0.4);
         }
-        .tab-active { color: #000; font-weight: 700; }
+
+        /* Tab Styles */
+        .tab-btn { position: relative; padding-bottom: 0.75rem; transition: all 0.3s ease; }
+        .tab-btn::after {
+            content: ''; position: absolute; bottom: -1px; left: 0; width: 0%; height: 3px;
+            background: linear-gradient(90deg, #ec4899, #8b5cf6);
+            transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            border-radius: 3px;
+        }
+        .tab-active { color: #fff; font-weight: 700; text-shadow: 0 0 10px rgba(255,255,255,0.2); }
         .tab-active::after { width: 100%; }
-        .tab-inactive { color: #9ca3af; font-weight: 500; }
-        .tab-inactive:hover { color: #4b5563; }
+        .tab-inactive { color: #64748b; font-weight: 500; }
+        .tab-inactive:hover { color: #cbd5e1; }
+
+        /* Video Card Hover */
+        .video-card-hover { transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.4s; cursor: pointer; }
+        .video-card-hover:hover { transform: translateY(-8px) scale(1.02); box-shadow: 0 20px 40px rgba(0,0,0,0.4); border-color: rgba(236, 72, 153, 0.3); }
+        .video-card-hover:hover .play-overlay { opacity: 1; transform: scale(1); }
+
+        /* Modal Transitions */
+        .modal-overlay { opacity: 0; visibility: hidden; transition: all 0.4s ease; backdrop-filter: blur(10px); }
+        .modal-overlay.active { opacity: 1; visibility: visible; }
+        .modal-content { opacity: 0; transform: scale(0.9) translateY(20px); transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1); }
+        .modal-overlay.active .modal-content { opacity: 1; transform: scale(1) translateY(0); }
     </style>
 </head>
-<body class="min-h-screen flex flex-col items-center py-12 px-4 sm:px-6 relative">
+<body class="min-h-screen flex flex-col items-center py-10 px-4 sm:px-6 relative">
 
-    <div class="fixed top-[-10%] left-[-10%] w-96 h-96 bg-pink-300 rounded-full mix-blend-multiply filter blur-3xl opacity-40 animate-blob pointer-events-none z-0"></div>
-    <div class="fixed top-[20%] right-[-10%] w-96 h-96 bg-blue-300 rounded-full mix-blend-multiply filter blur-3xl opacity-40 animate-blob animation-delay-2000 pointer-events-none z-0"></div>
+    <!-- Đồ họa nền Không Gian (Neon Blobs) -->
+    <div class="fixed top-[-10%] left-[-10%] w-[500px] h-[500px] bg-pink-600 rounded-full mix-blend-screen filter blur-[120px] opacity-20 animate-blob pointer-events-none z-0"></div>
+    <div class="fixed top-[40%] right-[-10%] w-[400px] h-[400px] bg-purple-600 rounded-full mix-blend-screen filter blur-[100px] opacity-20 animate-blob animation-delay-2000 pointer-events-none z-0"></div>
+    <div class="fixed bottom-[-10%] left-[20%] w-[600px] h-[600px] bg-blue-600 rounded-full mix-blend-screen filter blur-[130px] opacity-15 animate-blob animation-delay-4000 pointer-events-none z-0"></div>
 
-    <div class="text-center mb-10 w-full max-w-3xl z-10 animate-fade-up">
-        <h1 class="text-4xl md:text-5xl font-extrabold tracking-tight mb-3">
-            <i class="fa-brands fa-tiktok text-black mr-2"></i>TikTok <span class="text-transparent bg-clip-text bg-gradient-to-r from-pink-500 to-violet-500">Studio</span>
+    <!-- Header -->
+    <div class="text-center mb-12 w-full max-w-3xl z-10 animate-fade-up">
+        <div class="inline-block px-4 py-1.5 rounded-full glass-dark text-xs font-bold tracking-widest text-pink-400 uppercase mb-4 border border-pink-500/30 shadow-[0_0_15px_rgba(236,72,153,0.2)]">PRO MAX EDITION</div>
+        <h1 class="text-4xl md:text-6xl font-extrabold tracking-tight mb-4">
+            <i class="fa-brands fa-tiktok text-white mr-2 drop-shadow-lg"></i>TikTok <span class="text-transparent bg-clip-text bg-gradient-to-r from-pink-500 via-purple-500 to-indigo-500 drop-shadow-[0_0_10px_rgba(236,72,153,0.3)]">Studio</span>
         </h1>
-        <p class="text-gray-500 font-medium">Bộ công cụ tải đa luồng & phân tích dữ liệu</p>
+        <p class="text-slate-400 font-medium text-lg">Phân tích & Tải đa luồng siêu tốc</p>
     </div>
 
-    <div class="w-full max-w-4xl glass-panel rounded-3xl p-6 sm:p-10 z-10 animate-fade-up" style="animation-delay: 0.1s;">
+    <!-- Bảng điều khiển chính -->
+    <div class="w-full max-w-4xl glass-dark rounded-[2.5rem] p-6 sm:p-10 z-10 animate-fade-up relative overflow-hidden" style="animation-delay: 0.1s;">
         
-        <div class="flex space-x-8 mb-8 border-b border-gray-200/60 pb-1">
-            <button onclick="switchTab('video')" id="tab-video" class="tab-btn tab-active focus:outline-none flex items-center gap-2">
-                <i class="fa-solid fa-layer-group"></i> Tải Nhiều Video
+        <!-- Decoration Line -->
+        <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-pink-500 via-purple-500 to-blue-500 opacity-80"></div>
+
+        <!-- Tabs Nav -->
+        <div class="flex space-x-10 mb-8 border-b border-slate-700/50 pb-0">
+            <button onclick="switchTab('video')" id="tab-video" class="tab-btn tab-active focus:outline-none flex items-center gap-2 text-lg">
+                <i class="fa-solid fa-layer-group"></i> Box Tải Video
             </button>
-            <button onclick="switchTab('info')" id="tab-info" class="tab-btn tab-inactive focus:outline-none flex items-center gap-2">
-                <i class="fa-solid fa-user-astronaut"></i> Tra Cứu Kênh
+            <button onclick="switchTab('info')" id="tab-info" class="tab-btn tab-inactive focus:outline-none flex items-center gap-2 text-lg">
+                <i class="fa-solid fa-user-ninja"></i> Box Soi Kênh
             </button>
         </div>
 
+        <!-- TAB 1: Tải Video -->
         <div id="mode-video" class="transition-opacity duration-500">
-            <label class="block text-sm font-semibold text-gray-700 mb-3">Dán link video (Mỗi link 1 dòng, tối đa 10 link để tránh nghẽn)</label>
-            <textarea id="tiktok-links" rows="4" placeholder="https://vt.tiktok.com/ZS...&#10;https://www.tiktok.com/@user/video/123..." 
-                class="w-full px-5 py-4 bg-white/50 rounded-2xl focus:outline-none focus:ring-2 focus:ring-pink-400 transition-all resize-none mb-5 text-gray-800 placeholder-gray-400 shadow-inner border border-white"></textarea>
+            <label class="block text-sm font-semibold text-slate-300 mb-3 ml-1">Dán link video (Tối đa 10 link, mỗi link 1 dòng)</label>
+            <div class="relative">
+                <textarea id="tiktok-links" rows="4" placeholder="https://vt.tiktok.com/ZS...&#10;https://www.tiktok.com/@user/video/123..." 
+                    class="w-full px-6 py-5 bg-slate-900/50 rounded-2xl focus:outline-none focus:ring-2 focus:ring-pink-500/50 transition-all resize-none mb-5 text-slate-200 placeholder-slate-600 border border-slate-700/50 shadow-inner custom-scroll"></textarea>
+                <div class="absolute top-4 right-4 text-slate-500 opacity-50"><i class="fa-solid fa-link text-xl"></i></div>
+            </div>
             
             <button id="fetch-video-btn" onclick="processVideos()" 
-                class="w-full bg-black hover:bg-gray-800 text-white font-bold py-4 px-6 rounded-2xl transition-all transform hover:scale-[1.01] active:scale-95 flex items-center justify-center gap-2 shadow-xl">
-                <i class="fa-solid fa-wand-magic-sparkles"></i> <span>Xử Lý Dữ Liệu</span>
+                class="w-full bg-white text-black hover:bg-gray-200 font-bold py-4 px-6 rounded-2xl transition-all transform hover:scale-[1.02] active:scale-95 flex items-center justify-center gap-3 glow-btn shadow-lg">
+                <i class="fa-solid fa-bolt text-pink-500 text-xl"></i> <span class="text-lg">Kích Hoạt Xử Lý</span>
             </button>
         </div>
 
+        <!-- TAB 2: Soi Kênh -->
         <div id="mode-info" class="hidden transition-opacity duration-500">
-            <label class="block text-sm font-semibold text-gray-700 mb-3">Nhập Username (ID TikTok, không cần @)</label>
-            <div class="flex flex-col sm:flex-row gap-3 mb-5">
-                <input type="text" id="tiktok-username" placeholder="Ví dụ: hoaa.hanassii" 
-                    class="flex-1 px-5 py-4 bg-white/50 rounded-2xl focus:outline-none focus:ring-2 focus:ring-violet-400 transition-all text-gray-800 shadow-inner border border-white">
+            <label class="block text-sm font-semibold text-slate-300 mb-3 ml-1">Nhập ID Kênh (Không cần dấu @)</label>
+            <div class="flex flex-col sm:flex-row gap-4 mb-2">
+                <div class="relative flex-1">
+                    <div class="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none text-slate-500 font-bold">@</div>
+                    <input type="text" id="tiktok-username" placeholder="hoaa.hanassii" 
+                        class="w-full pl-10 pr-5 py-4 bg-slate-900/50 rounded-2xl focus:outline-none focus:ring-2 focus:ring-purple-500/50 transition-all text-slate-200 border border-slate-700/50 shadow-inner">
+                </div>
                 <button id="fetch-info-btn" onclick="fetchUserInfo()" 
-                    class="bg-violet-600 hover:bg-violet-700 text-white font-bold py-4 px-10 rounded-2xl transition-all transform hover:scale-[1.02] active:scale-95 shadow-xl flex items-center justify-center gap-2">
-                    <i class="fa-solid fa-magnifying-glass"></i> Soi
+                    class="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold py-4 px-10 rounded-2xl transition-all transform hover:scale-[1.02] active:scale-95 glow-btn shadow-lg flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-radar-base text-lg"></i> Quét Kênh
                 </button>
             </div>
         </div>
 
     </div>
 
-    <div id="loading" class="hidden z-10 mt-8 text-center animate-fade-up">
-        <div class="inline-flex items-center gap-3 bg-white/80 backdrop-blur-md px-6 py-3 rounded-full shadow-sm text-sm font-semibold text-gray-700">
-            <i class="fa-solid fa-circle-notch fa-spin text-pink-500 text-lg"></i>
-            <span id="loading-text">Hệ thống đang chạy...</span>
+    <!-- Trạng thái Loading -->
+    <div id="loading" class="hidden z-10 mt-10 text-center animate-fade-up">
+        <div class="inline-flex items-center gap-4 glass-dark px-8 py-4 rounded-full shadow-2xl border border-pink-500/20">
+            <div class="relative w-6 h-6">
+                <div class="absolute top-0 left-0 w-full h-full border-4 border-slate-600 rounded-full"></div>
+                <div class="absolute top-0 left-0 w-full h-full border-4 border-pink-500 rounded-full border-t-transparent animate-spin"></div>
+            </div>
+            <span id="loading-text" class="text-sm font-bold text-slate-200 tracking-wide uppercase">Đang đồng bộ dữ liệu...</span>
         </div>
     </div>
 
-    <div id="error-msg" class="hidden z-10 mt-6 max-w-2xl bg-red-50 text-red-600 px-6 py-4 rounded-2xl shadow-sm text-center text-sm font-medium animate-fade-up border border-red-100"></div>
+    <!-- Thông báo lỗi -->
+    <div id="error-msg" class="hidden z-10 mt-8 max-w-2xl bg-red-900/30 text-red-400 px-6 py-4 rounded-2xl shadow-sm text-center text-sm font-medium animate-fade-up border border-red-500/20 backdrop-blur-md"></div>
 
-    <div id="result-area" class="w-full max-w-5xl z-10 mt-10 space-y-8 flex flex-col items-center pb-20"></div>
+    <!-- Nút Tải Toàn Bộ (Sẽ ẩn/hiện) -->
+    <div id="batch-download-container" class="hidden w-full max-w-5xl z-10 mt-10 flex justify-end animate-fade-up">
+        <button onclick="downloadAllVideos(this)" class="bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-white font-bold py-3 px-8 rounded-2xl shadow-[0_0_20px_rgba(16,185,129,0.3)] transition transform hover:-translate-y-1 flex items-center gap-2 glow-btn">
+            <i class="fa-solid fa-boxes-packing"></i> Đóng Gói & Tải Toàn Bộ
+        </button>
+    </div>
 
+    <!-- Khu vực hiển thị kết quả Grid -->
+    <div id="result-area" class="w-full max-w-6xl z-10 mt-8 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pb-20"></div>
+
+    <!-- ================= MODALS ================= -->
+    
+    <!-- Modal Chi Tiết Video -->
+    <div id="video-modal" class="modal-overlay fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80">
+        <div class="modal-content glass-dark w-full max-w-5xl rounded-[2rem] overflow-hidden flex flex-col md:flex-row max-h-[90vh] relative border border-white/10 shadow-2xl">
+            <button onclick="closeModal('video-modal')" class="absolute top-4 right-4 z-20 w-10 h-10 bg-black/50 hover:bg-pink-600 text-white rounded-full flex items-center justify-center transition-colors backdrop-blur-md border border-white/10">
+                <i class="fa-solid fa-xmark text-lg"></i>
+            </button>
+            
+            <!-- Trái: Video Player -->
+            <div class="w-full md:w-[45%] bg-black relative flex items-center justify-center" id="modal-video-container">
+                <!-- Chèn video vào đây -->
+            </div>
+            
+            <!-- Phải: Thông tin chi tiết -->
+            <div class="w-full md:w-[55%] p-8 overflow-y-auto custom-scroll flex flex-col">
+                <div id="modal-video-info">
+                    <!-- Chèn info vào đây -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Phóng to Avatar -->
+    <div id="avatar-modal" class="modal-overlay fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/90 cursor-zoom-out" onclick="closeModal('avatar-modal')">
+        <img id="modal-avatar-img" src="" class="modal-content max-w-full max-h-[90vh] rounded-full shadow-[0_0_50px_rgba(255,255,255,0.1)] border-4 border-white/10 object-contain">
+    </div>
+
+
+    <!-- ================= SCRIPT XỬ LÝ LÕI ================= -->
     <script>
         let fetchedVideos = []; 
 
@@ -128,17 +209,17 @@
             const btnInfo = document.getElementById('tab-info');
             
             if(mode === 'video') {
-                btnVideo.className = 'tab-btn tab-active focus:outline-none flex items-center gap-2';
-                btnInfo.className = 'tab-btn tab-inactive focus:outline-none flex items-center gap-2';
+                btnVideo.className = 'tab-btn tab-active focus:outline-none flex items-center gap-2 text-lg';
+                btnInfo.className = 'tab-btn tab-inactive focus:outline-none flex items-center gap-2 text-lg';
             } else {
-                btnInfo.className = 'tab-btn tab-active focus:outline-none flex items-center gap-2';
-                btnVideo.className = 'tab-btn tab-inactive focus:outline-none flex items-center gap-2';
+                btnInfo.className = 'tab-btn tab-active focus:outline-none flex items-center gap-2 text-lg';
+                btnVideo.className = 'tab-btn tab-inactive focus:outline-none flex items-center gap-2 text-lg';
             }
             clearResults();
         }
 
         // ----- TIỆN ÍCH UI -----
-        function showLoading(show, text = "Đang xử lý...") {
+        function showLoading(show, text = "Đang đồng bộ dữ liệu...") {
             const loader = document.getElementById('loading');
             document.getElementById('loading-text').innerText = text;
             show ? loader.classList.remove('hidden') : loader.classList.add('hidden');
@@ -147,7 +228,7 @@
         function showError(msg) {
             const errEl = document.getElementById('error-msg');
             if(msg) {
-                errEl.innerText = msg;
+                errEl.innerHTML = `<i class="fa-solid fa-triangle-exclamation mr-2"></i> ${msg}`;
                 errEl.classList.remove('hidden');
             } else {
                 errEl.classList.add('hidden');
@@ -156,24 +237,20 @@
 
         function clearResults() {
             document.getElementById('result-area').innerHTML = '';
+            document.getElementById('result-area').className = "w-full max-w-6xl z-10 mt-8 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pb-20"; // Reset lưới
+            document.getElementById('batch-download-container').classList.add('hidden');
             showError('');
             fetchedVideos = [];
         }
 
-        // Tự tạo tên file đẹp: ID_NgàyTháng_IDVideo
         function generateFileName(author, videoId, ext) {
-            const now = new Date();
-            const time = `${String(now.getHours()).padStart(2,'0')}${String(now.getMinutes()).padStart(2,'0')}`;
-            const date = `${String(now.getDate()).padStart(2,'0')}${String(now.getMonth()+1).padStart(2,'0')}`;
-            return `${author}_${date}_${time}_${videoId}.${ext}`;
+            return `${author}_${videoId}.${ext}`;
         }
 
-        // Ép tải file qua Blob để đổi tên file
         async function forceDownload(url, filename, btnObj) {
             const originalHTML = btnObj.innerHTML;
             btnObj.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i>`;
             btnObj.style.pointerEvents = 'none';
-
             try {
                 const response = await fetch(url);
                 const blob = await response.blob();
@@ -194,22 +271,101 @@
             }
         }
 
+        // ----- QUẢN LÝ MODAL -----
+        function openVideoModal(index) {
+            const d = fetchedVideos[index].data;
+            const fileNameMp4 = generateFileName(d.author.uniqueId, d.video_data.id, 'mp4');
+            const fileNameMp3 = generateFileName(d.author.uniqueId, d.video_data.id, 'mp3');
+
+            // Set Video
+            document.getElementById('modal-video-container').innerHTML = `
+                <video controls playsinline autoplay class="w-full h-full object-contain max-h-[60vh] md:max-h-full" poster="${d.urls.cover}">
+                    <source src="${d.urls.no_watermark}" type="video/mp4">
+                </video>
+            `;
+
+            // Set Info
+            document.getElementById('modal-video-info').innerHTML = `
+                <div class="flex items-center gap-4 mb-6 pb-6 border-b border-white/10">
+                    <img src="${d.author.avatar}" class="w-16 h-16 rounded-full object-cover border-2 border-pink-500 shadow-[0_0_15px_rgba(236,72,153,0.3)]">
+                    <div>
+                        <h3 class="font-extrabold text-white text-xl">${d.author.nickname}</h3>
+                        <p class="text-pink-400 font-medium">@${d.author.uniqueId}</p>
+                    </div>
+                </div>
+                
+                <p class="text-slate-300 mb-6 text-base leading-relaxed whitespace-pre-wrap">${d.video_data.description || 'Không có nội dung mô tả.'}</p>
+                
+                <div class="grid grid-cols-2 gap-4 mb-8">
+                    <div class="bg-slate-800/50 p-4 rounded-2xl border border-white/5 flex flex-col items-center justify-center">
+                        <i class="fa-solid fa-play text-slate-400 text-xl mb-1"></i>
+                        <span class="text-white font-bold text-lg">${d.stats.play}</span>
+                        <span class="text-xs text-slate-500 uppercase">Lượt xem</span>
+                    </div>
+                    <div class="bg-slate-800/50 p-4 rounded-2xl border border-white/5 flex flex-col items-center justify-center">
+                        <i class="fa-solid fa-heart text-pink-500 text-xl mb-1 drop-shadow-[0_0_8px_rgba(236,72,153,0.8)]"></i>
+                        <span class="text-white font-bold text-lg">${d.stats.like}</span>
+                        <span class="text-xs text-slate-500 uppercase">Yêu thích</span>
+                    </div>
+                    <div class="bg-slate-800/50 p-4 rounded-2xl border border-white/5 flex flex-col items-center justify-center">
+                        <i class="fa-solid fa-comment text-blue-400 text-xl mb-1"></i>
+                        <span class="text-white font-bold text-lg">${d.stats.comment}</span>
+                        <span class="text-xs text-slate-500 uppercase">Bình luận</span>
+                    </div>
+                    <div class="bg-slate-800/50 p-4 rounded-2xl border border-white/5 flex flex-col items-center justify-center">
+                        <i class="fa-solid fa-share text-emerald-400 text-xl mb-1"></i>
+                        <span class="text-white font-bold text-lg">${d.stats.share}</span>
+                        <span class="text-xs text-slate-500 uppercase">Chia sẻ</span>
+                    </div>
+                </div>
+
+                <div class="flex flex-col gap-3 mt-auto">
+                    <button onclick="forceDownload('${d.urls.no_watermark}', '${fileNameMp4}', this)" 
+                        class="w-full bg-pink-600 hover:bg-pink-500 text-white font-bold py-4 rounded-xl transition-all shadow-[0_0_15px_rgba(236,72,153,0.4)] flex items-center justify-center gap-2 text-lg">
+                        <i class="fa-solid fa-video"></i> Tải Video Không Logo
+                    </button>
+                    <button onclick="forceDownload('${d.music.playUrl}', '${fileNameMp3}', this)" 
+                        class="w-full bg-slate-800 hover:bg-slate-700 text-white border border-slate-600 font-bold py-4 rounded-xl transition-all flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-music text-purple-400"></i> Tải Âm Thanh (MP3)
+                    </button>
+                </div>
+            `;
+
+            document.getElementById('video-modal').classList.add('active');
+            document.body.style.overflow = 'hidden';
+        }
+
+        function openAvatarModal(url) {
+            document.getElementById('modal-avatar-img').src = url;
+            document.getElementById('avatar-modal').classList.add('active');
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeModal(modalId) {
+            document.getElementById(modalId).classList.remove('active');
+            document.body.style.overflow = 'auto';
+            if(modalId === 'video-modal') {
+                // Xóa video để ngừng phát khi đóng modal
+                document.getElementById('modal-video-container').innerHTML = ''; 
+            }
+        }
+
         // ----- TÍNH NĂNG 1: TẢI NHIỀU VIDEO -----
         async function processVideos() {
             const input = document.getElementById('tiktok-links').value;
             const links = input.split('\n').map(l => l.trim()).filter(l => l !== '');
             
-            if (links.length === 0) return showError("Vui lòng dán ít nhất 1 đường link.");
-            if (links.length > 10) return showError("Giới hạn 10 link mỗi lần để tránh quá tải máy chủ.");
+            if (links.length === 0) return showError("Hãy dán ít nhất 1 link bạn ơi.");
+            if (links.length > 10) return showError("Hệ thống chỉ chạy tối đa 10 link/lần để tránh nghẽn server.");
 
             clearResults();
-            showLoading(true, `Đang bóc tách ${links.length} video...`);
+            showLoading(true, `Đang mã hóa ${links.length} luồng dữ liệu...`);
             
             const btn = document.getElementById('fetch-video-btn');
             btn.disabled = true;
 
             try {
-                // Fetch đồng loạt các link tới API hiện tại của bạn
+                // Gọi API lấy thông tin video[span_1](start_span)[span_1](end_span)
                 const promises = links.map(link => 
                     fetch(`/api/video?video=${encodeURIComponent(link)}`)
                     .then(res => res.json())
@@ -218,86 +374,83 @@
                 );
 
                 const results = await Promise.all(promises);
-                renderVideos(results);
+                
+                // Lọc video thành công
+                fetchedVideos = results.map((r, idx) => ({ ...r, originalIndex: idx })).filter(r => r.data && r.data.status === "Live");
+
+                renderVideosGrid(results);
 
             } catch (error) {
-                showError("Lỗi hệ thống: " + error.message);
+                showError("Lỗi Server: " + error.message);
             } finally {
                 showLoading(false);
                 btn.disabled = false;
             }
         }
 
-        function renderVideos(results) {
+        function renderVideosGrid(results) {
             const container = document.getElementById('result-area');
             let html = '';
 
-            const successfulVids = results.filter(r => r.data && r.data.status === "Live");
-            fetchedVideos = successfulVids;
-
-            // Nút Tải Toàn Bộ nếu có > 1 video
-            if (successfulVids.length > 1) {
-                html += `
-                    <div class="w-full flex justify-end animate-fade-up">
-                        <button onclick="downloadAllVideos(this)" class="bg-gradient-to-r from-pink-500 to-violet-500 hover:from-pink-600 hover:to-violet-600 text-white font-bold py-3 px-8 rounded-2xl shadow-lg transition transform hover:-translate-y-1 flex items-center gap-2">
-                            <i class="fa-solid fa-cloud-arrow-down"></i> Tải Toàn Bộ (${successfulVids.length} Video)
-                        </button>
-                    </div>
-                `;
+            if (fetchedVideos.length > 1) {
+                document.getElementById('batch-download-container').classList.remove('hidden');
             }
 
+            // Map lại để tạo card nhỏ gọn
+            let successIndex = 0;
             results.forEach((item, index) => {
                 const delay = index * 0.1;
                 
                 if (item.error || item.data.status !== "Live") {
                     html += `
-                        <div class="w-full glass-panel rounded-2xl p-4 text-red-500 text-sm animate-fade-up flex items-center gap-3" style="animation-delay: ${delay}s">
-                            <i class="fa-solid fa-circle-exclamation text-lg"></i>
-                            <span>Lỗi lấy video: <span class="opacity-70">${item.link}</span></span>
+                        <div class="col-span-full glass-dark rounded-2xl p-4 border border-red-500/30 text-red-400 text-sm animate-fade-up flex items-center gap-3" style="animation-delay: ${delay}s">
+                            <i class="fa-solid fa-skull-crossbones text-xl"></i>
+                            <span>Liên kết gãy hoặc video riêng tư: <span class="opacity-70">${item.link}</span></span>
                         </div>`;
                     return;
                 }
 
                 const d = item.data;
-                const fileNameMp4 = generateFileName(d.author.uniqueId, d.video_data.id, 'mp4');
-                const fileNameMp3 = generateFileName(d.author.uniqueId, d.video_data.id, 'mp3');
+                const currentIndex = successIndex; // Index dùng cho Modal
+                successIndex++;
                 
-                // Giao diện thẻ video (Không dùng box frame, dùng divider)
+                // Card Thu Gọn
                 html += `
-                    <div class="w-full glass-panel rounded-3xl overflow-hidden animate-fade-up flex flex-col md:flex-row" style="animation-delay: ${delay}s">
-                        <div class="w-full md:w-[35%] bg-black/5 relative aspect-[9/16] max-h-[400px] md:max-h-[500px] flex items-center justify-center">
-                            <video controls playsinline class="w-full h-full object-contain" poster="${d.urls.cover}">
-                                <source src="${d.urls.no_watermark}" type="video/mp4">
-                            </video>
-                        </div>
+                    <div onclick="openVideoModal(${currentIndex})" class="glass-dark rounded-3xl overflow-hidden animate-fade-up video-card-hover relative group border border-slate-700/50" style="animation-delay: ${delay}s">
                         
-                        <div class="w-full md:w-[65%] p-6 sm:p-8 flex flex-col justify-between divide-y divide-gray-200/50">
-                            <div class="pb-6">
-                                <div class="flex items-center gap-4 mb-5">
-                                    <img src="${d.author.avatar}" class="w-12 h-12 rounded-full object-cover shadow-sm">
-                                    <div>
-                                        <h3 class="font-bold text-gray-900 text-lg leading-tight">${d.author.nickname}</h3>
-                                        <p class="text-sm text-gray-500">@${d.author.uniqueId}</p>
-                                    </div>
-                                </div>
-                                <p class="text-sm text-gray-700 mb-5 leading-relaxed line-clamp-3">${d.video_data.description || 'Không có nội dung mô tả.'}</p>
-                                
-                                <div class="flex flex-wrap gap-4 text-sm font-medium text-gray-600">
-                                    <div class="flex items-center gap-1.5"><i class="fa-solid fa-play text-gray-400"></i> ${d.stats.play}</div>
-                                    <div class="flex items-center gap-1.5"><i class="fa-solid fa-heart text-pink-500"></i> ${d.stats.like}</div>
-                                    <div class="flex items-center gap-1.5"><i class="fa-solid fa-comment text-blue-400"></i> ${d.stats.comment}</div>
+                        <!-- Thumbnail -->
+                        <div class="w-full aspect-[3/4] relative overflow-hidden bg-slate-900">
+                            <img src="${d.urls.cover}" class="w-full h-full object-cover opacity-80 group-hover:opacity-60 transition-opacity duration-300">
+                            
+                            <!-- Nút Play Mờ -->
+                            <div class="play-overlay absolute inset-0 flex items-center justify-center opacity-0 transform scale-50 transition-all duration-300">
+                                <div class="w-16 h-16 bg-pink-600/80 rounded-full flex items-center justify-center backdrop-blur-sm shadow-[0_0_30px_rgba(236,72,153,0.8)] text-white text-2xl pl-1">
+                                    <i class="fa-solid fa-play"></i>
                                 </div>
                             </div>
 
-                            <div class="pt-6 flex flex-col sm:flex-row gap-3">
-                                <button onclick="forceDownload('${d.urls.no_watermark}', '${fileNameMp4}', this)" 
-                                    class="flex-1 bg-black text-white font-semibold py-3.5 rounded-xl hover:bg-gray-800 transition flex items-center justify-center gap-2">
-                                    <i class="fa-solid fa-download"></i> Tải Video
-                                </button>
-                                <button onclick="forceDownload('${d.music.playUrl}', '${fileNameMp3}', this)" 
-                                    class="sm:w-auto px-6 bg-white text-gray-800 font-semibold py-3.5 rounded-xl hover:bg-gray-50 transition flex items-center justify-center gap-2 shadow-sm border border-gray-100">
-                                    <i class="fa-solid fa-music text-violet-500"></i> Tải Nhạc
-                                </button>
+                            <!-- Nhãn Tác giả nổi lên trên Thumbnail -->
+                            <div class="absolute bottom-0 left-0 w-full p-4 bg-gradient-to-t from-black/90 via-black/50 to-transparent">
+                                <div class="flex items-center gap-2">
+                                    <img src="${d.author.avatar}" class="w-8 h-8 rounded-full border border-white/20">
+                                    <span class="text-white font-bold text-sm line-clamp-1">${d.author.nickname}</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Stats ngang đáy card -->
+                        <div class="grid grid-cols-3 divide-x divide-white/10 bg-black/40 border-t border-white/5 py-3">
+                            <div class="flex flex-col items-center justify-center">
+                                <i class="fa-solid fa-play text-slate-400 text-xs mb-1"></i>
+                                <span class="text-white font-bold text-xs">${d.stats.play}</span>
+                            </div>
+                            <div class="flex flex-col items-center justify-center">
+                                <i class="fa-solid fa-heart text-pink-500 text-xs mb-1"></i>
+                                <span class="text-white font-bold text-xs">${d.stats.like}</span>
+                            </div>
+                            <div class="flex flex-col items-center justify-center">
+                                <i class="fa-solid fa-comment text-blue-400 text-xs mb-1"></i>
+                                <span class="text-white font-bold text-xs">${d.stats.comment}</span>
                             </div>
                         </div>
                     </div>
@@ -307,12 +460,12 @@
             container.innerHTML = html;
         }
 
-        // Logic Tải lần lượt để không crash
+        // Tải toàn bộ lần lượt
         async function downloadAllVideos(btnObj) {
             if (!fetchedVideos || fetchedVideos.length === 0) return;
             
             const originalHTML = btnObj.innerHTML;
-            btnObj.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Đang tải...`;
+            btnObj.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Đang trích xuất...`;
             btnObj.disabled = true;
 
             const sleep = ms => new Promise(r => setTimeout(r, ms));
@@ -334,15 +487,13 @@
                     window.URL.revokeObjectURL(url);
                     a.remove();
                 } catch(e) {
-                    console.error("Lỗi tải file:", e);
                     window.open(vid.urls.no_watermark, '_blank');
                 }
                 
-                // Nghỉ 1 giây giữa các file để trình duyệt không bị treo
                 await sleep(1000); 
             }
 
-            btnObj.innerHTML = `<i class="fa-solid fa-check"></i> Đã Tải Xong`;
+            btnObj.innerHTML = `<i class="fa-solid fa-check"></i> Hoàn Tất`;
             setTimeout(() => {
                 btnObj.innerHTML = originalHTML;
                 btnObj.disabled = false;
@@ -353,20 +504,22 @@
         async function fetchUserInfo() {
             let user = document.getElementById('tiktok-username').value.trim();
             if (user.startsWith('@')) user = user.substring(1);
-            if (!user) return showError("Vui lòng nhập ID kênh.");
+            if (!user) return showError("Bỏ trống ID thì soi bằng niềm tin à?");
 
             clearResults();
-            showLoading(true, "Đang trích xuất dữ liệu kênh...");
+            // Đổi layout lưới thành box đơn cho Info
+            document.getElementById('result-area').className = "w-full max-w-4xl z-10 mt-8 flex flex-col items-center pb-20"; 
+            showLoading(true, "Đang thâm nhập radar quét kênh...");
             
             const btn = document.getElementById('fetch-info-btn');
             btn.disabled = true;
 
             try {
-                // Gọi tới api/index.js của bạn
+                // Gọi API index lấy thông tin người dùng[span_2](start_span)[span_2](end_span)
                 const response = await fetch(`/api/index?username=${user}`);
                 const data = await response.json();
 
-                if (data.status !== "Live") throw new Error(data.error || "Không tìm thấy dữ liệu kênh. Có thể kênh riêng tư hoặc bị ban.");
+                if (data.status !== "Live") throw new Error(data.error || "Mục tiêu không tồn tại hoặc radar bị chặn.");
 
                 renderUserInfo(data);
 
@@ -384,32 +537,42 @@
             const s = data.stats_formatted;
 
             let html = `
-                <div class="w-full max-w-3xl glass-panel rounded-3xl p-8 md:p-12 text-center animate-fade-up relative overflow-hidden">
+                <div class="w-full glass-dark rounded-[2.5rem] p-8 md:p-12 text-center animate-fade-up relative overflow-hidden border border-white/10 shadow-2xl">
                     
-                    <img src="${u.avatar}" class="w-28 h-28 rounded-full mx-auto object-cover shadow-xl relative z-10">
+                    <!-- Backdrop Phát Sáng -->
+                    <div class="absolute top-0 left-1/2 transform -translate-x-1/2 w-48 h-48 bg-pink-600 rounded-full mix-blend-screen filter blur-[80px] opacity-40"></div>
                     
-                    <h2 class="text-3xl font-extrabold mt-5 text-gray-900 flex items-center justify-center gap-2">
-                        ${u.nickname} ${u.verified ? '<i class="fa-solid fa-circle-check text-blue-500 text-xl"></i>' : ''}
+                    <!-- Avatar Clickable -->
+                    <div class="relative inline-block mt-4 cursor-pointer group" onclick="openAvatarModal('${u.avatar}')">
+                        <img src="${u.avatar}" class="w-32 h-32 rounded-full mx-auto object-cover border-4 border-slate-800 shadow-[0_0_30px_rgba(236,72,153,0.3)] relative z-10 group-hover:scale-105 transition-transform duration-300">
+                        <div class="absolute inset-0 bg-black/40 rounded-full z-20 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 backdrop-blur-sm border-4 border-pink-500">
+                            <i class="fa-solid fa-magnifying-glass-plus text-white text-3xl"></i>
+                        </div>
+                    </div>
+                    
+                    <h2 class="text-3xl md:text-4xl font-extrabold mt-6 text-white flex items-center justify-center gap-3 drop-shadow-md">
+                        ${u.nickname} ${u.verified ? '<i class="fa-solid fa-circle-check text-blue-400 text-2xl drop-shadow-[0_0_10px_rgba(96,165,250,0.8)]"></i>' : ''}
                     </h2>
-                    <p class="text-gray-500 font-medium text-lg mt-1">@${u.uniqueId}</p>
+                    <p class="text-pink-400 font-bold text-lg mt-1 tracking-wide">@${u.uniqueId}</p>
                     
-                    ${data.live_info ? `<div class="mt-3 inline-flex items-center gap-2 bg-red-100 text-red-600 px-4 py-1.5 rounded-full text-sm font-bold animate-pulse"><span class="w-2 h-2 rounded-full bg-red-600"></span> ${data.live_info.status}</div>` : ''}
+                    ${data.live_info ? `<div class="mt-4 inline-flex items-center gap-2 bg-red-900/50 border border-red-500/50 text-red-400 px-5 py-2 rounded-full text-sm font-bold shadow-[0_0_15px_rgba(239,68,68,0.5)] animate-pulse"><span class="w-2.5 h-2.5 rounded-full bg-red-500"></span> ${data.live_info.status}</div>` : ''}
 
-                    <p class="mt-6 text-gray-700 text-base leading-relaxed max-w-xl mx-auto italic whitespace-pre-wrap">${u.signature || 'Chưa có tiểu sử.'}</p>
-                    ${u.bioLink ? `<a href="${u.bioLink}" target="_blank" class="block mt-2 text-blue-500 hover:underline text-sm"><i class="fa-solid fa-link mr-1"></i>${u.bioLink}</a>` : ''}
+                    <p class="mt-8 text-slate-300 text-base md:text-lg leading-relaxed max-w-2xl mx-auto italic whitespace-pre-wrap px-4">${u.signature || 'Hành tung bí ẩn, chưa có tiểu sử.'}</p>
+                    ${u.bioLink ? `<a href="${u.bioLink}" target="_blank" class="inline-block mt-4 text-blue-400 hover:text-blue-300 hover:underline text-sm bg-blue-900/30 px-4 py-2 rounded-full border border-blue-500/30 transition-all"><i class="fa-solid fa-link mr-2"></i>${u.bioLink}</a>` : ''}
                     
-                    <div class="flex justify-center divide-x divide-gray-200 mt-10 pt-8 border-t border-gray-200/60">
-                        <div class="px-4 md:px-8 flex flex-col">
-                            <span class="text-3xl font-extrabold text-gray-900">${s.following}</span>
-                            <span class="text-xs text-gray-500 uppercase tracking-wider mt-1 font-semibold">Đang theo dõi</span>
+                    <!-- Box Thống Kê -->
+                    <div class="flex justify-center divide-x divide-slate-700/50 mt-12 pt-8 border-t border-slate-700/50">
+                        <div class="px-4 md:px-10 flex flex-col items-center">
+                            <span class="text-3xl md:text-4xl font-black text-white drop-shadow-md">${s.following}</span>
+                            <span class="text-xs md:text-sm text-slate-400 uppercase tracking-widest mt-2 font-bold">Đang follow</span>
                         </div>
-                        <div class="px-4 md:px-8 flex flex-col">
-                            <span class="text-3xl font-extrabold text-gray-900">${s.follower}</span>
-                            <span class="text-xs text-gray-500 uppercase tracking-wider mt-1 font-semibold">Follower</span>
+                        <div class="px-4 md:px-10 flex flex-col items-center">
+                            <span class="text-3xl md:text-4xl font-black text-white drop-shadow-md">${s.follower}</span>
+                            <span class="text-xs md:text-sm text-slate-400 uppercase tracking-widest mt-2 font-bold">Follower</span>
                         </div>
-                        <div class="px-4 md:px-8 flex flex-col">
-                            <span class="text-3xl font-extrabold text-gray-900">${s.heart}</span>
-                            <span class="text-xs text-gray-500 uppercase tracking-wider mt-1 font-semibold">Lượt thích</span>
+                        <div class="px-4 md:px-10 flex flex-col items-center">
+                            <span class="text-3xl md:text-4xl font-black text-white drop-shadow-md">${s.heart}</span>
+                            <span class="text-xs md:text-sm text-slate-400 uppercase tracking-widest mt-2 font-bold">Lượt thích</span>
                         </div>
                     </div>
                 </div>
