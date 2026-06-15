@@ -74,6 +74,7 @@ function loadMore() {
     else if (currentMode === 'info') fetchUserInfo(true);
 }
 
+// Bypass Download 
 async function forceDownload(url, filename, btnObj) {
     const originalHTML = btnObj.innerHTML;
     btnObj.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Đang nén...`;
@@ -90,21 +91,15 @@ async function forceDownload(url, filename, btnObj) {
         window.URL.revokeObjectURL(downloadUrl); a.remove();
     };
 
-    try {
-        await triggerDownload(url);
-    } catch (error) {
+    try { await triggerDownload(url); } 
+    catch (error) {
         try {
             const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(url)}`;
             await triggerDownload(proxyUrl);
-        } catch (proxyError) {
-            window.open(url, '_blank');
-        }
+        } catch (proxyError) { window.open(url, '_blank'); }
     } finally {
-        btnObj.innerHTML = `<i class="fa-solid fa-check"></i> Xong`;
-        setTimeout(() => {
-            btnObj.innerHTML = originalHTML;
-            btnObj.style.pointerEvents = 'auto';
-        }, 2000);
+        btnObj.innerHTML = `<i class="fa-solid fa-check"></i> Hoàn Tất`;
+        setTimeout(() => { btnObj.innerHTML = originalHTML; btnObj.style.pointerEvents = 'auto'; }, 2000);
     }
 }
 
@@ -116,44 +111,126 @@ function searchUserFromModal(username) {
     window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
+// ================= MODAL HIỂN THỊ CHI TIẾT (ĐÃ TRANG TRÍ SIÊU VIP) =================
 function openVideoModal(index) {
     const d = fetchedVideos[index].data;
     const fileNameMp4 = generateFileName(d.author.uniqueId, d.video_data.id, 'mp4');
     const fileNameMp3 = generateFileName(d.author.uniqueId, d.video_data.id, 'mp3');
 
     document.getElementById('modal-video-container').innerHTML = `
-        <video controls playsinline autoplay class="w-full h-full object-contain max-h-[100%] bg-black" poster="${d.urls.cover}">
+        <video controls playsinline autoplay class="w-full h-full object-contain max-h-[100%] bg-black/90 shadow-[inset_0_0_50px_rgba(0,0,0,0.8)]" poster="${d.urls.cover}">
             <source src="${d.urls.no_watermark}" type="video/mp4">
         </video>
     `;
 
     document.getElementById('modal-video-info').innerHTML = `
-        <div class="flex items-center gap-3 mb-4 p-2 -ml-2 rounded-xl hover:bg-white/5 cursor-pointer transition group" onclick="searchUserFromModal('${d.author.uniqueId}')">
-            <!-- Thêm decoding="async" để chống lag -->
-            <img src="${d.author.avatar}" class="w-12 h-12 rounded-full object-cover border-2 border-slate-700 group-hover:border-pink-500 transition shadow-sm bg-slate-800" loading="lazy" decoding="async">
-            <div class="flex-1">
-                <h3 class="font-bold text-white text-base group-hover:text-pink-400 transition">${d.author.nickname}</h3>
-                <p class="text-slate-400 text-xs">@${d.author.uniqueId}</p>
+        
+        <div class="relative p-[1px] rounded-2xl bg-gradient-to-r from-pink-500 via-purple-500 to-indigo-500 mb-5 group cursor-pointer hover:shadow-[0_0_20px_rgba(236,72,153,0.3)] transition-all duration-300" onclick="searchUserFromModal('${d.author.uniqueId}')">
+            <div class="flex items-center gap-4 p-3 bg-slate-900/95 backdrop-blur-xl rounded-[15px]">
+                <div class="relative w-14 h-14">
+                    <div class="absolute inset-0 bg-gradient-to-tr from-pink-500 to-indigo-500 rounded-full animate-spin blur-[3px] opacity-70 group-hover:opacity-100 transition"></div>
+                    <img src="${d.author.avatar}" class="w-14 h-14 rounded-full object-cover relative z-10 border-[2.5px] border-slate-900 bg-slate-800" loading="lazy" decoding="async">
+                </div>
+                <div class="flex-1 truncate">
+                    <h3 class="font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-white to-slate-300 text-lg group-hover:from-pink-400 group-hover:to-purple-400 transition truncate">${d.author.nickname}</h3>
+                    <p class="text-pink-500/80 font-medium text-xs mt-0.5 tracking-wide truncate">@${d.author.uniqueId}</p>
+                </div>
+                <div class="px-3 py-1.5 rounded-lg bg-white/5 text-white text-xs font-bold border border-white/10 group-hover:bg-pink-500 group-hover:border-pink-400 transition-all flex items-center gap-1.5 shadow-sm">
+                    Kênh <i class="fa-solid fa-arrow-right"></i>
+                </div>
             </div>
-            <i class="fa-solid fa-chevron-right text-slate-600 group-hover:text-pink-500 transition text-sm"></i>
+        </div>
+
+        <div class="flex items-center gap-3 bg-slate-900/40 p-3 rounded-xl border border-white/5 mb-5 shadow-inner">
+            <div class="w-9 h-9 rounded-full bg-slate-800 flex items-center justify-center border border-white/10 shadow-[0_0_10px_rgba(168,85,247,0.3)] animate-[spin_4s_linear_infinite]">
+                <i class="fa-solid fa-music text-purple-400 text-xs drop-shadow-[0_0_5px_rgba(168,85,247,0.8)]"></i>
+            </div>
+            <div class="flex-1 truncate">
+                <p class="text-white text-sm font-bold truncate tracking-wide">${d.music.title}</p>
+                <p class="text-[10px] text-slate-500 uppercase font-semibold mt-0.5 tracking-widest">Âm thanh gốc</p>
+            </div>
+            <div class="px-2">
+                <div class="flex gap-1 items-end h-3">
+                    <div class="w-1 bg-purple-500 rounded-full animate-[bounce_1s_infinite] opacity-80 h-2"></div>
+                    <div class="w-1 bg-pink-500 rounded-full animate-[bounce_1s_infinite_0.2s] opacity-80 h-3"></div>
+                    <div class="w-1 bg-indigo-500 rounded-full animate-[bounce_1s_infinite_0.4s] opacity-80 h-1.5"></div>
+                </div>
+            </div>
         </div>
         
-        <p class="text-slate-200 text-sm leading-relaxed whitespace-pre-wrap mb-5">${d.video_data.description || 'Không có mô tả.'}</p>
+        <div class="relative bg-gradient-to-br from-slate-800/60 to-slate-900/60 p-5 rounded-2xl border border-slate-700/50 shadow-[inset_0_4px_20px_rgba(0,0,0,0.5)] mb-6">
+            <i class="fa-solid fa-quote-left absolute top-3 right-4 text-4xl text-white/5"></i>
+            <h4 class="text-[11px] text-pink-500 font-bold uppercase tracking-widest mb-2 flex items-center gap-2">
+                <i class="fa-solid fa-align-left"></i> Mô tả video
+            </h4>
+            <p class="text-slate-200 text-[14px] md:text-[15px] leading-relaxed whitespace-pre-wrap relative z-10 font-medium">${d.video_data.description || 'Tác giả rất lười, không để lại chữ nào.'}</p>
+        </div>
         
-        <div class="flex gap-4 border-t border-white/5 pt-4">
-            <div class="flex items-center gap-2"><i class="fa-solid fa-play text-slate-500"></i><span class="text-white text-sm font-bold">${d.stats.play}</span></div>
-            <div class="flex items-center gap-2"><i class="fa-solid fa-heart text-pink-500"></i><span class="text-white text-sm font-bold">${d.stats.like}</span></div>
-            <div class="flex items-center gap-2"><i class="fa-solid fa-comment text-blue-400"></i><span class="text-white text-sm font-bold">${d.stats.comment}</span></div>
-            <div class="flex items-center gap-2"><i class="fa-solid fa-share text-emerald-400"></i><span class="text-white text-sm font-bold">${d.stats.share}</span></div>
+        <h4 class="text-[11px] text-blue-400 font-bold uppercase tracking-widest mb-3 flex items-center gap-2 pl-1">
+            <i class="fa-solid fa-chart-pie"></i> Tương tác số liệu
+        </h4>
+        <div class="grid grid-cols-2 gap-3 md:gap-4 mb-2">
+            
+            <div class="relative overflow-hidden bg-slate-800/40 p-3.5 rounded-2xl border border-white/5 hover:border-slate-500/50 hover:bg-slate-800/70 transition duration-300 group">
+                <div class="absolute -right-4 -top-4 w-16 h-16 bg-white/5 rounded-full blur-xl group-hover:bg-slate-400/20 transition"></div>
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-full bg-slate-700/50 flex items-center justify-center text-slate-300 group-hover:text-white group-hover:scale-110 transition shadow-inner">
+                        <i class="fa-solid fa-play"></i>
+                    </div>
+                    <div>
+                        <span class="block text-white text-lg font-black tracking-tight drop-shadow-md">${d.stats.play}</span>
+                        <span class="block text-[10px] text-slate-400 uppercase font-bold tracking-wider mt-0.5">Lượt xem</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="relative overflow-hidden bg-slate-800/40 p-3.5 rounded-2xl border border-white/5 hover:border-pink-500/40 hover:bg-slate-800/70 transition duration-300 group">
+                <div class="absolute -right-4 -top-4 w-16 h-16 bg-pink-500/5 rounded-full blur-xl group-hover:bg-pink-500/20 transition"></div>
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-full bg-pink-500/10 flex items-center justify-center text-pink-500 group-hover:scale-110 transition shadow-[inset_0_0_10px_rgba(236,72,153,0.2)]">
+                        <i class="fa-solid fa-heart drop-shadow-[0_0_5px_rgba(236,72,153,0.8)]"></i>
+                    </div>
+                    <div>
+                        <span class="block text-white text-lg font-black tracking-tight drop-shadow-md">${d.stats.like}</span>
+                        <span class="block text-[10px] text-slate-400 uppercase font-bold tracking-wider mt-0.5">Yêu thích</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="relative overflow-hidden bg-slate-800/40 p-3.5 rounded-2xl border border-white/5 hover:border-blue-500/40 hover:bg-slate-800/70 transition duration-300 group">
+                <div class="absolute -right-4 -top-4 w-16 h-16 bg-blue-500/5 rounded-full blur-xl group-hover:bg-blue-500/20 transition"></div>
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-full bg-blue-500/10 flex items-center justify-center text-blue-400 group-hover:scale-110 transition shadow-[inset_0_0_10px_rgba(96,165,250,0.2)]">
+                        <i class="fa-solid fa-comment drop-shadow-[0_0_5px_rgba(96,165,250,0.6)]"></i>
+                    </div>
+                    <div>
+                        <span class="block text-white text-lg font-black tracking-tight drop-shadow-md">${d.stats.comment}</span>
+                        <span class="block text-[10px] text-slate-400 uppercase font-bold tracking-wider mt-0.5">Bình luận</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="relative overflow-hidden bg-slate-800/40 p-3.5 rounded-2xl border border-white/5 hover:border-emerald-500/40 hover:bg-slate-800/70 transition duration-300 group">
+                <div class="absolute -right-4 -top-4 w-16 h-16 bg-emerald-500/5 rounded-full blur-xl group-hover:bg-emerald-500/20 transition"></div>
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-full bg-emerald-500/10 flex items-center justify-center text-emerald-400 group-hover:scale-110 transition shadow-[inset_0_0_10px_rgba(52,211,153,0.2)]">
+                        <i class="fa-solid fa-share drop-shadow-[0_0_5px_rgba(52,211,153,0.6)]"></i>
+                    </div>
+                    <div>
+                        <span class="block text-white text-lg font-black tracking-tight drop-shadow-md">${d.stats.share}</span>
+                        <span class="block text-[10px] text-slate-400 uppercase font-bold tracking-wider mt-0.5">Chia sẻ</span>
+                    </div>
+                </div>
+            </div>
         </div>
     `;
 
     document.getElementById('modal-video-actions').innerHTML = `
-        <button onclick="forceDownload('${d.urls.no_watermark}', '${fileNameMp4}', this)" class="w-full bg-pink-600 hover:bg-pink-500 text-white font-bold py-3 rounded-xl transition-transform active:scale-95 shadow-lg flex items-center justify-center gap-2 text-sm">
-            <i class="fa-solid fa-video"></i> Tải Video
+        <button onclick="forceDownload('${d.urls.no_watermark}', '${fileNameMp4}', this)" class="w-full bg-gradient-to-r from-pink-600 to-rose-500 hover:from-pink-500 hover:to-rose-400 text-white font-bold py-4 rounded-xl transition-transform active:scale-95 shadow-[0_10px_20px_-10px_rgba(236,72,153,0.6)] flex items-center justify-center gap-2 text-base">
+            <i class="fa-solid fa-download text-lg"></i> Tải Video Gốc
         </button>
-        <button onclick="forceDownload('${d.music.playUrl}', '${fileNameMp3}', this)" class="w-full bg-slate-700 hover:bg-slate-600 text-white font-bold py-3 rounded-xl transition-transform active:scale-95 flex items-center justify-center gap-2 text-sm">
-            <i class="fa-solid fa-music text-purple-400"></i> Tải MP3
+        <button onclick="forceDownload('${d.music.playUrl}', '${fileNameMp3}', this)" class="w-full bg-slate-800 hover:bg-slate-700 text-white font-bold py-4 rounded-xl transition-transform active:scale-95 border border-slate-600 shadow-lg flex items-center justify-center gap-2 text-base">
+            <i class="fa-solid fa-music text-purple-400 text-lg"></i> Tải Nhạc MP3
         </button>
     `;
 
@@ -165,16 +242,13 @@ function closeModal(modalId) {
     document.getElementById(modalId).classList.remove('active');
     document.body.style.overflow = '';
     if(modalId === 'video-modal') {
-        // TỐI ƯU SIÊU CẤP: Ép giải phóng bộ nhớ của Thẻ Video khi tắt (Chống rò rỉ RAM)
         const videoEl = document.querySelector('#modal-video-container video');
-        if (videoEl) {
-            videoEl.pause();
-            videoEl.removeAttribute('src'); 
-            videoEl.load();
-        }
+        if (videoEl) { videoEl.pause(); videoEl.removeAttribute('src'); videoEl.load(); }
         document.getElementById('modal-video-container').innerHTML = ''; 
     }
 }
+
+// ================= CÁC TÍNH NĂNG FETCH DỮ LIỆU CÒN LẠI (GIỮ NGUYÊN) =================
 
 async function processVideos() {
     const input = document.getElementById('tiktok-links').value;
@@ -187,9 +261,7 @@ async function processVideos() {
     document.getElementById('fetch-video-btn').disabled = true;
 
     try {
-        const promises = links.map(link => 
-            fetch(`/api/video?video=${encodeURIComponent(link)}`).then(res => res.json()).then(data => ({ link, data })).catch(err => ({ link, error: err.message }))
-        );
+        const promises = links.map(link => fetch(`/api/video?video=${encodeURIComponent(link)}`).then(res => res.json()).then(data => ({ link, data })).catch(err => ({ link, error: err.message })));
         const results = await Promise.all(promises);
         fetchedVideos = results.map((r, idx) => ({ ...r, originalIndex: idx })).filter(r => r.data && r.data.status === "Live");
         renderVideoCards(fetchedVideos, false, 0);
@@ -344,7 +416,7 @@ function renderUserInfoCompact() {
                     <p class="text-slate-400 text-sm font-medium">@${u.uniqueId} • ${s?.follower || '0'} Fl</p>
                 </div>
             </div>
-            <div class="text-slate-500 flex flex-col items-center bg-slate-900/50 p-2 px-4 rounded-xl">
+            <div class="text-slate-500 flex flex-col items-center bg-slate-900/50 p-2 px-4 rounded-xl border border-white/5">
                 <span class="text-xs font-bold text-pink-500">MỞ RỘNG</span>
                 <i class="fa-solid fa-chevron-down mt-1"></i>
             </div>
@@ -359,28 +431,27 @@ function renderUserInfoExpanded() {
     const s = fullUserData.stats_formatted;
     container.innerHTML = `
         <div class="w-full glass-panel rounded-[2.5rem] p-8 md:p-10 text-center relative overflow-hidden shadow-2xl animate-fade-up">
-            <button class="absolute top-4 right-4 z-20 w-10 h-10 bg-slate-800 hover:bg-red-500 text-white rounded-full flex items-center justify-center transition" onclick="renderUserInfoCompact()"><i class="fa-solid fa-chevron-up"></i></button>
+            <button class="absolute top-4 right-4 z-20 w-10 h-10 bg-slate-800 border border-white/10 hover:bg-red-500 text-white rounded-full flex items-center justify-center transition" onclick="renderUserInfoCompact()"><i class="fa-solid fa-chevron-up"></i></button>
             <div class="absolute top-0 left-1/2 transform -translate-x-1/2 w-40 h-40 bg-pink-600 rounded-full blur-[80px] opacity-30 pointer-events-none"></div>
             
-            <img src="${u.avatar}" class="w-24 h-24 rounded-full mx-auto object-cover border-4 border-slate-800 shadow-[0_0_20px_rgba(236,72,153,0.3)] relative z-10 bg-slate-900" loading="lazy" decoding="async">
-            <h2 class="text-2xl font-extrabold mt-3 text-white flex items-center justify-center gap-2">${u.nickname} ${u.verified ? '<i class="fa-solid fa-circle-check text-blue-400"></i>' : ''}</h2>
+            <img src="${u.avatar}" class="w-24 h-24 rounded-full mx-auto object-cover border-4 border-slate-800 shadow-[0_0_30px_rgba(236,72,153,0.5)] relative z-10 bg-slate-900" loading="lazy" decoding="async">
+            <h2 class="text-2xl font-extrabold mt-4 text-white flex items-center justify-center gap-2">${u.nickname} ${u.verified ? '<i class="fa-solid fa-circle-check text-blue-400"></i>' : ''}</h2>
             <p class="text-pink-400 font-medium text-sm mt-0.5">@${u.uniqueId}</p>
             ${fullUserData.live_info ? `<div class="mt-3 inline-block bg-red-900/50 text-red-400 px-3 py-1 rounded-full text-xs font-bold animate-pulse">🔴 ${fullUserData.live_info.status}</div>` : ''}
             <p class="mt-4 text-slate-300 text-sm leading-relaxed max-w-xl mx-auto italic">${u.signature || 'Chưa có tiểu sử.'}</p>
-            ${u.bioLink ? `<a href="${u.bioLink}" target="_blank" class="inline-block mt-3 text-blue-400 text-xs bg-slate-800 px-3 py-1.5 rounded-lg"><i class="fa-solid fa-link mr-1"></i>${u.bioLink}</a>` : ''}
+            ${u.bioLink ? `<a href="${u.bioLink}" target="_blank" class="inline-block mt-3 text-blue-400 text-xs bg-slate-800 px-4 py-2 rounded-xl border border-white/5"><i class="fa-solid fa-link mr-1"></i>${u.bioLink}</a>` : ''}
             
             <div class="grid grid-cols-4 gap-2 mt-6 pt-6 border-t border-slate-700/50">
-                <div class="flex flex-col"><span class="text-xl font-bold text-white">${s?.following || '0'}</span><span class="text-[10px] text-slate-400 uppercase mt-0.5">Đang FL</span></div>
-                <div class="flex flex-col"><span class="text-xl font-bold text-white">${s?.follower || '0'}</span><span class="text-[10px] text-slate-400 uppercase mt-0.5">Follower</span></div>
-                <div class="flex flex-col"><span class="text-xl font-bold text-white">${s?.heart || '0'}</span><span class="text-[10px] text-slate-400 uppercase mt-0.5">Thích</span></div>
-                <div class="flex flex-col"><span class="text-xl font-bold text-white">${s?.video || '0'}</span><span class="text-[10px] text-slate-400 uppercase mt-0.5">Video</span></div>
+                <div class="flex flex-col"><span class="text-xl font-bold text-white">${s?.following || '0'}</span><span class="text-[10px] text-slate-400 uppercase mt-0.5 font-semibold">Đang FL</span></div>
+                <div class="flex flex-col"><span class="text-xl font-bold text-white">${s?.follower || '0'}</span><span class="text-[10px] text-slate-400 uppercase mt-0.5 font-semibold">Follower</span></div>
+                <div class="flex flex-col"><span class="text-xl font-bold text-white">${s?.heart || '0'}</span><span class="text-[10px] text-slate-400 uppercase mt-0.5 font-semibold">Thích</span></div>
+                <div class="flex flex-col"><span class="text-xl font-bold text-white">${s?.video || '0'}</span><span class="text-[10px] text-slate-400 uppercase mt-0.5 font-semibold">Video</span></div>
             </div>
         </div>
     `;
 }
 
 function renderVideoCards(results, append = false, startIndex = 0) {
-    // TỐI ƯU SIÊU CẤP: Dùng requestAnimationFrame để đẩy việc Render vào luồng chống giật (Trình duyệt sẽ vẽ khi sẵn sàng)
     requestAnimationFrame(() => {
         const container = document.getElementById('result-area');
         let html = '';
@@ -393,8 +464,8 @@ function renderVideoCards(results, append = false, startIndex = 0) {
 
         if (!append) {
             container.innerHTML = '';
-            if (fetchedVideos.length === 1) container.className = "w-full max-w-[320px] mx-auto z-10 mt-6 pb-8";
-            else container.className = "w-full max-w-[98%] 2xl:max-w-[1600px] mx-auto z-10 mt-6 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-4 pb-8";
+            if (fetchedVideos.length === 1) container.className = "w-full max-w-[340px] mx-auto z-10 mt-6 pb-8";
+            else container.className = "w-full max-w-[98%] 2xl:max-w-[1600px] mx-auto z-10 mt-6 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 sm:gap-6 pb-8";
         }
 
         results.forEach((item, index) => {
@@ -402,24 +473,38 @@ function renderVideoCards(results, append = false, startIndex = 0) {
             const d = item.data;
             const currentIndex = startIndex + index; 
             
-            // Tối ưu ảnh: loading="lazy" và decoding="async" giúp load hàng ngàn ảnh không bị nghẽn
             html += `
-                <div onclick="openVideoModal(${currentIndex})" class="glass-card rounded-2xl overflow-hidden relative group flex flex-col h-full cursor-pointer animate-fade-up" style="animation-delay: ${(index % 20) * 0.03}s">
-                    <div class="w-full aspect-[3/4] relative bg-slate-900">
-                        <img src="${d.urls.cover}" class="w-full h-full object-cover opacity-80 group-hover:opacity-40 transition-opacity duration-300" loading="lazy" decoding="async">
-                        <div class="play-overlay absolute inset-0 flex items-center justify-center opacity-0 transform scale-50 transition-all duration-300">
-                            <div class="w-14 h-14 bg-pink-600/90 rounded-full flex items-center justify-center text-white text-xl pl-1 shadow-lg"><i class="fa-solid fa-play"></i></div>
+                <div class="premium-card-wrapper animate-fade-up" style="animation-delay: ${(index % 20) * 0.03}s">
+                    <div onclick="openVideoModal(${currentIndex})" class="premium-card rounded-3xl overflow-hidden relative w-full aspect-[3/4] flex flex-col cursor-pointer group">
+                        
+                        <div class="absolute inset-0 bg-slate-900 z-0 overflow-hidden">
+                            <img src="${d.urls.cover}" class="cover-img w-full h-full object-cover opacity-80" loading="lazy" decoding="async">
                         </div>
-                    </div>
-                    
-                    <div class="absolute bottom-0 left-0 w-full p-2 bg-gradient-to-t from-black/90 to-transparent">
-                        <div class="flex items-center gap-2 mb-1.5 px-1">
-                            <img src="${d.author.avatar}" class="w-5 h-5 rounded-full object-cover bg-slate-800" loading="lazy" decoding="async">
-                            <span class="text-white font-semibold text-[11px] truncate shadow-black">${d.author.nickname}</span>
+                        
+                        <div class="absolute top-3 right-3 bg-black/60 backdrop-blur-md border border-white/10 text-white text-[10px] font-bold px-2.5 py-1.5 rounded-xl flex items-center gap-1.5 z-20 shadow-lg">
+                            <i class="fa-solid fa-play text-pink-500"></i> ${d.stats.play}
                         </div>
-                        <div class="flex justify-between px-1 text-[10px] text-white/80 font-medium">
-                            <span class="flex items-center gap-1"><i class="fa-solid fa-play text-slate-400"></i> ${d.stats.play}</span>
-                            <span class="flex items-center gap-1"><i class="fa-solid fa-heart text-pink-500"></i> ${d.stats.like}</span>
+
+                        <div class="play-aura absolute inset-0 flex items-center justify-center opacity-0 transform scale-50 z-20 pointer-events-none">
+                            <div class="w-14 h-14 bg-pink-600/90 backdrop-blur-sm rounded-full flex items-center justify-center text-white text-xl pl-1 border border-pink-400/50">
+                                <i class="fa-solid fa-play"></i>
+                            </div>
+                        </div>
+
+                        <div class="info-bar absolute bottom-0 left-0 w-full pt-16 pb-4 px-4 bg-gradient-to-t from-[#020617] via-[#020617]/80 to-transparent z-10 flex flex-col justify-end">
+                            <div class="flex items-center gap-2.5 mb-2.5">
+                                <img src="${d.author.avatar}" class="w-7 h-7 rounded-full object-cover ring-2 ring-pink-500/40 group-hover:ring-pink-500 transition-all shadow-lg bg-slate-800" loading="lazy" decoding="async">
+                                <span class="text-white font-bold text-xs truncate drop-shadow-md tracking-wide">${d.author.nickname}</span>
+                            </div>
+                            
+                            <div class="flex gap-2 text-[10px] font-bold text-white/90">
+                                <span class="bg-white/10 border border-white/5 px-2 py-1 rounded-lg backdrop-blur-sm flex items-center gap-1.5 shadow-sm">
+                                    <i class="fa-solid fa-heart text-pink-500"></i> ${d.stats.like}
+                                </span>
+                                <span class="bg-white/10 border border-white/5 px-2 py-1 rounded-lg backdrop-blur-sm flex items-center gap-1.5 shadow-sm">
+                                    <i class="fa-solid fa-comment text-blue-400"></i> ${d.stats.comment}
+                                </span>
+                            </div>
                         </div>
                     </div>
                 </div>
