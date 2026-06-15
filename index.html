@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>TikTok Studio Pro | Smooth Edition</title>
-    <!-- Preconnect để tăng tốc độ load ảnh/video từ CDN -->
     <link rel="preconnect" href="https://p16-sign-va.tiktokcdn.com">
     <link rel="preconnect" href="https://www.tikwm.com">
     <script src="https://cdn.tailwindcss.com"></script>
@@ -33,20 +32,18 @@
             -webkit-backdrop-filter: blur(24px);
             border: 1px solid rgba(255, 255, 255, 0.08);
             box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
-            transform: translateZ(0); /* Ép Render bằng GPU */
+            transform: translateZ(0); 
         }
 
         .glass-card {
             background: rgba(30, 41, 59, 0.85);
             border: 1px solid rgba(255, 255, 255, 0.05);
             transition: all 0.4s cubic-bezier(0.25, 1, 0.5, 1);
-            
-            /* SIÊU TỐI ƯU HIỆU NĂNG GRID TẠI ĐÂY */
             will-change: transform, box-shadow;
             transform: perspective(1000px) translateZ(0);
             backface-visibility: hidden; 
-            content-visibility: auto; /* Bỏ qua render khi ngoài màn hình */
-            contain-intrinsic-size: auto 300px; /* Giữ khung khi cuộn siêu tốc */
+            content-visibility: auto; 
+            contain-intrinsic-size: auto 300px; 
         }
 
         .glass-card:hover {
@@ -64,7 +61,7 @@
         }
         .animate-fade-up { 
             animation: fadeUpIn 0.5s cubic-bezier(0.25, 1, 0.5, 1) forwards; 
-            backface-visibility: hidden; /* Giảm chớp giật lúc xuất hiện */
+            backface-visibility: hidden; 
         }
         
         @keyframes popIn {
@@ -78,7 +75,6 @@
         .modal-content { opacity: 0; transform: scale(0.85); transition: none; will-change: transform, opacity; }
         .modal-overlay.active .modal-content { animation: popIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards; }
 
-        /* Nền tĩnh siêu nhẹ */
         .bg-blob { position: fixed; border-radius: 50%; filter: blur(120px); opacity: 0.15; pointer-events: none; z-index: 0; transform: translateZ(0); }
 
         .tab-btn { position: relative; padding-bottom: 0.75rem; transition: all 0.3s ease; white-space: nowrap; }
@@ -100,7 +96,6 @@
     <div class="bg-blob bg-purple-600 w-[400px] h-[400px] top-[40%] right-[-10%] opacity-10"></div>
     <div class="bg-blob bg-blue-600 w-[600px] h-[600px] bottom-[-10%] left-[20%] opacity-10"></div>
 
-    <!-- Header -->
     <div class="text-center mb-8 w-full max-w-3xl z-10 animate-fade-up">
         <div class="inline-block px-4 py-1.5 rounded-full bg-slate-800/50 border border-slate-700 text-xs font-bold tracking-widest text-pink-400 uppercase mb-4 shadow-lg">SMOOTH ENGINE</div>
         <h1 class="text-4xl md:text-6xl font-extrabold tracking-tight mb-3">
@@ -109,7 +104,6 @@
         <p class="text-slate-400 font-medium text-sm md:text-base">Mượt mà, Sắc nét & Tối ưu hóa hiệu năng</p>
     </div>
 
-    <!-- Bảng điều khiển -->
     <div class="w-full max-w-4xl glass-panel rounded-[2rem] p-6 sm:p-8 z-10 animate-fade-up relative overflow-hidden" style="animation-delay: 0.1s;">
         <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-pink-500 via-purple-500 to-blue-500 opacity-80"></div>
 
@@ -143,12 +137,12 @@
                     <div class="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none text-slate-500"><i class="fa-solid fa-magnifying-glass"></i></div>
                     <input type="text" id="tiktok-keyword" placeholder="Ví dụ: nhạc chill, lập trình web..." class="w-full pl-12 pr-5 py-4 bg-slate-900/80 rounded-xl focus:outline-none focus:ring-2 focus:ring-rose-500/50 transition-all text-slate-200 border border-slate-700 shadow-inner">
                 </div>
-                <div class="flex gap-2">
-                    <button id="fetch-search-btn" onclick="searchTikTok(false)" class="bg-rose-600 hover:bg-rose-500 text-white font-bold py-4 px-6 rounded-xl transition-transform active:scale-95 shadow-lg flex items-center gap-2">
-                        <i class="fa-solid fa-satellite-dish"></i> Quét
+                <div class="flex gap-2 sm:gap-3">
+                    <button id="fetch-search-btn" onclick="searchTikTok(false)" class="bg-gradient-to-r from-pink-600 to-rose-500 hover:from-pink-500 hover:to-rose-400 text-white font-bold py-4 px-6 md:px-8 rounded-xl transition-all duration-300 transform hover:-translate-y-1 active:scale-95 shadow-[0_0_20px_rgba(225,29,72,0.3)] hover:shadow-[0_0_30px_rgba(225,29,72,0.6)] border border-pink-500/30 flex items-center justify-center gap-2 flex-1 sm:flex-none">
+                        <i class="fa-solid fa-magnifying-glass"></i> Tìm kiếm
                     </button>
-                    <button id="random-btn" onclick="searchRandom()" class="bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-4 px-5 rounded-xl transition-transform active:scale-95 shadow-lg flex items-center gap-2" title="Lấy 1 video ngẫu nhiên theo từ khóa">
-                        <i class="fa-solid fa-dice text-xl"></i>
+                    <button id="random-btn" onclick="searchRandom()" class="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-bold py-4 px-5 md:px-7 rounded-xl transition-all duration-300 transform hover:-translate-y-1 active:scale-95 shadow-[0_0_20px_rgba(79,70,229,0.3)] hover:shadow-[0_0_30px_rgba(79,70,229,0.6)] border border-indigo-500/30 flex items-center justify-center gap-2 flex-1 sm:flex-none" title="Lấy ngẫu nhiên 1 video theo từ khóa">
+                        <i class="fa-solid fa-dice text-lg"></i> Random
                     </button>
                 </div>
             </div>
@@ -168,7 +162,6 @@
         </div>
     </div>
 
-    <!-- UI Các trạng thái -->
     <div id="loading" class="hidden z-10 mt-6 text-center animate-fade-up">
         <div class="inline-flex items-center gap-3 bg-slate-800 border border-slate-700 px-6 py-3 rounded-full shadow-lg">
             <i class="fa-solid fa-circle-notch fa-spin text-pink-500"></i>
@@ -185,7 +178,6 @@
         </button>
     </div>
 
-    <!-- Lưới Result có Contain CSS để mượt khung hình -->
     <div id="result-area" class="w-full max-w-[98%] 2xl:max-w-[1600px] mx-auto z-10 mt-6 pb-6" style="contain: content;"></div>
 
     <div id="load-more-container" class="hidden w-full flex justify-center z-10 pb-20 animate-fade-up">
@@ -194,7 +186,6 @@
         </button>
     </div>
 
-    <!-- MODAL -->
     <div id="video-modal" class="modal-overlay fixed inset-0 z-50 flex items-center justify-center p-3 md:p-6 bg-black/85">
         <div class="modal-content glass-panel w-full max-w-5xl rounded-3xl overflow-hidden flex flex-col md:flex-row max-h-[90vh] md:max-h-[80vh] relative border border-white/10 shadow-2xl">
             <button onclick="closeModal('video-modal')" class="absolute top-3 right-3 z-30 w-9 h-9 bg-black/60 hover:bg-red-500 text-white rounded-full flex items-center justify-center transition-colors backdrop-blur-md">
