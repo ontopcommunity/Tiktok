@@ -5,22 +5,21 @@ let searchCursor = 0;
 
 let currentUserProfile = "";
 let userVideoCursor = 0;
-let currentUserAvatar = "";
-let currentUserNickname = "";
 let fullUserData = null;
+
+// Biến cho tab Xu Hướng
+let trendingRegion = 'VN';
 
 function switchTab(mode) {
     currentMode = mode;
-    document.getElementById('mode-video').classList.toggle('hidden', mode !== 'video');
-    document.getElementById('mode-search').classList.toggle('hidden', mode !== 'search');
-    document.getElementById('mode-info').classList.toggle('hidden', mode !== 'info');
-    
-    ['video', 'search', 'info'].forEach(m => {
-        const btn = document.getElementById(`tab-${m}`);
-        if (m === mode) {
-            btn.className = 'tab-btn tab-active focus:outline-none flex items-center gap-2 text-base md:text-lg';
-        } else {
-            btn.className = 'tab-btn tab-inactive focus:outline-none flex items-center gap-2 text-base md:text-lg';
+    ['video', 'search', 'info', 'trending'].forEach(m => {
+        const btn = document.getElementById(`mode-${m}`);
+        const tabBtn = document.getElementById(`tab-${m}`);
+        if(btn && tabBtn) {
+            btn.classList.toggle('hidden', m !== mode);
+            tabBtn.className = (m === mode) 
+                ? 'tab-btn tab-active focus:outline-none flex items-center gap-2 text-base md:text-lg'
+                : 'tab-btn tab-inactive focus:outline-none flex items-center gap-2 text-base md:text-lg';
         }
     });
     clearResults();
@@ -69,15 +68,10 @@ const formatStatsClient = (num) => {
     return (Math.floor(num / 100000) / 10).toString().replace('.', ',') + "M";
 };
 
-function loadMore() {
-    if (currentMode === 'search') searchTikTok(true);
-    else if (currentMode === 'info') fetchUserInfo(true);
-}
-
-// Bypass Download 
+// ================= BYPASS DOWNLOAD =================
 async function forceDownload(url, filename, btnObj) {
     const originalHTML = btnObj.innerHTML;
-    btnObj.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Đang nén...`;
+    btnObj.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Đang tải...`;
     btnObj.style.pointerEvents = 'none';
 
     const triggerDownload = async (targetUrl) => {
@@ -111,116 +105,62 @@ function searchUserFromModal(username) {
     window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
-// ================= MODAL HIỂN THỊ CHI TIẾT (ĐÃ TRANG TRÍ SIÊU VIP) =================
+// ================= MODAL HIỂN THỊ CHI TIẾT (CINEMA UI) =================
 function openVideoModal(index) {
     const d = fetchedVideos[index].data;
     const fileNameMp4 = generateFileName(d.author.uniqueId, d.video_data.id, 'mp4');
     const fileNameMp3 = generateFileName(d.author.uniqueId, d.video_data.id, 'mp3');
+    const isImagePost = d.images && d.images.length > 0;
 
-    document.getElementById('modal-video-container').innerHTML = `
-        <video controls playsinline autoplay class="w-full h-full object-contain max-h-[100%] bg-black/90 shadow-[inset_0_0_50px_rgba(0,0,0,0.8)]" poster="${d.urls.cover}">
+    document.getElementById('modal-video-container').innerHTML = isImagePost 
+        ? `<div class="relative w-full h-full flex flex-col items-center justify-center bg-slate-900 shadow-[inset_0_0_50px_rgba(0,0,0,0.8)]">
+             <img src="${d.urls.cover}" class="w-full h-full object-contain blur-sm absolute opacity-30 z-0">
+             <img src="${d.images[0]}" class="w-full h-full object-contain z-10 relative">
+             <div class="absolute top-4 left-4 bg-pink-600 text-white font-bold text-xs px-3 py-1 rounded-full z-20 shadow-lg"><i class="fa-regular fa-images"></i> Bài đăng ${d.images.length} Ảnh</div>
+           </div>`
+        : `<video controls playsinline autoplay class="w-full h-full object-contain max-h-[100%] bg-black/90 shadow-[inset_0_0_50px_rgba(0,0,0,0.8)]" poster="${d.urls.cover}">
             <source src="${d.urls.no_watermark}" type="video/mp4">
-        </video>
-    `;
+           </video>`;
+
+    const safeDesc = (d.video_data.description || 'Tác giả rất lười, không để lại chữ nào.');
 
     document.getElementById('modal-video-info').innerHTML = `
-        
-        <div class="relative p-[1px] rounded-2xl bg-gradient-to-r from-pink-500 via-purple-500 to-indigo-500 mb-5 group cursor-pointer hover:shadow-[0_0_20px_rgba(236,72,153,0.3)] transition-all duration-300" onclick="searchUserFromModal('${d.author.uniqueId}')">
-            <div class="flex items-center gap-4 p-3 bg-slate-900/95 backdrop-blur-xl rounded-[15px]">
-                <div class="relative w-14 h-14">
-                    <div class="absolute inset-0 bg-gradient-to-tr from-pink-500 to-indigo-500 rounded-full animate-spin blur-[3px] opacity-70 group-hover:opacity-100 transition"></div>
-                    <img src="${d.author.avatar}" class="w-14 h-14 rounded-full object-cover relative z-10 border-[2.5px] border-slate-900 bg-slate-800" loading="lazy" decoding="async">
-                </div>
-                <div class="flex-1 truncate">
-                    <h3 class="font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-white to-slate-300 text-lg group-hover:from-pink-400 group-hover:to-purple-400 transition truncate">${d.author.nickname}</h3>
-                    <p class="text-pink-500/80 font-medium text-xs mt-0.5 tracking-wide truncate">@${d.author.uniqueId}</p>
-                </div>
-                <div class="px-3 py-1.5 rounded-lg bg-white/5 text-white text-xs font-bold border border-white/10 group-hover:bg-pink-500 group-hover:border-pink-400 transition-all flex items-center gap-1.5 shadow-sm">
-                    Kênh <i class="fa-solid fa-arrow-right"></i>
-                </div>
+        <div class="flex items-center gap-4 mb-6 p-3 -ml-3 rounded-2xl hover:bg-white/5 cursor-pointer transition-all duration-300 group" onclick="searchUserFromModal('${d.author.uniqueId}')">
+            <div class="relative">
+                <div class="absolute inset-0 bg-pink-500 rounded-full blur-md opacity-0 group-hover:opacity-60 transition duration-300"></div>
+                <img src="${d.author.avatar}" class="w-14 h-14 rounded-full object-cover border-2 border-slate-700 group-hover:border-pink-500 relative z-10 shadow-lg" loading="lazy" decoding="async">
             </div>
-        </div>
-
-        <div class="flex items-center gap-3 bg-slate-900/40 p-3 rounded-xl border border-white/5 mb-5 shadow-inner">
-            <div class="w-9 h-9 rounded-full bg-slate-800 flex items-center justify-center border border-white/10 shadow-[0_0_10px_rgba(168,85,247,0.3)] animate-[spin_4s_linear_infinite]">
-                <i class="fa-solid fa-music text-purple-400 text-xs drop-shadow-[0_0_5px_rgba(168,85,247,0.8)]"></i>
+            <div class="flex-1">
+                <h3 class="font-bold text-white text-lg group-hover:text-pink-400 transition">${d.author.nickname}</h3>
+                <p class="text-pink-500/80 font-medium text-sm">@${d.author.uniqueId}</p>
             </div>
-            <div class="flex-1 truncate">
-                <p class="text-white text-sm font-bold truncate tracking-wide">${d.music.title}</p>
-                <p class="text-[10px] text-slate-500 uppercase font-semibold mt-0.5 tracking-widest">Âm thanh gốc</p>
-            </div>
-            <div class="px-2">
-                <div class="flex gap-1 items-end h-3">
-                    <div class="w-1 bg-purple-500 rounded-full animate-[bounce_1s_infinite] opacity-80 h-2"></div>
-                    <div class="w-1 bg-pink-500 rounded-full animate-[bounce_1s_infinite_0.2s] opacity-80 h-3"></div>
-                    <div class="w-1 bg-indigo-500 rounded-full animate-[bounce_1s_infinite_0.4s] opacity-80 h-1.5"></div>
-                </div>
+            <div class="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center group-hover:bg-pink-500/20 group-hover:text-pink-400 text-slate-500 transition">
+                <i class="fa-solid fa-arrow-right"></i>
             </div>
         </div>
         
-        <div class="relative bg-gradient-to-br from-slate-800/60 to-slate-900/60 p-5 rounded-2xl border border-slate-700/50 shadow-[inset_0_4px_20px_rgba(0,0,0,0.5)] mb-6">
-            <i class="fa-solid fa-quote-left absolute top-3 right-4 text-4xl text-white/5"></i>
-            <h4 class="text-[11px] text-pink-500 font-bold uppercase tracking-widest mb-2 flex items-center gap-2">
-                <i class="fa-solid fa-align-left"></i> Mô tả video
-            </h4>
-            <p class="text-slate-200 text-[14px] md:text-[15px] leading-relaxed whitespace-pre-wrap relative z-10 font-medium">${d.video_data.description || 'Tác giả rất lười, không để lại chữ nào.'}</p>
-        </div>
+        <p class="text-slate-300 text-[15px] leading-relaxed whitespace-pre-wrap mb-8 bg-black/20 p-4 rounded-xl border border-white/5 shadow-inner">${safeDesc}</p>
         
-        <h4 class="text-[11px] text-blue-400 font-bold uppercase tracking-widest mb-3 flex items-center gap-2 pl-1">
-            <i class="fa-solid fa-chart-pie"></i> Tương tác số liệu
-        </h4>
-        <div class="grid grid-cols-2 gap-3 md:gap-4 mb-2">
-            
-            <div class="relative overflow-hidden bg-slate-800/40 p-3.5 rounded-2xl border border-white/5 hover:border-slate-500/50 hover:bg-slate-800/70 transition duration-300 group">
-                <div class="absolute -right-4 -top-4 w-16 h-16 bg-white/5 rounded-full blur-xl group-hover:bg-slate-400/20 transition"></div>
-                <div class="flex items-center gap-3">
-                    <div class="w-10 h-10 rounded-full bg-slate-700/50 flex items-center justify-center text-slate-300 group-hover:text-white group-hover:scale-110 transition shadow-inner">
-                        <i class="fa-solid fa-play"></i>
-                    </div>
-                    <div>
-                        <span class="block text-white text-lg font-black tracking-tight drop-shadow-md">${d.stats.play}</span>
-                        <span class="block text-[10px] text-slate-400 uppercase font-bold tracking-wider mt-0.5">Lượt xem</span>
-                    </div>
-                </div>
+        <div class="grid grid-cols-2 gap-3 md:gap-4">
+            <div class="glass-panel p-4 rounded-2xl flex flex-col items-center justify-center border-t border-white/10 hover:-translate-y-1 transition duration-300">
+                <i class="fa-solid fa-play text-slate-400 text-2xl mb-1.5 drop-shadow-md"></i>
+                <span class="text-white text-xl font-black">${d.stats.play}</span>
+                <span class="text-[10px] text-slate-500 uppercase font-bold tracking-widest mt-1">Lượt xem</span>
             </div>
-
-            <div class="relative overflow-hidden bg-slate-800/40 p-3.5 rounded-2xl border border-white/5 hover:border-pink-500/40 hover:bg-slate-800/70 transition duration-300 group">
-                <div class="absolute -right-4 -top-4 w-16 h-16 bg-pink-500/5 rounded-full blur-xl group-hover:bg-pink-500/20 transition"></div>
-                <div class="flex items-center gap-3">
-                    <div class="w-10 h-10 rounded-full bg-pink-500/10 flex items-center justify-center text-pink-500 group-hover:scale-110 transition shadow-[inset_0_0_10px_rgba(236,72,153,0.2)]">
-                        <i class="fa-solid fa-heart drop-shadow-[0_0_5px_rgba(236,72,153,0.8)]"></i>
-                    </div>
-                    <div>
-                        <span class="block text-white text-lg font-black tracking-tight drop-shadow-md">${d.stats.like}</span>
-                        <span class="block text-[10px] text-slate-400 uppercase font-bold tracking-wider mt-0.5">Yêu thích</span>
-                    </div>
-                </div>
+            <div class="glass-panel p-4 rounded-2xl flex flex-col items-center justify-center border-t border-white/10 hover:-translate-y-1 transition duration-300">
+                <i class="fa-solid fa-heart text-pink-500 text-2xl mb-1.5 drop-shadow-[0_0_10px_rgba(236,72,153,0.8)]"></i>
+                <span class="text-white text-xl font-black">${d.stats.like}</span>
+                <span class="text-[10px] text-slate-500 uppercase font-bold tracking-widest mt-1">Yêu thích</span>
             </div>
-
-            <div class="relative overflow-hidden bg-slate-800/40 p-3.5 rounded-2xl border border-white/5 hover:border-blue-500/40 hover:bg-slate-800/70 transition duration-300 group">
-                <div class="absolute -right-4 -top-4 w-16 h-16 bg-blue-500/5 rounded-full blur-xl group-hover:bg-blue-500/20 transition"></div>
-                <div class="flex items-center gap-3">
-                    <div class="w-10 h-10 rounded-full bg-blue-500/10 flex items-center justify-center text-blue-400 group-hover:scale-110 transition shadow-[inset_0_0_10px_rgba(96,165,250,0.2)]">
-                        <i class="fa-solid fa-comment drop-shadow-[0_0_5px_rgba(96,165,250,0.6)]"></i>
-                    </div>
-                    <div>
-                        <span class="block text-white text-lg font-black tracking-tight drop-shadow-md">${d.stats.comment}</span>
-                        <span class="block text-[10px] text-slate-400 uppercase font-bold tracking-wider mt-0.5">Bình luận</span>
-                    </div>
-                </div>
+            <div class="glass-panel p-4 rounded-2xl flex flex-col items-center justify-center border-t border-white/10 hover:-translate-y-1 transition duration-300">
+                <i class="fa-solid fa-comment text-blue-400 text-2xl mb-1.5 drop-shadow-[0_0_10px_rgba(96,165,250,0.6)]"></i>
+                <span class="text-white text-xl font-black">${d.stats.comment}</span>
+                <span class="text-[10px] text-slate-500 uppercase font-bold tracking-widest mt-1">Bình luận</span>
             </div>
-
-            <div class="relative overflow-hidden bg-slate-800/40 p-3.5 rounded-2xl border border-white/5 hover:border-emerald-500/40 hover:bg-slate-800/70 transition duration-300 group">
-                <div class="absolute -right-4 -top-4 w-16 h-16 bg-emerald-500/5 rounded-full blur-xl group-hover:bg-emerald-500/20 transition"></div>
-                <div class="flex items-center gap-3">
-                    <div class="w-10 h-10 rounded-full bg-emerald-500/10 flex items-center justify-center text-emerald-400 group-hover:scale-110 transition shadow-[inset_0_0_10px_rgba(52,211,153,0.2)]">
-                        <i class="fa-solid fa-share drop-shadow-[0_0_5px_rgba(52,211,153,0.6)]"></i>
-                    </div>
-                    <div>
-                        <span class="block text-white text-lg font-black tracking-tight drop-shadow-md">${d.stats.share}</span>
-                        <span class="block text-[10px] text-slate-400 uppercase font-bold tracking-wider mt-0.5">Chia sẻ</span>
-                    </div>
-                </div>
+            <div class="glass-panel p-4 rounded-2xl flex flex-col items-center justify-center border-t border-white/10 hover:-translate-y-1 transition duration-300">
+                <i class="fa-solid fa-share text-emerald-400 text-2xl mb-1.5 drop-shadow-[0_0_10px_rgba(52,211,153,0.6)]"></i>
+                <span class="text-white text-xl font-black">${d.stats.share}</span>
+                <span class="text-[10px] text-slate-500 uppercase font-bold tracking-widest mt-1">Chia sẻ</span>
             </div>
         </div>
     `;
@@ -248,13 +188,28 @@ function closeModal(modalId) {
     }
 }
 
-// ================= CÁC TÍNH NĂNG FETCH DỮ LIỆU CÒN LẠI (GIỮ NGUYÊN) =================
+// ================= CÁC HÀM FETCH DỮ LIỆU =================
 
+// FORMAT DATA CHUNG TỪ TIKWM
+function formatTikWmToGrid(videosArray) {
+    return videosArray.map(v => ({
+        link: `https://www.tiktok.com/@${v.author.unique_id}/video/${v.video_id}`,
+        data: {
+            status: "Live",
+            author: { uniqueId: v.author.unique_id, nickname: v.author.nickname, avatar: v.author.avatar || v.cover },
+            video_data: { id: v.video_id, description: v.title },
+            stats: { play: formatStatsClient(v.play_count), like: formatStatsClient(v.digg_count), comment: formatStatsClient(v.comment_count), share: formatStatsClient(v.share_count) },
+            urls: { cover: v.cover, no_watermark: v.play }, music: { playUrl: v.music, title: v.music_info?.title || "Âm thanh gốc" },
+            images: v.images || null 
+        }
+    }));
+}
+
+// 1. TẢI BẰNG LINK
 async function processVideos() {
     const input = document.getElementById('tiktok-links').value;
     const links = input.split('\n').map(l => l.trim()).filter(l => l !== '');
     if (links.length === 0) return showError("Dán link vô đi nào!");
-    if (links.length > 20) return showError("Hệ thống xử lý tối đa 20 link/lần.");
 
     clearResults();
     showLoading(true, `Đang xử lý ${links.length} luồng dữ liệu...`);
@@ -262,13 +217,14 @@ async function processVideos() {
 
     try {
         const promises = links.map(link => fetch(`/api/video?video=${encodeURIComponent(link)}`).then(res => res.json()).then(data => ({ link, data })).catch(err => ({ link, error: err.message })));
-        const results = await Promise.all(promises);
-        fetchedVideos = results.map((r, idx) => ({ ...r, originalIndex: idx })).filter(r => r.data && r.data.status === "Live");
+        let results = await Promise.all(promises);
+        fetchedVideos = results.filter(r => r.data && r.data.status === "Live");
         renderVideoCards(fetchedVideos, false, 0);
     } catch (error) { showError("Lỗi: " + error.message); } 
     finally { showLoading(false); document.getElementById('fetch-video-btn').disabled = false; }
 }
 
+// 2. TÌM KIẾM
 async function searchTikTok(isLoadMore = false) {
     let kw = document.getElementById('tiktok-keyword').value.trim();
     if(!kw && !isLoadMore) return showError("Nhập từ khóa vô!");
@@ -289,12 +245,10 @@ async function searchTikTok(isLoadMore = false) {
         const resData = await response.json();
         if (resData.code !== 0 || !resData.data?.videos?.length) throw new Error("Không tìm thấy kết quả.");
 
-        const videos = resData.data.videos;
-        searchCursor = resData.data.cursor;
-
-        const formattedResults = formatTikWmToGrid(videos, "");
+        const formattedResults = formatTikWmToGrid(resData.data.videos);
         const startIndex = fetchedVideos.length;
         fetchedVideos.push(...formattedResults);
+        searchCursor = resData.data.cursor;
         
         renderVideoCards(formattedResults, isLoadMore, startIndex);
         checkLoadMoreUI(resData.data.hasMore);
@@ -306,6 +260,7 @@ async function searchTikTok(isLoadMore = false) {
     }
 }
 
+// 2b. TÌM KIẾM NGẪU NHIÊN 1 VIDEO
 async function searchRandom() {
     let kw = document.getElementById('tiktok-keyword').value.trim();
     if(!kw) return showError("Cần có từ khóa để random!");
@@ -317,7 +272,7 @@ async function searchRandom() {
     showLoading(true, `Đang bốc thăm may mắn: "${kw}"...`);
 
     try {
-        const randomCursor = Math.floor(Math.random() * 30);
+        const randomCursor = Math.floor(Math.random() * 20);
         const response = await fetch(`/api/search?keywords=${encodeURIComponent(currentSearchKeyword)}&cursor=${randomCursor}&count=20`);
         const resData = await response.json();
         
@@ -328,12 +283,9 @@ async function searchRandom() {
             resData.data = retryData.data;
         }
 
-        const videos = resData.data.videos;
-        const luckyVideo = videos[Math.floor(Math.random() * videos.length)];
-        const formattedResults = formatTikWmToGrid([luckyVideo], "");
-        fetchedVideos = formattedResults;
-        
-        renderVideoCards(formattedResults, false, 0);
+        const luckyVideo = resData.data.videos[Math.floor(Math.random() * resData.data.videos.length)];
+        fetchedVideos = formatTikWmToGrid([luckyVideo]);
+        renderVideoCards(fetchedVideos, false, 0);
     } catch (error) { showError(error.message); } 
     finally { 
         showLoading(false); 
@@ -342,6 +294,7 @@ async function searchRandom() {
     }
 }
 
+// 3. SOI KÊNH
 async function fetchUserInfo(isLoadMore = false) {
     let user = isLoadMore ? currentUserProfile : document.getElementById('tiktok-username').value.trim();
     if (user.startsWith('@')) user = user.substring(1);
@@ -363,20 +316,18 @@ async function fetchUserInfo(isLoadMore = false) {
         if (data.status !== "Live") throw new Error(data.error || "Mục tiêu không tồn tại.");
 
         if (!isLoadMore && data.author) {
-            currentUserAvatar = data.author.avatar;
-            currentUserNickname = data.author.nickname;
             fullUserData = data; 
             renderUserInfoCompact(); 
         }
 
         if (data.videos && data.videos.length > 0) {
-            const formattedResults = data.videos.map(v => ({
+            let formattedResults = data.videos.map(v => ({
                 link: v.link,
                 data: {
                     status: "Live",
-                    author: { uniqueId: user, nickname: currentUserNickname || user, avatar: currentUserAvatar || "" },
+                    author: { uniqueId: user, nickname: fullUserData.author.nickname || user, avatar: fullUserData.author.avatar || "" },
                     video_data: { id: v.id, description: v.caption },
-                    stats: v.stats, urls: v.urls, music: v.music
+                    stats: v.stats, urls: v.urls, music: v.music, images: v.images || null
                 }
             }));
             const startIndex = fetchedVideos.length;
@@ -390,19 +341,7 @@ async function fetchUserInfo(isLoadMore = false) {
     finally { showLoading(false); document.getElementById('fetch-info-btn').disabled = false; }
 }
 
-function formatTikWmToGrid(videosArray) {
-    return videosArray.map(v => ({
-        link: `https://www.tiktok.com/@${v.author.unique_id}/video/${v.video_id}`,
-        data: {
-            status: "Live",
-            author: { uniqueId: v.author.unique_id, nickname: v.author.nickname, avatar: v.author.avatar || v.cover },
-            video_data: { id: v.video_id, description: v.title },
-            stats: { play: formatStatsClient(v.play_count), like: formatStatsClient(v.digg_count), comment: formatStatsClient(v.comment_count), share: formatStatsClient(v.share_count) },
-            urls: { cover: v.cover, no_watermark: v.play }, music: { playUrl: v.music }
-        }
-    }));
-}
-
+// PROFILE UI
 function renderUserInfoCompact() {
     const container = document.getElementById('user-info-area');
     const u = fullUserData.author;
@@ -439,7 +378,6 @@ function renderUserInfoExpanded() {
             <p class="text-pink-400 font-medium text-sm mt-0.5">@${u.uniqueId}</p>
             ${fullUserData.live_info ? `<div class="mt-3 inline-block bg-red-900/50 text-red-400 px-3 py-1 rounded-full text-xs font-bold animate-pulse">🔴 ${fullUserData.live_info.status}</div>` : ''}
             <p class="mt-4 text-slate-300 text-sm leading-relaxed max-w-xl mx-auto italic">${u.signature || 'Chưa có tiểu sử.'}</p>
-            ${u.bioLink ? `<a href="${u.bioLink}" target="_blank" class="inline-block mt-3 text-blue-400 text-xs bg-slate-800 px-4 py-2 rounded-xl border border-white/5"><i class="fa-solid fa-link mr-1"></i>${u.bioLink}</a>` : ''}
             
             <div class="grid grid-cols-4 gap-2 mt-6 pt-6 border-t border-slate-700/50">
                 <div class="flex flex-col"><span class="text-xl font-bold text-white">${s?.following || '0'}</span><span class="text-[10px] text-slate-400 uppercase mt-0.5 font-semibold">Đang FL</span></div>
@@ -451,6 +389,50 @@ function renderUserInfoExpanded() {
     `;
 }
 
+// 4. XU HƯỚNG MỚI THÊM
+async function fetchTrending(isLoadMore = false) {
+    if (!isLoadMore) {
+        clearResults();
+        trendingRegion = document.getElementById('trending-region').value;
+        document.getElementById('fetch-trending-btn').disabled = true;
+        showLoading(true, `Đang kết nối lấy dữ liệu Xu Hướng...`);
+    } else {
+        document.getElementById('load-more-btn').disabled = true;
+        document.getElementById('load-more-btn').innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Đang tải...`;
+    }
+
+    try {
+        const response = await fetch(`/api/trending?region=${trendingRegion}&count=20`);
+        const resData = await response.json();
+        
+        if (resData.code !== 0 || !resData.data || resData.data.length === 0) {
+            throw new Error("Không thể lấy video xu hướng hiện tại. Thử đổi quốc gia.");
+        }
+
+        const formattedResults = formatTikWmToGrid(resData.data);
+        const startIndex = fetchedVideos.length;
+        fetchedVideos.push(...formattedResults);
+        
+        renderVideoCards(formattedResults, isLoadMore, startIndex);
+        
+        // Tab Trending luôn có thể load thêm (nó trả ra random trending array mới mỗi lần)
+        checkLoadMoreUI(true);
+
+    } catch (error) { if(!isLoadMore) showError(error.message); else alert("Lỗi: " + error.message); } 
+    finally { 
+        showLoading(false); 
+        document.getElementById('fetch-trending-btn').disabled = false;
+    }
+}
+
+// ĐIỀU HƯỚNG NÚT LOAD MORE CHUNG
+function loadMore() {
+    if (currentMode === 'search') searchTikTok(true);
+    else if (currentMode === 'info') fetchUserInfo(true);
+    else if (currentMode === 'trending') fetchTrending(true);
+}
+
+// RENDER GRID VIDEO CHUNG
 function renderVideoCards(results, append = false, startIndex = 0) {
     requestAnimationFrame(() => {
         const container = document.getElementById('result-area');
@@ -473,6 +455,10 @@ function renderVideoCards(results, append = false, startIndex = 0) {
             const d = item.data;
             const currentIndex = startIndex + index; 
             
+            const mediaTypeBadge = (d.images && d.images.length > 0) 
+                ? `<div class="absolute top-3 left-3 bg-black/60 backdrop-blur-md border border-white/10 text-white text-[10px] font-bold px-2 py-1 rounded-lg z-20"><i class="fa-regular fa-images"></i> ${d.images.length}</div>` 
+                : '';
+
             html += `
                 <div class="premium-card-wrapper animate-fade-up" style="animation-delay: ${(index % 20) * 0.03}s">
                     <div onclick="openVideoModal(${currentIndex})" class="premium-card rounded-3xl overflow-hidden relative w-full aspect-[3/4] flex flex-col cursor-pointer group">
@@ -481,6 +467,7 @@ function renderVideoCards(results, append = false, startIndex = 0) {
                             <img src="${d.urls.cover}" class="cover-img w-full h-full object-cover opacity-80" loading="lazy" decoding="async">
                         </div>
                         
+                        ${mediaTypeBadge}
                         <div class="absolute top-3 right-3 bg-black/60 backdrop-blur-md border border-white/10 text-white text-[10px] font-bold px-2.5 py-1.5 rounded-xl flex items-center gap-1.5 z-20 shadow-lg">
                             <i class="fa-solid fa-play text-pink-500"></i> ${d.stats.play}
                         </div>
@@ -498,12 +485,8 @@ function renderVideoCards(results, append = false, startIndex = 0) {
                             </div>
                             
                             <div class="flex gap-2 text-[10px] font-bold text-white/90">
-                                <span class="bg-white/10 border border-white/5 px-2 py-1 rounded-lg backdrop-blur-sm flex items-center gap-1.5 shadow-sm">
-                                    <i class="fa-solid fa-heart text-pink-500"></i> ${d.stats.like}
-                                </span>
-                                <span class="bg-white/10 border border-white/5 px-2 py-1 rounded-lg backdrop-blur-sm flex items-center gap-1.5 shadow-sm">
-                                    <i class="fa-solid fa-comment text-blue-400"></i> ${d.stats.comment}
-                                </span>
+                                <span class="bg-white/10 border border-white/5 px-2 py-1 rounded-lg backdrop-blur-sm flex items-center gap-1.5 shadow-sm"><i class="fa-solid fa-heart text-pink-500"></i> ${d.stats.like}</span>
+                                <span class="bg-white/10 border border-white/5 px-2 py-1 rounded-lg backdrop-blur-sm flex items-center gap-1.5 shadow-sm"><i class="fa-solid fa-comment text-blue-400"></i> ${d.stats.comment}</span>
                             </div>
                         </div>
                     </div>
@@ -531,21 +514,20 @@ async function downloadAllVideos(btnObj) {
     btnObj.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Đang tải...`;
     btnObj.disabled = true;
 
-    const sleep = ms => new Promise(r => setTimeout(r, ms));
     for (let i = 0; i < fetchedVideos.length; i++) {
-        const vid = fetchedVideos[i].data;
-        const filename = generateFileName(vid.author.uniqueId, vid.video_data.id, 'mp4');
+        const d = fetchedVideos[i].data;
+        const filename = generateFileName(d.author.uniqueId, d.video_data.id, 'mp4');
         try {
-            const response = await fetch(vid.urls.no_watermark);
+            const response = await fetch(d.urls.no_watermark);
             const blob = await response.blob();
             const url = window.URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.style.display = 'none'; a.href = url; a.download = filename;
             document.body.appendChild(a); a.click();
             window.URL.revokeObjectURL(url); a.remove();
-        } catch(e) { window.open(vid.urls.no_watermark, '_blank'); }
-        await sleep(800); 
+        } catch(e) { window.open(d.urls.no_watermark, '_blank'); }
+        await new Promise(r => setTimeout(r, 800)); 
     }
-    btnObj.innerHTML = `<i class="fa-solid fa-check"></i> Xong ${fetchedVideos.length} Video`;
+    btnObj.innerHTML = `<i class="fa-solid fa-check"></i> Hoàn Tất`;
     setTimeout(() => { btnObj.innerHTML = originalHTML; btnObj.disabled = false; }, 3000);
 }
