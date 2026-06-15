@@ -46,7 +46,6 @@ function clearResults() {
     document.getElementById('user-info-area').innerHTML = '';
     document.getElementById('user-info-area').classList.add('hidden');
     document.getElementById('result-area').innerHTML = '';
-    // Reset Grid
     document.getElementById('result-area').className = "w-full max-w-[98%] 2xl:max-w-[1600px] mx-auto z-10 mt-6 pb-6";
     document.getElementById('batch-download-container').classList.add('hidden');
     document.getElementById('load-more-container').classList.add('hidden');
@@ -75,7 +74,6 @@ function loadMore() {
     else if (currentMode === 'info') fetchUserInfo(true);
 }
 
-// ================= BYPASS DOWNLOAD =================
 async function forceDownload(url, filename, btnObj) {
     const originalHTML = btnObj.innerHTML;
     btnObj.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Đang nén...`;
@@ -110,7 +108,6 @@ async function forceDownload(url, filename, btnObj) {
     }
 }
 
-// ================= LIÊN KẾT TỪ MODAL SANG SOI KÊNH =================
 function searchUserFromModal(username) {
     closeModal('video-modal');
     switchTab('info');
@@ -119,23 +116,21 @@ function searchUserFromModal(username) {
     window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
-// ================= XỬ LÝ MODAL (Giao diện tinh gọn, mượt mà) =================
 function openVideoModal(index) {
     const d = fetchedVideos[index].data;
     const fileNameMp4 = generateFileName(d.author.uniqueId, d.video_data.id, 'mp4');
     const fileNameMp3 = generateFileName(d.author.uniqueId, d.video_data.id, 'mp3');
 
-    // Nạp Video
     document.getElementById('modal-video-container').innerHTML = `
         <video controls playsinline autoplay class="w-full h-full object-contain max-h-[100%] bg-black" poster="${d.urls.cover}">
             <source src="${d.urls.no_watermark}" type="video/mp4">
         </video>
     `;
 
-    // Nạp Thông Tin Cuộn Trượt
     document.getElementById('modal-video-info').innerHTML = `
         <div class="flex items-center gap-3 mb-4 p-2 -ml-2 rounded-xl hover:bg-white/5 cursor-pointer transition group" onclick="searchUserFromModal('${d.author.uniqueId}')">
-            <img src="${d.author.avatar}" class="w-12 h-12 rounded-full object-cover border-2 border-slate-700 group-hover:border-pink-500 transition shadow-sm bg-slate-800" loading="lazy">
+            <!-- Thêm decoding="async" để chống lag -->
+            <img src="${d.author.avatar}" class="w-12 h-12 rounded-full object-cover border-2 border-slate-700 group-hover:border-pink-500 transition shadow-sm bg-slate-800" loading="lazy" decoding="async">
             <div class="flex-1">
                 <h3 class="font-bold text-white text-base group-hover:text-pink-400 transition">${d.author.nickname}</h3>
                 <p class="text-slate-400 text-xs">@${d.author.uniqueId}</p>
@@ -153,7 +148,6 @@ function openVideoModal(index) {
         </div>
     `;
 
-    // Nạp Nút Tải Cố định phía dưới
     document.getElementById('modal-video-actions').innerHTML = `
         <button onclick="forceDownload('${d.urls.no_watermark}', '${fileNameMp4}', this)" class="w-full bg-pink-600 hover:bg-pink-500 text-white font-bold py-3 rounded-xl transition-transform active:scale-95 shadow-lg flex items-center justify-center gap-2 text-sm">
             <i class="fa-solid fa-video"></i> Tải Video
@@ -171,11 +165,17 @@ function closeModal(modalId) {
     document.getElementById(modalId).classList.remove('active');
     document.body.style.overflow = '';
     if(modalId === 'video-modal') {
+        // TỐI ƯU SIÊU CẤP: Ép giải phóng bộ nhớ của Thẻ Video khi tắt (Chống rò rỉ RAM)
+        const videoEl = document.querySelector('#modal-video-container video');
+        if (videoEl) {
+            videoEl.pause();
+            videoEl.removeAttribute('src'); 
+            videoEl.load();
+        }
         document.getElementById('modal-video-container').innerHTML = ''; 
     }
 }
 
-// ================= TAB 1: TẢI BẰNG LINK =================
 async function processVideos() {
     const input = document.getElementById('tiktok-links').value;
     const links = input.split('\n').map(l => l.trim()).filter(l => l !== '');
@@ -197,7 +197,6 @@ async function processVideos() {
     finally { showLoading(false); document.getElementById('fetch-video-btn').disabled = false; }
 }
 
-// ================= TAB 2: TÌM KIẾM =================
 async function searchTikTok(isLoadMore = false) {
     let kw = document.getElementById('tiktok-keyword').value.trim();
     if(!kw && !isLoadMore) return showError("Nhập từ khóa vô!");
@@ -235,7 +234,6 @@ async function searchTikTok(isLoadMore = false) {
     }
 }
 
-// TÍNH NĂNG MỚI: TÌM KIẾM NGẪU NHIÊN 1 VIDEO
 async function searchRandom() {
     let kw = document.getElementById('tiktok-keyword').value.trim();
     if(!kw) return showError("Cần có từ khóa để random!");
@@ -247,13 +245,11 @@ async function searchRandom() {
     showLoading(true, `Đang bốc thăm may mắn: "${kw}"...`);
 
     try {
-        // Lấy ngẫu nhiên trang (cursor) từ 0 đến 30 để độ ngẫu nhiên cao hơn
         const randomCursor = Math.floor(Math.random() * 30);
         const response = await fetch(`/api/search?keywords=${encodeURIComponent(currentSearchKeyword)}&cursor=${randomCursor}&count=20`);
         const resData = await response.json();
         
         if (resData.code !== 0 || !resData.data?.videos?.length) {
-            // Rơi vào trang không có data, thử lại trang 0
             const retryRes = await fetch(`/api/search?keywords=${encodeURIComponent(currentSearchKeyword)}&cursor=0&count=20`);
             const retryData = await retryRes.json();
             if (retryData.code !== 0 || !retryData.data?.videos?.length) throw new Error("Không có video nào.");
@@ -261,15 +257,11 @@ async function searchRandom() {
         }
 
         const videos = resData.data.videos;
-        // Bốc ngẫu nhiên 1 video trong mảng
         const luckyVideo = videos[Math.floor(Math.random() * videos.length)];
-        
         const formattedResults = formatTikWmToGrid([luckyVideo], "");
         fetchedVideos = formattedResults;
         
-        // Render 1 video duy nhất to đẹp giữa màn hình
         renderVideoCards(formattedResults, false, 0);
-
     } catch (error) { showError(error.message); } 
     finally { 
         showLoading(false); 
@@ -278,7 +270,6 @@ async function searchRandom() {
     }
 }
 
-// ================= TAB 3: SOI KÊNH =================
 async function fetchUserInfo(isLoadMore = false) {
     let user = isLoadMore ? currentUserProfile : document.getElementById('tiktok-username').value.trim();
     if (user.startsWith('@')) user = user.substring(1);
@@ -327,9 +318,6 @@ async function fetchUserInfo(isLoadMore = false) {
     finally { showLoading(false); document.getElementById('fetch-info-btn').disabled = false; }
 }
 
-// ================= RENDER COMPONENTS CHUNG =================
-
-// Hàm Format Data TikWM chung
 function formatTikWmToGrid(videosArray) {
     return videosArray.map(v => ({
         link: `https://www.tiktok.com/@${v.author.unique_id}/video/${v.video_id}`,
@@ -343,7 +331,6 @@ function formatTikWmToGrid(videosArray) {
     }));
 }
 
-// Thẻ Profile Thu Gọn
 function renderUserInfoCompact() {
     const container = document.getElementById('user-info-area');
     const u = fullUserData.author;
@@ -351,7 +338,7 @@ function renderUserInfoCompact() {
     container.innerHTML = `
         <div class="w-full glass-panel rounded-[2rem] p-4 md:p-5 cursor-pointer hover:bg-slate-800 transition duration-300 shadow-xl flex items-center justify-between" onclick="renderUserInfoExpanded()">
             <div class="flex items-center gap-4">
-                <img src="${u.avatar}" class="w-14 h-14 rounded-full object-cover border-2 border-pink-500 bg-slate-800" loading="lazy">
+                <img src="${u.avatar}" class="w-14 h-14 rounded-full object-cover border-2 border-pink-500 bg-slate-800" loading="lazy" decoding="async">
                 <div class="text-left">
                     <h2 class="text-lg font-bold text-white flex items-center gap-1.5">${u.nickname} ${u.verified ? '<i class="fa-solid fa-circle-check text-blue-400 text-xs"></i>' : ''}</h2>
                     <p class="text-slate-400 text-sm font-medium">@${u.uniqueId} • ${s?.follower || '0'} Fl</p>
@@ -366,7 +353,6 @@ function renderUserInfoCompact() {
     container.classList.remove('hidden');
 }
 
-// Thẻ Profile Chi Tiết Mượt
 function renderUserInfoExpanded() {
     const container = document.getElementById('user-info-area');
     const u = fullUserData.author;
@@ -376,7 +362,7 @@ function renderUserInfoExpanded() {
             <button class="absolute top-4 right-4 z-20 w-10 h-10 bg-slate-800 hover:bg-red-500 text-white rounded-full flex items-center justify-center transition" onclick="renderUserInfoCompact()"><i class="fa-solid fa-chevron-up"></i></button>
             <div class="absolute top-0 left-1/2 transform -translate-x-1/2 w-40 h-40 bg-pink-600 rounded-full blur-[80px] opacity-30 pointer-events-none"></div>
             
-            <img src="${u.avatar}" class="w-24 h-24 rounded-full mx-auto object-cover border-4 border-slate-800 shadow-[0_0_20px_rgba(236,72,153,0.3)] relative z-10 bg-slate-900" loading="lazy">
+            <img src="${u.avatar}" class="w-24 h-24 rounded-full mx-auto object-cover border-4 border-slate-800 shadow-[0_0_20px_rgba(236,72,153,0.3)] relative z-10 bg-slate-900" loading="lazy" decoding="async">
             <h2 class="text-2xl font-extrabold mt-3 text-white flex items-center justify-center gap-2">${u.nickname} ${u.verified ? '<i class="fa-solid fa-circle-check text-blue-400"></i>' : ''}</h2>
             <p class="text-pink-400 font-medium text-sm mt-0.5">@${u.uniqueId}</p>
             ${fullUserData.live_info ? `<div class="mt-3 inline-block bg-red-900/50 text-red-400 px-3 py-1 rounded-full text-xs font-bold animate-pulse">🔴 ${fullUserData.live_info.status}</div>` : ''}
@@ -393,55 +379,56 @@ function renderUserInfoExpanded() {
     `;
 }
 
-// Render Lưới Video Siêu Tốc (Anti-lag)
 function renderVideoCards(results, append = false, startIndex = 0) {
-    const container = document.getElementById('result-area');
-    let html = '';
+    // TỐI ƯU SIÊU CẤP: Dùng requestAnimationFrame để đẩy việc Render vào luồng chống giật (Trình duyệt sẽ vẽ khi sẵn sàng)
+    requestAnimationFrame(() => {
+        const container = document.getElementById('result-area');
+        let html = '';
 
-    // LOGIC ẨN/HIỆN NÚT BATCH DOWNLOAD CHUẨN XÁC:
-    if (fetchedVideos.length > 1 && currentMode === 'video') {
-        document.getElementById('batch-download-container').classList.remove('hidden');
-    } else {
-        document.getElementById('batch-download-container').classList.add('hidden');
-    }
+        if (fetchedVideos.length > 1 && currentMode === 'video') {
+            document.getElementById('batch-download-container').classList.remove('hidden');
+        } else {
+            document.getElementById('batch-download-container').classList.add('hidden');
+        }
 
-    if (!append) {
-        container.innerHTML = '';
-        if (fetchedVideos.length === 1) container.className = "w-full max-w-[320px] mx-auto z-10 mt-6 pb-8";
-        else container.className = "w-full max-w-[98%] 2xl:max-w-[1600px] mx-auto z-10 mt-6 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-4 pb-8";
-    }
+        if (!append) {
+            container.innerHTML = '';
+            if (fetchedVideos.length === 1) container.className = "w-full max-w-[320px] mx-auto z-10 mt-6 pb-8";
+            else container.className = "w-full max-w-[98%] 2xl:max-w-[1600px] mx-auto z-10 mt-6 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-4 pb-8";
+        }
 
-    results.forEach((item, index) => {
-        if (item.error || item.data.status !== "Live") return;
-        const d = item.data;
-        const currentIndex = startIndex + index; 
-        
-        // Thẻ rút gọn hoàn toàn, không Blur, chỉ có Opacity
-        html += `
-            <div onclick="openVideoModal(${currentIndex})" class="glass-card rounded-2xl overflow-hidden relative group flex flex-col h-full cursor-pointer animate-fade-up" style="animation-delay: ${(index % 20) * 0.03}s">
-                <div class="w-full aspect-[3/4] relative bg-slate-900">
-                    <img src="${d.urls.cover}" class="w-full h-full object-cover opacity-80 group-hover:opacity-40 transition-opacity duration-300" loading="lazy">
-                    <div class="play-overlay absolute inset-0 flex items-center justify-center opacity-0 transform scale-50 transition-all duration-300">
-                        <div class="w-14 h-14 bg-pink-600/90 rounded-full flex items-center justify-center text-white text-xl pl-1 shadow-lg"><i class="fa-solid fa-play"></i></div>
+        results.forEach((item, index) => {
+            if (item.error || item.data.status !== "Live") return;
+            const d = item.data;
+            const currentIndex = startIndex + index; 
+            
+            // Tối ưu ảnh: loading="lazy" và decoding="async" giúp load hàng ngàn ảnh không bị nghẽn
+            html += `
+                <div onclick="openVideoModal(${currentIndex})" class="glass-card rounded-2xl overflow-hidden relative group flex flex-col h-full cursor-pointer animate-fade-up" style="animation-delay: ${(index % 20) * 0.03}s">
+                    <div class="w-full aspect-[3/4] relative bg-slate-900">
+                        <img src="${d.urls.cover}" class="w-full h-full object-cover opacity-80 group-hover:opacity-40 transition-opacity duration-300" loading="lazy" decoding="async">
+                        <div class="play-overlay absolute inset-0 flex items-center justify-center opacity-0 transform scale-50 transition-all duration-300">
+                            <div class="w-14 h-14 bg-pink-600/90 rounded-full flex items-center justify-center text-white text-xl pl-1 shadow-lg"><i class="fa-solid fa-play"></i></div>
+                        </div>
+                    </div>
+                    
+                    <div class="absolute bottom-0 left-0 w-full p-2 bg-gradient-to-t from-black/90 to-transparent">
+                        <div class="flex items-center gap-2 mb-1.5 px-1">
+                            <img src="${d.author.avatar}" class="w-5 h-5 rounded-full object-cover bg-slate-800" loading="lazy" decoding="async">
+                            <span class="text-white font-semibold text-[11px] truncate shadow-black">${d.author.nickname}</span>
+                        </div>
+                        <div class="flex justify-between px-1 text-[10px] text-white/80 font-medium">
+                            <span class="flex items-center gap-1"><i class="fa-solid fa-play text-slate-400"></i> ${d.stats.play}</span>
+                            <span class="flex items-center gap-1"><i class="fa-solid fa-heart text-pink-500"></i> ${d.stats.like}</span>
+                        </div>
                     </div>
                 </div>
-                
-                <div class="absolute bottom-0 left-0 w-full p-2 bg-gradient-to-t from-black/90 to-transparent">
-                    <div class="flex items-center gap-2 mb-1.5 px-1">
-                        <img src="${d.author.avatar}" class="w-5 h-5 rounded-full object-cover bg-slate-800" loading="lazy">
-                        <span class="text-white font-semibold text-[11px] truncate shadow-black">${d.author.nickname}</span>
-                    </div>
-                    <div class="flex justify-between px-1 text-[10px] text-white/80 font-medium">
-                        <span class="flex items-center gap-1"><i class="fa-solid fa-play text-slate-400"></i> ${d.stats.play}</span>
-                        <span class="flex items-center gap-1"><i class="fa-solid fa-heart text-pink-500"></i> ${d.stats.like}</span>
-                    </div>
-                </div>
-            </div>
-        `;
+            `;
+        });
+
+        if (append) container.insertAdjacentHTML('beforeend', html);
+        else container.innerHTML = html;
     });
-
-    if (append) container.insertAdjacentHTML('beforeend', html);
-    else container.innerHTML = html;
 }
 
 function checkLoadMoreUI(hasMore) {
@@ -453,7 +440,6 @@ function checkLoadMoreUI(hasMore) {
     } else loadMoreContainer.classList.add('hidden');
 }
 
-// ================= TẢI TOÀN BỘ (Dành riêng cho TAB VIDEO) =================
 async function downloadAllVideos(btnObj) {
     if (!fetchedVideos || fetchedVideos.length === 0) return;
     const originalHTML = btnObj.innerHTML;
@@ -473,9 +459,8 @@ async function downloadAllVideos(btnObj) {
             document.body.appendChild(a); a.click();
             window.URL.revokeObjectURL(url); a.remove();
         } catch(e) { window.open(vid.urls.no_watermark, '_blank'); }
-        await sleep(800); // Rút ngắn thời gian chờ một chút để nhanh hơn
+        await sleep(800); 
     }
     btnObj.innerHTML = `<i class="fa-solid fa-check"></i> Xong ${fetchedVideos.length} Video`;
     setTimeout(() => { btnObj.innerHTML = originalHTML; btnObj.disabled = false; }, 3000);
 }
-
