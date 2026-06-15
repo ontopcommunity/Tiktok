@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TikTok Studio Pro | Dark Space</title>
+    <title>TikTok Studio Pro | Smooth Edition</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
@@ -14,46 +14,64 @@
             background-color: #020617; 
             color: #f8fafc;
             overflow-x: hidden;
+            -webkit-font-smoothing: antialiased; /* Làm mượt font */
         }
 
-        ::-webkit-scrollbar { width: 6px; height: 6px; }
-        ::-webkit-scrollbar-track { background: #0f172a; }
+        /* Tối ưu thanh cuộn */
+        ::-webkit-scrollbar { width: 5px; height: 5px; }
+        ::-webkit-scrollbar-track { background: transparent; }
         ::-webkit-scrollbar-thumb { background-color: #334155; border-radius: 10px; }
         ::-webkit-scrollbar-thumb:hover { background-color: #475569; }
-        .custom-scroll-x::-webkit-scrollbar { height: 4px; }
+        .custom-scroll-x::-webkit-scrollbar { height: 3px; }
 
-        .glass-dark {
-            background: rgba(30, 41, 59, 0.6);
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
+        /* Khối Glass chính (Có Blur) */
+        .glass-panel {
+            background: rgba(15, 23, 42, 0.7);
+            backdrop-filter: blur(24px);
+            -webkit-backdrop-filter: blur(24px);
             border: 1px solid rgba(255, 255, 255, 0.08);
             box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
         }
 
-        @keyframes fadeUpIn {
-            0% { opacity: 0; transform: translateY(30px) scale(0.95); }
-            100% { opacity: 1; transform: translateY(0) scale(1); }
+        /* Tối ưu Card Video: KHÔNG dùng Blur để chống giật lag, dùng Solid Color + Opacity */
+        .glass-card {
+            background: rgba(30, 41, 59, 0.85);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            transition: all 0.4s cubic-bezier(0.25, 1, 0.5, 1);
+            will-change: transform, box-shadow; /* Ép chạy bằng GPU */
+            transform: perspective(1000px) translateZ(0); /* Kích hoạt 3D engine */
         }
-        .animate-fade-up { animation: fadeUpIn 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+
+        .glass-card:hover {
+            transform: perspective(1000px) translateZ(20px) translateY(-8px);
+            box-shadow: 0 30px 50px -15px rgba(0,0,0,0.7);
+            border-color: rgba(236, 72, 153, 0.4);
+            z-index: 10;
+        }
+
+        .glass-card:hover .play-overlay { opacity: 1; transform: scale(1); }
+
+        /* Animation mượt mà */
+        @keyframes fadeUpIn {
+            0% { opacity: 0; transform: translateY(20px); }
+            100% { opacity: 1; transform: translateY(0); }
+        }
+        .animate-fade-up { animation: fadeUpIn 0.5s cubic-bezier(0.25, 1, 0.5, 1) forwards; }
         
-        /* Hiệu ứng Phóng to Rõ ràng cho Modal Video */
+        /* Hiệu ứng Phóng to Rõ ràng, Nảy cho Modal */
         @keyframes popIn {
-            0% { opacity: 0; transform: scale(0.5) translateY(50px); }
-            70% { opacity: 1; transform: scale(1.02) translateY(-10px); }
+            0% { opacity: 0; transform: scale(0.85) translateY(30px); }
+            60% { opacity: 1; transform: scale(1.02) translateY(-5px); }
             100% { opacity: 1; transform: scale(1) translateY(0); }
         }
-        
-        @keyframes blob {
-            0% { transform: translate(0px, 0px) scale(1); }
-            33% { transform: translate(40px, -60px) scale(1.2); }
-            66% { transform: translate(-30px, 30px) scale(0.8); }
-            100% { transform: translate(0px, 0px) scale(1); }
-        }
-        .animate-blob { animation: blob 10s infinite alternate; }
-        .animation-delay-2000 { animation-delay: 2s; }
-        .animation-delay-4000 { animation-delay: 4s; }
 
-        .glow-btn:hover { box-shadow: 0 0 20px rgba(236, 72, 153, 0.6), 0 0 40px rgba(139, 92, 246, 0.4); }
+        .modal-overlay { opacity: 0; visibility: hidden; transition: all 0.3s ease; backdrop-filter: blur(8px); }
+        .modal-overlay.active { opacity: 1; visibility: visible; }
+        .modal-content { opacity: 0; transform: scale(0.85); transition: none; will-change: transform, opacity; }
+        .modal-overlay.active .modal-content { animation: popIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards; }
+
+        /* Đồ họa nền tĩnh (Bỏ animation xoay liên tục để giảm tải CPU/GPU) */
+        .bg-blob { position: fixed; border-radius: 50%; filter: blur(120px); opacity: 0.15; pointer-events: none; z-index: 0; }
 
         .tab-btn { position: relative; padding-bottom: 0.75rem; transition: all 0.3s ease; white-space: nowrap; }
         .tab-btn::after {
@@ -66,34 +84,23 @@
         .tab-active::after { width: 100%; }
         .tab-inactive { color: #64748b; font-weight: 500; }
         .tab-inactive:hover { color: #cbd5e1; }
-
-        .video-card-hover { transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.4s; cursor: pointer; }
-        .video-card-hover:hover { transform: translateY(-8px) scale(1.02); box-shadow: 0 20px 40px rgba(0,0,0,0.4); border-color: rgba(236, 72, 153, 0.3); }
-        .video-card-hover:hover .play-overlay { opacity: 1; transform: scale(1); }
-
-        .modal-overlay { opacity: 0; visibility: hidden; transition: all 0.4s ease; backdrop-filter: blur(10px); }
-        .modal-overlay.active { opacity: 1; visibility: visible; }
-        
-        /* Gắn animation mới vào modal content */
-        .modal-content { opacity: 0; transform: scale(0.5); transition: none; }
-        .modal-overlay.active .modal-content { animation: popIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards; }
     </style>
 </head>
-<body class="min-h-screen flex flex-col items-center py-10 px-4 sm:px-6 relative">
+<body class="min-h-screen flex flex-col items-center py-10 px-4 sm:px-6 relative selection:bg-pink-500 selection:text-white">
 
-    <div class="fixed top-[-10%] left-[-10%] w-[500px] h-[500px] bg-pink-600 rounded-full mix-blend-screen filter blur-[120px] opacity-20 animate-blob pointer-events-none z-0"></div>
-    <div class="fixed top-[40%] right-[-10%] w-[400px] h-[400px] bg-purple-600 rounded-full mix-blend-screen filter blur-[100px] opacity-20 animate-blob animation-delay-2000 pointer-events-none z-0"></div>
-    <div class="fixed bottom-[-10%] left-[20%] w-[600px] h-[600px] bg-blue-600 rounded-full mix-blend-screen filter blur-[130px] opacity-15 animate-blob animation-delay-4000 pointer-events-none z-0"></div>
+    <div class="bg-blob bg-pink-600 w-[500px] h-[500px] top-[-10%] left-[-10%]"></div>
+    <div class="bg-blob bg-purple-600 w-[400px] h-[400px] top-[40%] right-[-10%] opacity-10"></div>
+    <div class="bg-blob bg-blue-600 w-[600px] h-[600px] bottom-[-10%] left-[20%] opacity-10"></div>
 
-    <div class="text-center mb-10 w-full max-w-3xl z-10 animate-fade-up">
-        <div class="inline-block px-4 py-1.5 rounded-full glass-dark text-xs font-bold tracking-widest text-pink-400 uppercase mb-4 border border-pink-500/30 shadow-[0_0_15px_rgba(236,72,153,0.2)]">MASTER EDITION</div>
-        <h1 class="text-4xl md:text-6xl font-extrabold tracking-tight mb-4">
-            <i class="fa-brands fa-tiktok text-white mr-2 drop-shadow-lg"></i>TikTok <span class="text-transparent bg-clip-text bg-gradient-to-r from-pink-500 via-purple-500 to-indigo-500 drop-shadow-[0_0_10px_rgba(236,72,153,0.3)]">Studio</span>
+    <div class="text-center mb-8 w-full max-w-3xl z-10 animate-fade-up">
+        <div class="inline-block px-4 py-1.5 rounded-full bg-slate-800/50 border border-slate-700 text-xs font-bold tracking-widest text-pink-400 uppercase mb-4 shadow-lg">SMOOTH ENGINE</div>
+        <h1 class="text-4xl md:text-6xl font-extrabold tracking-tight mb-3">
+            <i class="fa-brands fa-tiktok text-white mr-2"></i>TikTok <span class="text-transparent bg-clip-text bg-gradient-to-r from-pink-500 via-purple-500 to-indigo-500">Studio</span>
         </h1>
-        <p class="text-slate-400 font-medium text-base md:text-lg">Tìm kiếm, Phân tích & Tải đa luồng siêu tốc</p>
+        <p class="text-slate-400 font-medium text-sm md:text-base">Mượt mà, Sắc nét & Tối ưu hóa hiệu năng</p>
     </div>
 
-    <div class="w-full max-w-4xl glass-dark rounded-[2.5rem] p-6 sm:p-10 z-10 animate-fade-up relative overflow-hidden" style="animation-delay: 0.1s;">
+    <div class="w-full max-w-4xl glass-panel rounded-[2rem] p-6 sm:p-8 z-10 animate-fade-up relative overflow-hidden" style="animation-delay: 0.1s;">
         <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-pink-500 via-purple-500 to-blue-500 opacity-80"></div>
 
         <div class="flex space-x-6 md:space-x-10 mb-8 border-b border-slate-700/50 pb-0 overflow-x-auto custom-scroll-x">
@@ -108,80 +115,87 @@
             </button>
         </div>
 
-        <div id="mode-video" class="transition-opacity duration-500">
-            <label class="block text-sm font-semibold text-slate-300 mb-3 ml-1">Dán link video (Tối đa 20 link)</label>
+        <div id="mode-video" class="transition-opacity duration-300">
+            <label class="block text-sm font-semibold text-slate-300 mb-2 ml-1">Dán link video (Tối đa 20 link)</label>
             <div class="relative">
-                <textarea id="tiktok-links" rows="4" placeholder="https://vt.tiktok.com/ZS...&#10;https://www.tiktok.com/@user/video/123..." class="w-full px-6 py-5 bg-slate-900/50 rounded-2xl focus:outline-none focus:ring-2 focus:ring-pink-500/50 transition-all resize-none mb-5 text-slate-200 placeholder-slate-600 border border-slate-700/50 shadow-inner custom-scroll-x"></textarea>
-                <div class="absolute top-4 right-4 text-slate-500 opacity-50"><i class="fa-solid fa-link text-xl"></i></div>
+                <textarea id="tiktok-links" rows="4" placeholder="https://vt.tiktok.com/ZS..." class="w-full px-6 py-4 bg-slate-900/80 rounded-2xl focus:outline-none focus:ring-2 focus:ring-pink-500/50 transition-all resize-none mb-4 text-slate-200 placeholder-slate-600 border border-slate-700 shadow-inner custom-scroll-x"></textarea>
+                <div class="absolute top-4 right-4 text-slate-500 opacity-50"><i class="fa-solid fa-link"></i></div>
             </div>
-            <button id="fetch-video-btn" onclick="processVideos()" class="w-full bg-white text-black hover:bg-gray-200 font-bold py-4 px-6 rounded-2xl transition-all transform hover:scale-[1.01] active:scale-95 flex items-center justify-center gap-3 glow-btn shadow-lg">
-                <i class="fa-solid fa-bolt text-pink-500 text-xl"></i> <span class="text-lg">Kích Hoạt Xử Lý</span>
+            <button id="fetch-video-btn" onclick="processVideos()" class="w-full bg-white text-black hover:bg-gray-200 font-bold py-3.5 px-6 rounded-xl transition-all transform hover:scale-[1.01] active:scale-95 flex items-center justify-center gap-2 shadow-lg">
+                <i class="fa-solid fa-bolt text-pink-500"></i> Kích Hoạt Xử Lý
             </button>
         </div>
 
-        <div id="mode-search" class="hidden transition-opacity duration-500">
-            <label class="block text-sm font-semibold text-slate-300 mb-3 ml-1">Nhập từ khóa (Tên bài hát, trend...)</label>
-            <div class="flex flex-col sm:flex-row gap-4 mb-2">
+        <div id="mode-search" class="hidden transition-opacity duration-300">
+            <label class="block text-sm font-semibold text-slate-300 mb-2 ml-1">Nhập từ khóa (Tên bài hát, trend...)</label>
+            <div class="flex flex-col sm:flex-row gap-3 mb-2">
                 <div class="relative flex-1">
                     <div class="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none text-slate-500"><i class="fa-solid fa-magnifying-glass"></i></div>
-                    <input type="text" id="tiktok-keyword" placeholder="Ví dụ: nhạc chill, lập trình web..." class="w-full pl-12 pr-5 py-4 bg-slate-900/50 rounded-2xl focus:outline-none focus:ring-2 focus:ring-rose-500/50 transition-all text-slate-200 border border-slate-700/50 shadow-inner">
+                    <input type="text" id="tiktok-keyword" placeholder="Ví dụ: nhạc chill, lập trình web..." class="w-full pl-12 pr-5 py-4 bg-slate-900/80 rounded-xl focus:outline-none focus:ring-2 focus:ring-rose-500/50 transition-all text-slate-200 border border-slate-700 shadow-inner">
                 </div>
-                <button id="fetch-search-btn" onclick="searchTikTok(false)" class="bg-gradient-to-r from-pink-600 to-rose-600 hover:from-pink-500 hover:to-rose-500 text-white font-bold py-4 px-10 rounded-2xl transition-all transform hover:scale-[1.02] active:scale-95 glow-btn shadow-lg flex items-center justify-center gap-2">
-                    <i class="fa-solid fa-satellite-dish text-lg"></i> Quét
-                </button>
+                <div class="flex gap-2">
+                    <button id="fetch-search-btn" onclick="searchTikTok(false)" class="bg-rose-600 hover:bg-rose-500 text-white font-bold py-4 px-6 rounded-xl transition-transform active:scale-95 shadow-lg flex items-center gap-2">
+                        <i class="fa-solid fa-satellite-dish"></i> Quét
+                    </button>
+                    <button id="random-btn" onclick="searchRandom()" class="bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-4 px-5 rounded-xl transition-transform active:scale-95 shadow-lg flex items-center gap-2" title="Lấy 1 video ngẫu nhiên theo từ khóa">
+                        <i class="fa-solid fa-dice text-xl"></i>
+                    </button>
+                </div>
             </div>
         </div>
 
-        <div id="mode-info" class="hidden transition-opacity duration-500">
-            <label class="block text-sm font-semibold text-slate-300 mb-3 ml-1">Nhập ID Kênh (Không cần dấu @)</label>
-            <div class="flex flex-col sm:flex-row gap-4 mb-2">
+        <div id="mode-info" class="hidden transition-opacity duration-300">
+            <label class="block text-sm font-semibold text-slate-300 mb-2 ml-1">Nhập ID Kênh (Không cần dấu @)</label>
+            <div class="flex flex-col sm:flex-row gap-3 mb-2">
                 <div class="relative flex-1">
                     <div class="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none text-slate-500 font-bold">@</div>
-                    <input type="text" id="tiktok-username" placeholder="hoaa.hanassii" class="w-full pl-10 pr-5 py-4 bg-slate-900/50 rounded-2xl focus:outline-none focus:ring-2 focus:ring-purple-500/50 transition-all text-slate-200 border border-slate-700/50 shadow-inner">
+                    <input type="text" id="tiktok-username" placeholder="hoaa.hanassii" class="w-full pl-10 pr-5 py-4 bg-slate-900/80 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500/50 transition-all text-slate-200 border border-slate-700 shadow-inner">
                 </div>
-                <button id="fetch-info-btn" onclick="fetchUserInfo()" class="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold py-4 px-10 rounded-2xl transition-all transform hover:scale-[1.02] active:scale-95 glow-btn shadow-lg flex items-center justify-center gap-2">
-                    <i class="fa-solid fa-radar-base text-lg"></i> Quét Kênh
+                <button id="fetch-info-btn" onclick="fetchUserInfo()" class="bg-purple-600 hover:bg-purple-500 text-white font-bold py-4 px-8 rounded-xl transition-transform active:scale-95 shadow-lg flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-radar-base"></i> Soi Kênh
                 </button>
             </div>
         </div>
     </div>
 
-    <div id="loading" class="hidden z-10 mt-8 text-center animate-fade-up">
-        <div class="inline-flex items-center gap-4 glass-dark px-8 py-4 rounded-full shadow-2xl border border-pink-500/20">
-            <div class="relative w-6 h-6">
-                <div class="absolute top-0 left-0 w-full h-full border-4 border-slate-600 rounded-full"></div>
-                <div class="absolute top-0 left-0 w-full h-full border-4 border-pink-500 rounded-full border-t-transparent animate-spin"></div>
-            </div>
-            <span id="loading-text" class="text-sm font-bold text-slate-200 tracking-wide uppercase">Đang đồng bộ dữ liệu...</span>
+    <div id="loading" class="hidden z-10 mt-6 text-center animate-fade-up">
+        <div class="inline-flex items-center gap-3 bg-slate-800 border border-slate-700 px-6 py-3 rounded-full shadow-lg">
+            <i class="fa-solid fa-circle-notch fa-spin text-pink-500"></i>
+            <span id="loading-text" class="text-sm font-bold text-slate-200 uppercase tracking-wide">Đang xử lý...</span>
         </div>
     </div>
-    <div id="error-msg" class="hidden z-10 mt-6 max-w-2xl bg-red-900/30 text-red-400 px-6 py-4 rounded-2xl shadow-sm text-center text-sm font-medium animate-fade-up border border-red-500/20 backdrop-blur-md"></div>
+    <div id="error-msg" class="hidden z-10 mt-4 max-w-2xl bg-red-900/50 border border-red-500/30 text-red-400 px-6 py-3 rounded-xl shadow-md text-center text-sm font-medium animate-fade-up"></div>
 
-    <div id="user-info-area" class="w-full max-w-4xl mx-auto z-10 mt-6 mb-8 hidden animate-fade-up"></div>
+    <div id="user-info-area" class="w-full max-w-4xl mx-auto z-10 mt-6 mb-6 hidden animate-fade-up"></div>
 
     <div id="batch-download-container" class="hidden w-full max-w-[98%] 2xl:max-w-[1600px] z-10 mt-2 flex justify-end animate-fade-up">
-        <button onclick="downloadAllVideos(this)" class="bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-white font-bold py-3 px-8 rounded-2xl shadow-[0_0_20px_rgba(16,185,129,0.3)] transition transform hover:-translate-y-1 flex items-center gap-2 glow-btn">
-            <i class="fa-solid fa-boxes-packing"></i> Tải Toàn Bộ Video Grid
+        <button onclick="downloadAllVideos(this)" class="bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 px-6 rounded-xl shadow-lg transition-transform hover:-translate-y-1 flex items-center gap-2">
+            <i class="fa-solid fa-boxes-packing"></i> Tải Toàn Bộ Dưới Đây
         </button>
     </div>
 
     <div id="result-area" class="w-full max-w-[98%] 2xl:max-w-[1600px] mx-auto z-10 mt-6 pb-6"></div>
 
     <div id="load-more-container" class="hidden w-full flex justify-center z-10 pb-20 animate-fade-up">
-        <button onclick="loadMore()" id="load-more-btn" class="bg-slate-800 hover:bg-slate-700 text-white font-bold py-3.5 px-10 rounded-full shadow-[0_0_20px_rgba(255,255,255,0.05)] border border-slate-600 transition-transform hover:-translate-y-1 active:scale-95 flex items-center gap-2">
+        <button onclick="loadMore()" id="load-more-btn" class="bg-slate-800 hover:bg-slate-700 text-white font-bold py-3 px-8 rounded-full shadow-lg border border-slate-600 transition-transform hover:-translate-y-1 active:scale-95 flex items-center gap-2">
             <i class="fa-solid fa-angle-down"></i> Tải Thêm Video
         </button>
     </div>
 
-    <div id="video-modal" class="modal-overlay fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80">
-        <div class="modal-content glass-dark w-full max-w-5xl rounded-[2rem] overflow-hidden flex flex-col md:flex-row max-h-[90vh] relative border border-white/10 shadow-2xl">
-            <button onclick="closeModal('video-modal')" class="absolute top-4 right-4 z-20 w-10 h-10 bg-black/50 hover:bg-pink-600 text-white rounded-full flex items-center justify-center transition-colors backdrop-blur-md border border-white/10">
-                <i class="fa-solid fa-xmark text-lg"></i>
+    <div id="video-modal" class="modal-overlay fixed inset-0 z-50 flex items-center justify-center p-3 md:p-6 bg-black/85">
+        <div class="modal-content glass-panel w-full max-w-5xl rounded-3xl overflow-hidden flex flex-col md:flex-row max-h-[90vh] md:max-h-[80vh] relative border border-white/10 shadow-2xl">
+            
+            <button onclick="closeModal('video-modal')" class="absolute top-3 right-3 z-30 w-9 h-9 bg-black/60 hover:bg-red-500 text-white rounded-full flex items-center justify-center transition-colors backdrop-blur-md">
+                <i class="fa-solid fa-xmark"></i>
             </button>
-            <div class="w-full md:w-[45%] bg-black relative flex items-center justify-center" id="modal-video-container"></div>
-            <div class="w-full md:w-[55%] p-6 md:p-8 overflow-y-auto custom-scroll-x flex flex-col">
-                <div id="modal-video-info"></div>
+            
+            <div class="w-full md:w-1/2 bg-black relative flex items-center justify-center h-[40vh] md:h-auto" id="modal-video-container"></div>
+            
+            <div class="w-full md:w-1/2 bg-slate-900/90 flex flex-col h-[50vh] md:h-auto">
+                <div id="modal-video-info" class="flex-1 overflow-y-auto custom-scroll-x p-6 md:p-8"></div>
+                <div id="modal-video-actions" class="p-5 border-t border-white/10 bg-slate-900 grid grid-cols-2 gap-3"></div>
             </div>
+            
         </div>
     </div>
 
