@@ -7,6 +7,11 @@ let currentUserProfile = "";
 let userVideoCursor = 0;
 let fullUserData = null;
 
+// Biến cho tính năng Music Scanner ngầm
+let currentMusicUrl = "";
+let currentMusicId = "";
+let musicCursor = 0;
+
 function switchTab(mode) {
     currentMode = mode;
     ['video', 'search', 'info', 'analytics'].forEach(m => {
@@ -50,6 +55,7 @@ function clearResults() {
     
     searchCursor = 0; currentSearchKeyword = "";
     userVideoCursor = 0; currentUserProfile = ""; fullUserData = null;
+    musicCursor = 0; currentMusicUrl = ""; currentMusicId = "";
 }
 
 function generateFileName(author, videoId, ext) { return `${author}_${videoId}.${ext}`; }
@@ -62,7 +68,6 @@ const formatStatsClient = (num) => {
     return (Math.floor(num / 100000) / 10).toString().replace('.', ',') + "M";
 };
 
-// Hàm dịch chữ (Ví dụ: 1.5M -> 1500000) dùng cho Analytics
 function parseRawStats(str) {
     if(!str) return 0;
     if(typeof str === 'number') return str;
@@ -72,12 +77,13 @@ function parseRawStats(str) {
     return parseFloat(str.replace(/,/g, '.').replace(/[KM]/g, '')) * multi;
 }
 
+// Điều hướng nút tải thêm
 function loadMore() {
     if (currentMode === 'search') searchTikTok(true);
     else if (currentMode === 'info') fetchUserInfo(true);
+    else if (currentMode === 'music_scan') fetchMoreMusicVideos();
 }
 
-// Bypass Download 
 async function forceDownload(url, filename, btnObj) {
     const originalHTML = btnObj.innerHTML;
     btnObj.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Đang tải...`;
@@ -114,7 +120,84 @@ function searchUserFromModal(username) {
     window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
-// ================= MODAL HIỂN THỊ CHI TIẾT (CINEMA UI) =================
+// ================= TÍNH NĂNG QUÉT NHẠC NGẦM TỪ MODAL =================
+async function scanMusicFromModal(musicUrl, musicTitle) {
+    closeModal('video-modal');
+    clearResults();
+    currentMode = 'music_scan'; // Chế độ Ảo
+    currentMusicUrl = musicUrl;
+    musicCursor = 0;
+    
+    ['video', 'search', 'info', 'analytics'].forEach(m => {
+        const btn = document.getElementById(`tab-${m}`);
+        if(btn) btn.className = 'tab-btn tab-inactive focus:outline-none flex items-center gap-2 text-base md:text-lg';
+    });
+
+    showLoading(true, `Đang truy vết các video dùng chung âm thanh...`);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+
+    try {
+        const response = await fetch(`/api/music?url=${encodeURIComponent(musicUrl)}`);
+        const resData = await response.json();
+        
+        if (resData.code !== 0 || !resData.data || !resData.data.videos || resData.data.videos.length === 0) {
+            throw new Error("Không tìm thấy video nào dùng chung bản nhạc này.");
+        }
+
+        fetchedVideos = formatTikWmToGrid(resData.data.videos);
+        musicCursor = resData.data.cursor;
+        currentMusicId = resData.music_id;
+        
+        const userInfoArea = document.getElementById('user-info-area');
+        userInfoArea.innerHTML = `
+            <div class="w-full glass-panel rounded-[2rem] p-6 md:p-10 text-center border border-purple-500/30 shadow-[0_0_30px_rgba(168,85,247,0.2)] animate-fade-up">
+                <div class="w-16 h-16 rounded-full bg-slate-800 mx-auto flex items-center justify-center border border-white/10 shadow-[0_0_15px_rgba(168,85,247,0.4)] mb-3 animate-[spin_4s_linear_infinite]">
+                    <i class="fa-solid fa-music text-purple-400 text-2xl drop-shadow-[0_0_8px_rgba(168,85,247,0.8)]"></i>
+                </div>
+                <h2 class="text-2xl font-extrabold text-white">Kết Quả Quét Âm Thanh</h2>
+                <p class="text-purple-400 font-bold text-sm mt-2 flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-compact-disc"></i> ${musicTitle}
+                </p>
+                <p class="text-slate-400 text-xs mt-3 italic">Toàn bộ video bên dưới đều sử dụng chung âm thanh này</p>
+            </div>
+        `;
+        userInfoArea.classList.remove('hidden');
+
+        renderVideoCards(fetchedVideos, false, 0);
+        checkLoadMoreUI(resData.data.hasMore);
+        
+    } catch (error) {
+        showError(error.message);
+    } finally {
+        showLoading(false);
+    }
+}
+
+async function fetchMoreMusicVideos() {
+    document.getElementById('load-more-btn').disabled = true;
+    document.getElementById('load-more-btn').innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Đang tải...`;
+
+    try {
+        const response = await fetch(`/api/music?music_id=${currentMusicId}&cursor=${musicCursor}`);
+        const resData = await response.json();
+
+        if (resData.code !== 0 || !resData.data || !resData.data.videos) throw new Error("Không thể tải thêm video.");
+
+        const formattedResults = formatTikWmToGrid(resData.data.videos);
+        const startIndex = fetchedVideos.length;
+        fetchedVideos.push(...formattedResults);
+        musicCursor = resData.data.cursor;
+
+        renderVideoCards(formattedResults, true, startIndex);
+        checkLoadMoreUI(resData.data.hasMore);
+    } catch (error) {
+        alert("Lỗi tải thêm: " + error.message);
+    } finally {
+        document.getElementById('load-more-btn').disabled = false;
+    }
+}
+
+// ================= MODAL HIỂN THỊ CHI TIẾT =================
 function openVideoModal(index) {
     const d = fetchedVideos[index].data;
     const fileNameMp4 = generateFileName(d.author.uniqueId, d.video_data.id, 'mp4');
@@ -131,7 +214,7 @@ function openVideoModal(index) {
             <source src="${d.urls.no_watermark}" type="video/mp4">
            </video>`;
 
-    const safeDesc = (d.video_data.description || 'Tác giả rất lười, không để lại chữ nào.');
+    const safeDesc = (d.video_data.description || 'Tác giả rất lười, không để lại chữ nào.').replace(/'/g, "\\'");
 
     document.getElementById('modal-video-info').innerHTML = `
         <div class="relative p-[1px] rounded-2xl bg-gradient-to-r from-pink-500 via-purple-500 to-indigo-500 mb-5 group cursor-pointer hover:shadow-[0_0_20px_rgba(236,72,153,0.3)] transition-all duration-300">
@@ -150,13 +233,13 @@ function openVideoModal(index) {
             </div>
         </div>
 
-        <div class="flex items-center gap-3 bg-slate-900/40 p-3 rounded-xl border border-white/5 mb-5 shadow-inner">
+        <div class="flex items-center gap-3 bg-slate-900/40 p-3 rounded-xl border border-white/5 mb-5 shadow-inner cursor-pointer hover:border-purple-500/50 hover:bg-slate-800/80 transition group" onclick="scanMusicFromModal('${d.music.playUrl}', '${d.music.title.replace(/'/g, "\\'")}')" title="Bấm để truy vết các video sử dụng nhạc này">
             <div class="w-9 h-9 rounded-full bg-slate-800 flex items-center justify-center border border-white/10 shadow-[0_0_10px_rgba(168,85,247,0.3)] animate-[spin_4s_linear_infinite]">
                 <i class="fa-solid fa-music text-purple-400 text-xs drop-shadow-[0_0_5px_rgba(168,85,247,0.8)]"></i>
             </div>
             <div class="flex-1 truncate">
-                <p class="text-white text-sm font-bold truncate tracking-wide">${d.music.title}</p>
-                <p class="text-[10px] text-slate-500 uppercase font-semibold mt-0.5 tracking-widest">Âm thanh gốc</p>
+                <p class="text-white text-sm font-bold truncate tracking-wide group-hover:text-purple-400 transition">${d.music.title}</p>
+                <p class="text-[10px] text-slate-400 uppercase font-semibold mt-0.5 tracking-widest flex items-center gap-1.5">Bấm để soi nhạc <i class="fa-solid fa-arrow-right"></i></p>
             </div>
             <div class="px-2">
                 <div class="flex gap-1 items-end h-3">
@@ -229,7 +312,6 @@ function closeModal(modalId) {
     }
 }
 
-// FORMAT API DATA TIKWM
 function formatTikWmToGrid(videosArray) {
     return videosArray.map(v => ({
         link: `https://www.tiktok.com/@${v.author.unique_id}/video/${v.video_id}`,
@@ -244,7 +326,281 @@ function formatTikWmToGrid(videosArray) {
     }));
 }
 
-// GRID RENDER 3D CAO CẤP
+// ================= CÁC TÍNH NĂNG CHÍNH =================
+
+async function processVideos() {
+    const input = document.getElementById('tiktok-links').value;
+    const links = input.split('\n').map(l => l.trim()).filter(l => l !== '');
+    if (links.length === 0) return showError("Dán link vô đi nào!");
+
+    clearResults();
+    showLoading(true, `Đang xử lý ${links.length} luồng dữ liệu...`);
+    document.getElementById('fetch-video-btn').disabled = true;
+
+    try {
+        const promises = links.map(link => fetch(`/api/video?video=${encodeURIComponent(link)}`).then(res => res.json()).then(data => ({ link, data })).catch(err => ({ link, error: err.message })));
+        let results = await Promise.all(promises);
+        fetchedVideos = results.filter(r => r.data && r.data.status === "Live");
+        renderVideoCards(fetchedVideos, false, 0);
+    } catch (error) { showError("Lỗi: " + error.message); } 
+    finally { showLoading(false); document.getElementById('fetch-video-btn').disabled = false; }
+}
+
+async function searchTikTok(isLoadMore = false) {
+    let kw = document.getElementById('tiktok-keyword').value.trim();
+    if(!kw && !isLoadMore) return showError("Nhập từ khóa vô!");
+
+    if (!isLoadMore) {
+        clearResults();
+        currentSearchKeyword = kw; searchCursor = 0;
+        document.getElementById('fetch-search-btn').disabled = true;
+        document.getElementById('random-btn').disabled = true;
+        showLoading(true, `Đang tìm: "${kw}"...`);
+    } else {
+        document.getElementById('load-more-btn').disabled = true;
+        document.getElementById('load-more-btn').innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Đang tải...`;
+    }
+
+    try {
+        const response = await fetch(`/api/search?keywords=${encodeURIComponent(currentSearchKeyword)}&cursor=${searchCursor}&count=20`);
+        const resData = await response.json();
+        if (resData.code !== 0 || !resData.data?.videos?.length) throw new Error("Không tìm thấy kết quả.");
+
+        const videos = resData.data.videos;
+        searchCursor = resData.data.cursor;
+
+        let formattedResults = formatTikWmToGrid(videos);
+        const startIndex = fetchedVideos.length;
+        fetchedVideos.push(...formattedResults);
+        
+        renderVideoCards(formattedResults, isLoadMore, startIndex);
+        checkLoadMoreUI(resData.data.hasMore);
+    } catch (error) { if(!isLoadMore) showError(error.message); else alert("Lỗi: " + error.message); } 
+    finally { 
+        showLoading(false); 
+        document.getElementById('fetch-search-btn').disabled = false;
+        document.getElementById('random-btn').disabled = false;
+    }
+}
+
+async function searchRandom() {
+    let kw = document.getElementById('tiktok-keyword').value.trim();
+    if(!kw) return showError("Cần có từ khóa để random!");
+
+    clearResults();
+    currentSearchKeyword = kw;
+    document.getElementById('fetch-search-btn').disabled = true;
+    document.getElementById('random-btn').disabled = true;
+    showLoading(true, `Đang bốc thăm may mắn: "${kw}"...`);
+
+    try {
+        const randomCursor = Math.floor(Math.random() * 30);
+        const response = await fetch(`/api/search?keywords=${encodeURIComponent(currentSearchKeyword)}&cursor=${randomCursor}&count=20`);
+        const resData = await response.json();
+        
+        if (resData.code !== 0 || !resData.data?.videos?.length) {
+            const retryRes = await fetch(`/api/search?keywords=${encodeURIComponent(currentSearchKeyword)}&cursor=0&count=20`);
+            const retryData = await retryRes.json();
+            if (retryData.code !== 0 || !retryData.data?.videos?.length) throw new Error("Không có video nào.");
+            resData.data = retryData.data;
+        }
+
+        const videos = resData.data.videos;
+        const luckyVideo = videos[Math.floor(Math.random() * videos.length)];
+        fetchedVideos = formatTikWmToGrid([luckyVideo]);
+        renderVideoCards(fetchedVideos, false, 0);
+    } catch (error) { showError(error.message); } 
+    finally { 
+        showLoading(false); 
+        document.getElementById('fetch-search-btn').disabled = false;
+        document.getElementById('random-btn').disabled = false;
+    }
+}
+
+async function fetchUserInfo(isLoadMore = false) {
+    let user = isLoadMore ? currentUserProfile : document.getElementById('tiktok-username').value.trim();
+    if (user.startsWith('@')) user = user.substring(1);
+    if (!user) return showError("Nhập ID vô mới quét được!");
+
+    if (!isLoadMore) {
+        clearResults();
+        currentUserProfile = user;
+        document.getElementById('fetch-info-btn').disabled = true;
+        showLoading(true, "Đang quét dữ liệu kênh...");
+    } else {
+        document.getElementById('load-more-btn').disabled = true;
+        document.getElementById('load-more-btn').innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Đang tải...`;
+    }
+
+    try {
+        const response = await fetch(`/api/index?username=${user}&cursor=${userVideoCursor}`);
+        const data = await response.json();
+        if (data.status !== "Live") throw new Error(data.error || "Mục tiêu không tồn tại.");
+
+        if (!isLoadMore && data.author) {
+            fullUserData = data; 
+            renderUserInfoExpanded(); // LUÔN LUÔN BUNG FULL HỒ SƠ 
+        }
+
+        if (data.videos && data.videos.length > 0) {
+            let formattedResults = data.videos.map(v => ({
+                link: v.link,
+                data: {
+                    status: "Live",
+                    author: { uniqueId: user, nickname: fullUserData.author.nickname || user, avatar: fullUserData.author.avatar || "" },
+                    video_data: { id: v.id, description: v.caption },
+                    stats: v.stats, urls: v.urls, music: v.music, images: v.images || null
+                }
+            }));
+            const startIndex = fetchedVideos.length;
+            fetchedVideos.push(...formattedResults);
+            renderVideoCards(formattedResults, isLoadMore, startIndex);
+        }
+
+        userVideoCursor = data.cursor;
+        checkLoadMoreUI(data.hasMore);
+    } catch (error) { if (!isLoadMore) showError(error.message); else alert("Lỗi: " + error.message); } 
+    finally { showLoading(false); document.getElementById('fetch-info-btn').disabled = false; }
+}
+
+async function fetchAnalytics() {
+    let user = document.getElementById('tiktok-analytics-id').value.trim();
+    if (user.startsWith('@')) user = user.substring(1);
+    if (!user) return showError("Nhập ID kênh cần phân tích!");
+
+    clearResults();
+    currentMode = 'analytics';
+    document.getElementById('fetch-analytics-btn').disabled = true;
+    showLoading(true, "Đang tổng hợp dữ liệu 30 video gần nhất...");
+
+    try {
+        const response = await fetch(`/api/index?username=${user}&cursor=0`);
+        const data = await response.json();
+        if (data.status !== "Live") throw new Error(data.error || "Mục tiêu không tồn tại.");
+        if (!data.videos || data.videos.length === 0) throw new Error("Kênh này chưa có video nào để phân tích.");
+
+        let totalPlays = 0, totalLikes = 0, totalComments = 0, totalShares = 0;
+        let hashtagCounts = {};
+
+        data.videos.forEach(v => {
+            totalPlays += parseRawStats(v.stats.play);
+            totalLikes += parseRawStats(v.stats.like);
+            totalComments += parseRawStats(v.stats.comment);
+            totalShares += parseRawStats(v.stats.share);
+
+            let desc = v.caption || "";
+            let tags = desc.match(/#[\w_À-ỹ]+/g);
+            if(tags) {
+                tags.forEach(t => {
+                    let cleanTag = t.toLowerCase();
+                    hashtagCounts[cleanTag] = (hashtagCounts[cleanTag] || 0) + 1;
+                });
+            }
+        });
+
+        const videoCount = data.videos.length;
+        const avgViews = (totalPlays / videoCount);
+        const er = totalPlays > 0 ? ((totalLikes + totalComments + totalShares) / totalPlays * 100).toFixed(2) : 0;
+        
+        let sortedTags = Object.entries(hashtagCounts).sort((a,b) => b[1] - a[1]).slice(0, 10);
+        let tagsHtml = sortedTags.length > 0 
+            ? sortedTags.map(t => `<span class="bg-pink-500/10 border border-pink-500/30 text-pink-400 px-3 py-1 rounded-full text-xs font-bold">${t[0]} <span class="opacity-60 ml-1">x${t[1]}</span></span>`).join('')
+            : '<span class="text-slate-500 text-sm italic">Kênh này không dùng Hashtag nào</span>';
+
+        const container = document.getElementById('user-info-area');
+        container.innerHTML = `
+            <div class="w-full glass-panel rounded-[2rem] p-8 relative overflow-hidden shadow-2xl animate-fade-up">
+                <div class="absolute top-0 right-0 w-64 h-64 bg-sky-500 rounded-full blur-[100px] opacity-20 pointer-events-none"></div>
+                
+                <div class="flex items-center gap-4 mb-8 pb-6 border-b border-white/10">
+                    <img src="${data.author?.avatar}" class="w-16 h-16 rounded-full object-cover border-2 border-sky-500 shadow-[0_0_15px_rgba(14,165,233,0.3)] bg-slate-800">
+                    <div>
+                        <h2 class="text-2xl font-extrabold text-white flex items-center gap-2">${data.author?.nickname || user}</h2>
+                        <p class="text-sky-400 font-medium text-sm">Báo cáo Phân tích ${videoCount} video gần nhất</p>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+                    <div class="bg-slate-800/60 border border-white/5 p-5 rounded-2xl flex flex-col items-center justify-center shadow-inner hover:-translate-y-1 transition duration-300">
+                        <i class="fa-solid fa-fire text-orange-500 text-2xl mb-2 drop-shadow-[0_0_8px_rgba(249,115,22,0.6)]"></i>
+                        <span class="text-2xl font-black text-white">${formatStatsClient(avgViews)}</span>
+                        <span class="text-[10px] text-slate-400 uppercase mt-1 font-bold tracking-widest text-center">View Trung Bình</span>
+                    </div>
+                    <div class="bg-slate-800/60 border border-white/5 p-5 rounded-2xl flex flex-col items-center justify-center shadow-inner hover:-translate-y-1 transition duration-300">
+                        <i class="fa-solid fa-percent text-sky-500 text-2xl mb-2 drop-shadow-[0_0_8px_rgba(14,165,233,0.6)]"></i>
+                        <span class="text-2xl font-black text-white">${er}%</span>
+                        <span class="text-[10px] text-slate-400 uppercase mt-1 font-bold tracking-widest text-center">Tỷ lệ ER</span>
+                    </div>
+                    <div class="bg-slate-800/60 border border-white/5 p-5 rounded-2xl flex flex-col items-center justify-center shadow-inner hover:-translate-y-1 transition duration-300">
+                        <i class="fa-solid fa-heart text-pink-500 text-2xl mb-2 drop-shadow-[0_0_8px_rgba(236,72,153,0.6)]"></i>
+                        <span class="text-2xl font-black text-white">${formatStatsClient(totalLikes / videoCount)}</span>
+                        <span class="text-[10px] text-slate-400 uppercase mt-1 font-bold tracking-widest text-center">Like Trung Bình</span>
+                    </div>
+                    <div class="bg-slate-800/60 border border-white/5 p-5 rounded-2xl flex flex-col items-center justify-center shadow-inner hover:-translate-y-1 transition duration-300">
+                        <i class="fa-solid fa-play text-emerald-500 text-2xl mb-2 drop-shadow-[0_0_8px_rgba(16,185,129,0.6)]"></i>
+                        <span class="text-2xl font-black text-white">${formatStatsClient(totalPlays)}</span>
+                        <span class="text-[10px] text-slate-400 uppercase mt-1 font-bold tracking-widest text-center">Tổng View</span>
+                    </div>
+                </div>
+
+                <div class="mb-2">
+                    <h4 class="text-xs text-slate-300 font-bold uppercase tracking-widest mb-3 flex items-center gap-2"><i class="fa-solid fa-hashtag text-sky-400"></i> Top Hashtag Sử Dụng</h4>
+                    <div class="flex flex-wrap gap-2">${tagsHtml}</div>
+                </div>
+            </div>
+            
+            <h3 class="text-center text-xl font-bold text-white mt-12 mb-2 flex items-center justify-center gap-2 animate-fade-up"><i class="fa-solid fa-crown text-yellow-400"></i> TOP 6 VIDEO VIRAL NHẤT</h3>
+        `;
+        container.classList.remove('hidden');
+
+        let formattedResults = data.videos.map(v => ({
+            link: v.link,
+            data: {
+                status: "Live",
+                author: { uniqueId: user, nickname: data.author?.nickname || user, avatar: data.author?.avatar || "" },
+                video_data: { id: v.id, description: v.caption },
+                stats: v.stats, urls: v.urls, music: v.music, images: v.images || null,
+                rawPlay: parseRawStats(v.stats.play)
+            }
+        }));
+
+        formattedResults.sort((a, b) => b.data.rawPlay - a.data.rawPlay);
+        fetchedVideos = formattedResults.slice(0, 6); 
+        
+        renderVideoCards(fetchedVideos, false, 0);
+
+    } catch (error) { showError(error.message); } 
+    finally { showLoading(false); document.getElementById('fetch-analytics-btn').disabled = false; }
+}
+
+// BẢNG HỒ SƠ LUÔN BUNG FULL KHI SOI KÊNH
+function renderUserInfoExpanded() {
+    const container = document.getElementById('user-info-area');
+    const u = fullUserData.author;
+    const s = fullUserData.stats_formatted;
+    container.innerHTML = `
+        <div class="w-full glass-panel rounded-[2.5rem] p-8 md:p-10 text-center relative overflow-hidden shadow-2xl animate-fade-up">
+            <div class="absolute top-0 left-1/2 transform -translate-x-1/2 w-40 h-40 bg-pink-600 rounded-full blur-[80px] opacity-30 pointer-events-none"></div>
+            
+            <img src="${u.avatar}" class="w-24 h-24 rounded-full mx-auto object-cover border-4 border-slate-800 shadow-[0_0_30px_rgba(236,72,153,0.5)] relative z-10 bg-slate-900" loading="lazy" decoding="async">
+            <h2 class="text-2xl font-extrabold mt-4 text-white flex items-center justify-center gap-2">${u.nickname} ${u.verified ? '<i class="fa-solid fa-circle-check text-blue-400"></i>' : ''}</h2>
+            <p class="text-pink-400 font-medium text-sm mt-0.5">@${u.uniqueId}</p>
+            ${fullUserData.live_info ? `<div class="mt-3 inline-block bg-red-900/50 text-red-400 px-3 py-1 rounded-full text-xs font-bold animate-pulse">🔴 ${fullUserData.live_info.status}</div>` : ''}
+            <p class="mt-4 text-slate-300 text-sm leading-relaxed max-w-xl mx-auto italic">${u.signature || 'Chưa có tiểu sử.'}</p>
+            ${u.bioLink ? `<a href="${u.bioLink}" target="_blank" class="inline-block mt-3 text-blue-400 text-xs bg-slate-800 px-4 py-2 rounded-xl border border-white/5"><i class="fa-solid fa-link mr-1"></i>${u.bioLink}</a>` : ''}
+            
+            <div class="grid grid-cols-4 gap-2 mt-6 pt-6 border-t border-slate-700/50">
+                <div class="flex flex-col"><span class="text-xl font-bold text-white">${s?.following || '0'}</span><span class="text-[10px] text-slate-400 uppercase mt-0.5 font-semibold">Đang FL</span></div>
+                <div class="flex flex-col"><span class="text-xl font-bold text-white">${s?.follower || '0'}</span><span class="text-[10px] text-slate-400 uppercase mt-0.5 font-semibold">Follower</span></div>
+                <div class="flex flex-col"><span class="text-xl font-bold text-white">${s?.heart || '0'}</span><span class="text-[10px] text-slate-400 uppercase mt-0.5 font-semibold">Thích</span></div>
+                <div class="flex flex-col"><span class="text-xl font-bold text-white">${s?.video || '0'}</span><span class="text-[10px] text-slate-400 uppercase mt-0.5 font-semibold">Video</span></div>
+            </div>
+        </div>
+    `;
+    container.classList.remove('hidden');
+}
+
+// RENDER GRID VIDEO CHUNG
 function renderVideoCards(results, append = false, startIndex = 0) {
     requestAnimationFrame(() => {
         const container = document.getElementById('result-area');
@@ -342,253 +698,4 @@ async function downloadAllVideos(btnObj) {
     }
     btnObj.innerHTML = `<i class="fa-solid fa-check"></i> Hoàn Tất`;
     setTimeout(() => { btnObj.innerHTML = originalHTML; btnObj.disabled = false; }, 3000);
-}
-
-// ================= TÍNH NĂNG 1: TẢI LINK =================
-async function processVideos() {
-    const input = document.getElementById('tiktok-links').value;
-    const links = input.split('\n').map(l => l.trim()).filter(l => l !== '');
-    if (links.length === 0) return showError("Dán link vô đi nào!");
-
-    clearResults();
-    showLoading(true, `Đang xử lý ${links.length} luồng dữ liệu...`);
-    document.getElementById('fetch-video-btn').disabled = true;
-
-    try {
-        const promises = links.map(link => fetch(`/api/video?video=${encodeURIComponent(link)}`).then(res => res.json()).then(data => ({ link, data })).catch(err => ({ link, error: err.message })));
-        let results = await Promise.all(promises);
-        fetchedVideos = results.filter(r => r.data && r.data.status === "Live");
-        renderVideoCards(fetchedVideos, false, 0);
-    } catch (error) { showError("Lỗi: " + error.message); } 
-    finally { showLoading(false); document.getElementById('fetch-video-btn').disabled = false; }
-}
-
-// ================= TÍNH NĂNG 2: TÌM KIẾM =================
-async function searchTikTok(isLoadMore = false) {
-    let kw = document.getElementById('tiktok-keyword').value.trim();
-    if(!kw && !isLoadMore) return showError("Nhập từ khóa vô!");
-
-    if (!isLoadMore) {
-        clearResults();
-        currentSearchKeyword = kw; searchCursor = 0;
-        document.getElementById('fetch-search-btn').disabled = true;
-        document.getElementById('random-btn').disabled = true;
-        showLoading(true, `Đang tìm: "${kw}"...`);
-    } else {
-        document.getElementById('load-more-btn').disabled = true;
-        document.getElementById('load-more-btn').innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Đang tải...`;
-    }
-
-    try {
-        const response = await fetch(`/api/search?keywords=${encodeURIComponent(currentSearchKeyword)}&cursor=${searchCursor}&count=20`);
-        const resData = await response.json();
-        if (resData.code !== 0 || !resData.data?.videos?.length) throw new Error("Không tìm thấy kết quả.");
-
-        const videos = resData.data.videos;
-        searchCursor = resData.data.cursor;
-
-        let formattedResults = formatTikWmToGrid(videos);
-        const startIndex = fetchedVideos.length;
-        fetchedVideos.push(...formattedResults);
-        
-        renderVideoCards(formattedResults, isLoadMore, startIndex);
-        checkLoadMoreUI(resData.data.hasMore);
-    } catch (error) { if(!isLoadMore) showError(error.message); else alert("Lỗi: " + error.message); } 
-    finally { 
-        showLoading(false); 
-        document.getElementById('fetch-search-btn').disabled = false;
-        document.getElementById('random-btn').disabled = false;
-    }
-}
-
-async function searchRandom() {
-    let kw = document.getElementById('tiktok-keyword').value.trim();
-    if(!kw) return showError("Cần có từ khóa để random!");
-
-    clearResults();
-    currentSearchKeyword = kw;
-    document.getElementById('fetch-search-btn').disabled = true;
-    document.getElementById('random-btn').disabled = true;
-    showLoading(true, `Đang bốc thăm may mắn: "${kw}"...`);
-
-    try {
-        const randomCursor = Math.floor(Math.random() * 30);
-        const response = await fetch(`/api/search?keywords=${encodeURIComponent(currentSearchKeyword)}&cursor=${randomCursor}&count=20`);
-        const resData = await response.json();
-        
-        if (resData.code !== 0 || !resData.data?.videos?.length) {
-            const retryRes = await fetch(`/api/search?keywords=${encodeURIComponent(currentSearchKeyword)}&cursor=0&count=20`);
-            const retryData = await retryRes.json();
-            if (retryData.code !== 0 || !retryData.data?.videos?.length) throw new Error("Không có video nào.");
-            resData.data = retryData.data;
-        }
-
-        const videos = resData.data.videos;
-        const luckyVideo = videos[Math.floor(Math.random() * videos.length)];
-        fetchedVideos = formatTikWmToGrid([luckyVideo]);
-        renderVideoCards(fetchedVideos, false, 0);
-    } catch (error) { showError(error.message); } 
-    finally { 
-        showLoading(false); 
-        document.getElementById('fetch-search-btn').disabled = false;
-        document.getElementById('random-btn').disabled = false;
-    }
-}
-
-// ================= TÍNH NĂNG 3: SOI KÊNH =================
-async function fetchUserInfo(isLoadMore = false) {
-    let user = isLoadMore ? currentUserProfile : document.getElementById('tiktok-username').value.trim();
-    if (user.startsWith('@')) user = user.substring(1);
-    if (!user) return showError("Nhập ID vô mới quét được!");
-
-    if (!isLoadMore) {
-        clearResults();
-        currentUserProfile = user;
-        document.getElementById('fetch-info-btn').disabled = true;
-        showLoading(true, "Đang quét dữ liệu kênh...");
-    } else {
-        document.getElementById('load-more-btn').disabled = true;
-        document.getElementById('load-more-btn').innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Đang tải...`;
-    }
-
-    try {
-        const response = await fetch(`/api/index?username=${user}&cursor=${userVideoCursor}`);
-        const data = await response.json();
-        if (data.status !== "Live") throw new Error(data.error || "Mục tiêu không tồn tại.");
-
-        if (!isLoadMore && data.author) {
-            fullUserData = data; 
-        }
-
-        if (data.videos && data.videos.length > 0) {
-            let formattedResults = data.videos.map(v => ({
-                link: v.link,
-                data: {
-                    status: "Live",
-                    author: { uniqueId: user, nickname: fullUserData?.author?.nickname || user, avatar: fullUserData?.author?.avatar || "" },
-                    video_data: { id: v.id, description: v.caption },
-                    stats: v.stats, urls: v.urls, music: v.music, images: v.images || null
-                }
-            }));
-            const startIndex = fetchedVideos.length;
-            fetchedVideos.push(...formattedResults);
-            renderVideoCards(formattedResults, isLoadMore, startIndex);
-        }
-
-        userVideoCursor = data.cursor;
-        checkLoadMoreUI(data.hasMore);
-    } catch (error) { if (!isLoadMore) showError(error.message); else alert("Lỗi: " + error.message); } 
-    finally { showLoading(false); document.getElementById('fetch-info-btn').disabled = false; }
-}
-
-// ================= TÍNH NĂNG 4: PHÂN TÍCH KÊNH =================
-async function fetchAnalytics() {
-    let user = document.getElementById('tiktok-analytics-id').value.trim();
-    if (user.startsWith('@')) user = user.substring(1);
-    if (!user) return showError("Nhập ID kênh cần phân tích!");
-
-    clearResults();
-    currentMode = 'analytics';
-    document.getElementById('fetch-analytics-btn').disabled = true;
-    showLoading(true, "Đang tổng hợp dữ liệu 30 video gần nhất để lên báo cáo...");
-
-    try {
-        const response = await fetch(`/api/index?username=${user}&cursor=0`);
-        const data = await response.json();
-        if (data.status !== "Live") throw new Error(data.error || "Mục tiêu không tồn tại.");
-        if (!data.videos || data.videos.length === 0) throw new Error("Kênh này chưa có video nào để phân tích.");
-
-        let totalPlays = 0, totalLikes = 0, totalComments = 0, totalShares = 0;
-        let hashtagCounts = {};
-
-        data.videos.forEach(v => {
-            totalPlays += parseRawStats(v.stats.play);
-            totalLikes += parseRawStats(v.stats.like);
-            totalComments += parseRawStats(v.stats.comment);
-            totalShares += parseRawStats(v.stats.share);
-
-            let desc = v.caption || "";
-            let tags = desc.match(/#[\w_À-ỹ]+/g);
-            if(tags) {
-                tags.forEach(t => {
-                    let cleanTag = t.toLowerCase();
-                    hashtagCounts[cleanTag] = (hashtagCounts[cleanTag] || 0) + 1;
-                });
-            }
-        });
-
-        const videoCount = data.videos.length;
-        const avgViews = (totalPlays / videoCount);
-        const er = totalPlays > 0 ? ((totalLikes + totalComments + totalShares) / totalPlays * 100).toFixed(2) : 0;
-        
-        let sortedTags = Object.entries(hashtagCounts).sort((a,b) => b[1] - a[1]).slice(0, 10);
-        let tagsHtml = sortedTags.length > 0 
-            ? sortedTags.map(t => `<span class="bg-pink-500/10 border border-pink-500/30 text-pink-400 px-3 py-1 rounded-full text-xs font-bold">${t[0]} <span class="opacity-60 ml-1">x${t[1]}</span></span>`).join('')
-            : '<span class="text-slate-500 text-sm italic">Kênh này không dùng Hashtag nào</span>';
-
-        const container = document.getElementById('user-info-area');
-        container.innerHTML = `
-            <div class="w-full glass-panel rounded-[2rem] p-8 relative overflow-hidden shadow-2xl animate-fade-up">
-                <div class="absolute top-0 right-0 w-64 h-64 bg-sky-500 rounded-full blur-[100px] opacity-20 pointer-events-none"></div>
-                
-                <div class="flex items-center gap-4 mb-8 pb-6 border-b border-white/10">
-                    <img src="${data.author?.avatar}" class="w-16 h-16 rounded-full object-cover border-2 border-sky-500 shadow-[0_0_15px_rgba(14,165,233,0.3)] bg-slate-800">
-                    <div>
-                        <h2 class="text-2xl font-extrabold text-white flex items-center gap-2">${data.author?.nickname || user}</h2>
-                        <p class="text-sky-400 font-medium text-sm">Báo cáo Phân tích ${videoCount} video gần nhất</p>
-                    </div>
-                </div>
-
-                <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-                    <div class="bg-slate-800/60 border border-white/5 p-5 rounded-2xl flex flex-col items-center justify-center shadow-inner">
-                        <i class="fa-solid fa-fire text-orange-500 text-2xl mb-2 drop-shadow-[0_0_8px_rgba(249,115,22,0.6)]"></i>
-                        <span class="text-2xl font-black text-white">${formatStatsClient(avgViews)}</span>
-                        <span class="text-[10px] text-slate-400 uppercase mt-1 font-bold">View Trung Bình</span>
-                    </div>
-                    <div class="bg-slate-800/60 border border-white/5 p-5 rounded-2xl flex flex-col items-center justify-center shadow-inner">
-                        <i class="fa-solid fa-percent text-sky-500 text-2xl mb-2 drop-shadow-[0_0_8px_rgba(14,165,233,0.6)]"></i>
-                        <span class="text-2xl font-black text-white">${er}%</span>
-                        <span class="text-[10px] text-slate-400 uppercase mt-1 font-bold">Tỷ lệ tương tác (ER)</span>
-                    </div>
-                    <div class="bg-slate-800/60 border border-white/5 p-5 rounded-2xl flex flex-col items-center justify-center shadow-inner">
-                        <i class="fa-solid fa-heart text-pink-500 text-2xl mb-2 drop-shadow-[0_0_8px_rgba(236,72,153,0.6)]"></i>
-                        <span class="text-2xl font-black text-white">${formatStatsClient(totalLikes / videoCount)}</span>
-                        <span class="text-[10px] text-slate-400 uppercase mt-1 font-bold">Like Trung Bình</span>
-                    </div>
-                    <div class="bg-slate-800/60 border border-white/5 p-5 rounded-2xl flex flex-col items-center justify-center shadow-inner">
-                        <i class="fa-solid fa-play text-emerald-500 text-2xl mb-2 drop-shadow-[0_0_8px_rgba(16,185,129,0.6)]"></i>
-                        <span class="text-2xl font-black text-white">${formatStatsClient(totalPlays)}</span>
-                        <span class="text-[10px] text-slate-400 uppercase mt-1 font-bold">Tổng View (30 Vid)</span>
-                    </div>
-                </div>
-
-                <div class="mb-2">
-                    <h4 class="text-xs text-slate-300 font-bold uppercase tracking-widest mb-3 flex items-center gap-2"><i class="fa-solid fa-hashtag text-sky-400"></i> Top Hashtag Sử Dụng</h4>
-                    <div class="flex flex-wrap gap-2">${tagsHtml}</div>
-                </div>
-            </div>
-            
-            <h3 class="text-center text-xl font-bold text-white mt-12 mb-2 flex items-center justify-center gap-2 animate-fade-up"><i class="fa-solid fa-crown text-yellow-400"></i> TOP 6 VIDEO VIRAL NHẤT</h3>
-        `;
-        container.classList.remove('hidden');
-
-        // Render Top 6 Viral Videos
-        let formattedResults = data.videos.map(v => ({
-            link: v.link,
-            data: {
-                status: "Live",
-                author: { uniqueId: user, nickname: data.author?.nickname || user, avatar: data.author?.avatar || "" },
-                video_data: { id: v.id, description: v.caption },
-                stats: v.stats, urls: v.urls, music: v.music, images: v.images || null,
-                rawPlay: parseRawStats(v.stats.play)
-            }
-        }));
-
-        formattedResults.sort((a, b) => b.data.rawPlay - a.data.rawPlay);
-        fetchedVideos = formattedResults.slice(0, 6); // Lấy 6 cái hot nhất
-        
-        renderVideoCards(fetchedVideos, false, 0);
-
-    } catch (error) { showError(error.message); } 
-    finally { showLoading(false); document.getElementById('fetch-analytics-btn').disabled = false; }
 }
