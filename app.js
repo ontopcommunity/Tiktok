@@ -115,7 +115,7 @@ async function forceDownload(url, filename, btnObj) {
 
     const triggerDownload = async (targetUrl) => {
         const response = await fetch(targetUrl);
-        if (!response.ok) throw new Error("CORS");
+        if (!response.ok) throw new Error("CORS Blocked");
         const blob = await response.blob();
         const downloadUrl = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
@@ -142,22 +142,9 @@ function searchUserFromDetail(username) {
     window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
-function searchUserFromModal(username) {
-    closeModal('video-modal');
-    switchTab('info');
-    document.getElementById('tiktok-username').value = username;
-    fetchUserInfo();
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-}
-
-// ================= SOI NHẠC (ĐÃ FIX: Dùng link video thay vì link mp3) =================
+// ================= SOI NHẠC TỪ MODAL MỚI =================
 async function scanMusicFromDetail(videoUrl, musicTitle) {
     closeDetailWindow('video-detail-window');
-    await executeMusicScan(videoUrl, musicTitle);
-}
-
-async function scanMusicFromModal(videoUrl, musicTitle) {
-    closeModal('video-modal');
     await executeMusicScan(videoUrl, musicTitle);
 }
 
@@ -175,7 +162,6 @@ async function executeMusicScan(videoUrl, musicTitle) {
     window.scrollTo({ top: 0, behavior: 'smooth' });
 
     try {
-        // Trỏ vào api/search với type=music
         const response = await fetch(`/api/search?type=music&url=${encodeURIComponent(videoUrl)}`);
         const resData = await response.json();
         
@@ -210,8 +196,11 @@ async function executeMusicScan(videoUrl, musicTitle) {
 }
 
 async function fetchMoreMusicVideos() {
-    document.getElementById('load-more-btn').disabled = true;
-    document.getElementById('load-more-btn').innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Đang tải...`;
+    const loadBtn = document.getElementById('load-more-btn');
+    if (loadBtn) {
+        loadBtn.disabled = true;
+        loadBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Đang tải...`;
+    }
 
     try {
         const response = await fetch(`/api/search?type=music&music_id=${currentMusicId}&cursor=${musicCursor}`);
@@ -227,10 +216,10 @@ async function fetchMoreMusicVideos() {
         renderVideoCards(formattedResults, true, startIndex);
         checkLoadMoreUI(resData.data.hasMore);
     } catch (error) { alert("Lỗi tải thêm: " + error.message); } 
-    finally { document.getElementById('load-more-btn').disabled = false; }
+    finally { if (loadBtn) loadBtn.disabled = false; }
 }
 
-// ================= PHÂN TÍCH VIDEO ĐƠN =================
+// ================= CỬA SỔ PHÂN TÍCH RIÊNG TỪNG VIDEO =================
 window.analyzeSingleVideo = function(index) {
     const d = fetchedVideos[index].data;
     const play = parseRawStats(d.stats.play);
@@ -252,27 +241,27 @@ window.analyzeSingleVideo = function(index) {
 
     infoBox.innerHTML = `
         <button onclick="restoreVideoDetail()" class="mb-4 text-pink-400 font-bold flex items-center gap-2 hover:text-pink-300 transition">
-            <i class="fa-solid fa-arrow-left"></i> Quay lại Video
+            <i class="fa-solid fa-arrow-left"></i> Quay lại Thông tin Video
         </button>
         <h3 class="text-2xl font-black text-white mb-6 border-b border-white/10 pb-4"><i class="fa-solid fa-chart-simple text-sky-400"></i> Phân Tích Video</h3>
         
         <div class="space-y-4">
-            <div class="glass-panel p-4 rounded-xl flex justify-between items-center border border-white/5 shadow-inner">
+            <div class="bg-slate-800/60 p-4 rounded-xl flex justify-between items-center border border-white/5 shadow-inner hover:-translate-y-1 transition">
                 <span class="text-slate-400 font-bold text-sm"><i class="fa-solid fa-clock text-orange-400"></i> Thời gian đăng:</span>
                 <span class="text-white font-bold text-sm text-right w-1/2">${uploadDate}</span>
             </div>
-            <div class="glass-panel p-4 rounded-xl flex justify-between items-center border border-white/5 shadow-inner">
+            <div class="bg-slate-800/60 p-4 rounded-xl flex justify-between items-center border border-white/5 shadow-inner hover:-translate-y-1 transition">
                 <span class="text-slate-400 font-bold text-sm"><i class="fa-solid fa-percent text-sky-400"></i> Tỷ lệ Tương tác (ER):</span>
                 <span class="text-white font-black text-lg ${er > 10 ? 'text-emerald-400' : ''}">${er}%</span>
             </div>
-            <div class="glass-panel p-4 rounded-xl flex justify-between items-center border border-white/5 shadow-inner">
+            <div class="bg-slate-800/60 p-4 rounded-xl flex justify-between items-center border border-white/5 shadow-inner hover:-translate-y-1 transition">
                 <span class="text-slate-400 font-bold text-sm"><i class="fa-solid fa-heart-pulse text-pink-500"></i> Tỷ lệ Chuyển đổi Like:</span>
                 <span class="text-white font-bold">${likeRatio}% (trên lượt xem)</span>
             </div>
-            <div class="glass-panel p-4 rounded-xl border border-white/5 shadow-inner">
+            <div class="bg-slate-800/60 p-4 rounded-xl border border-white/5 shadow-inner hover:-translate-y-1 transition">
                 <span class="text-slate-400 font-bold text-sm block mb-2"><i class="fa-solid fa-quote-left text-indigo-400"></i> Hashtag sử dụng:</span>
                 <div class="flex flex-wrap gap-2">
-                    ${(d.video_data.description.match(/#[\w_À-ỹ]+/g) || []).map(t => `<span class="bg-white/10 px-2 py-1 rounded text-xs text-white">${t}</span>`).join('') || '<span class="text-slate-500 text-xs">Không có hashtag</span>'}
+                    ${(d.video_data.description.match(/#[\w_À-ỹ]+/g) || []).map(t => `<span class="bg-white/10 px-2 py-1 rounded text-xs text-white border border-white/5">${t}</span>`).join('') || '<span class="text-slate-500 text-xs">Không có hashtag</span>'}
                 </div>
             </div>
         </div>
@@ -280,7 +269,7 @@ window.analyzeSingleVideo = function(index) {
 
     document.getElementById('detail-video-actions').innerHTML = `
         <button onclick="restoreVideoDetail()" class="w-full col-span-2 bg-slate-800 hover:bg-slate-700 text-white font-bold py-4 rounded-xl transition-all shadow-lg flex items-center justify-center gap-2">
-            Đóng Phân Tích
+            Đóng Bảng Phân Tích
         </button>
     `;
 
@@ -290,6 +279,7 @@ window.analyzeSingleVideo = function(index) {
     }
 }
 
+// ================= CỬA SỔ CHI TIẾT VIDEO =================
 function openVideoDetail(index) {
     const d = fetchedVideos[index].data;
     const fileNameMp4 = generateFileName(d.author.uniqueId, d.video_data.id, 'mp4');
@@ -309,7 +299,6 @@ function openVideoDetail(index) {
     const safeDesc = (d.video_data.description || 'Chưa có mô tả.').replace(/'/g, "\\'");
     const safeMusicTitle = (d.music.title || 'Âm thanh gốc').replace(/'/g, "\\'");
 
-    // ĐÃ FIX: Truyền d.link thay vì d.music.playUrl
     document.getElementById('detail-video-info').innerHTML = `
         <div class="relative p-[1px] rounded-2xl bg-gradient-to-r from-pink-500 via-purple-500 to-indigo-500 mb-5 group cursor-pointer hover:shadow-[0_0_20px_rgba(236,72,153,0.3)] transition-all duration-300" onclick="searchUserFromDetail('${d.author.uniqueId}')">
             <div class="flex items-center gap-4 p-3 bg-slate-900/95 backdrop-blur-xl rounded-[15px]">
@@ -354,8 +343,8 @@ function openVideoDetail(index) {
         
         <div class="flex justify-between items-center mb-3 pl-1">
             <h4 class="text-[11px] text-blue-400 font-bold uppercase tracking-widest flex items-center gap-2"><i class="fa-solid fa-chart-pie"></i> Tương tác số liệu</h4>
-            <button onclick="analyzeSingleVideo(${index})" class="text-xs bg-sky-500/20 text-sky-400 hover:bg-sky-500/40 px-3 py-1 rounded-full font-bold transition flex items-center gap-1">
-                <i class="fa-solid fa-chart-simple"></i> Phân Tích
+            <button onclick="analyzeSingleVideo(${index})" class="bg-gradient-to-r from-sky-600 to-blue-500 hover:from-sky-500 hover:to-blue-400 text-white px-4 py-2 rounded-xl font-bold shadow-lg transition-transform active:scale-95 flex items-center gap-2 text-xs">
+                <i class="fa-solid fa-chart-simple"></i> Phân Tích Nhanh
             </button>
         </div>
 
@@ -406,16 +395,6 @@ function closeDetailWindow(windowId) {
     }
 }
 
-// Giữ lại openVideoModal cho các View cũ (Dùng chung layout)
-function openVideoModal(index) {
-    openVideoDetail(index);
-}
-
-function closeModal(modalId) {
-    closeDetailWindow(modalId);
-}
-
-// FORMAT API DATA TIKWM
 function formatTikWmToGrid(videosArray) {
     return videosArray.map(v => ({
         link: `https://www.tiktok.com/@${v.author.unique_id}/video/${v.video_id}`,
@@ -432,17 +411,20 @@ function formatTikWmToGrid(videosArray) {
     }));
 }
 
-// ================= CÁC API CALLS =================
+// ================= CÁC TÍNH NĂNG CHÍNH =================
 
+// 1. TẢI LINK
 async function processVideos() {
     const input = document.getElementById('tiktok-links').value;
     const links = input.split('\n').map(l => l.trim()).filter(l => l !== '');
     if (links.length === 0) return showError("Dán link vô đi nào!");
     if (linkMode === 'single' && links.length > 1) return showError("Đang ở chế độ 1 Video. Hãy chuyển sang Tab 'Nhiều Video'!");
 
+    const fetchBtn = document.getElementById('fetch-video-btn');
+
     clearResults();
     showLoading(true, `Đang xử lý ${links.length} luồng dữ liệu...`);
-    document.getElementById('fetch-video-btn').disabled = true;
+    if(fetchBtn) fetchBtn.disabled = true;
 
     try {
         const promises = links.map(link => fetch(`/api/video?video=${encodeURIComponent(link)}`).then(res => res.json()).then(data => ({ link, data })).catch(err => ({ link, error: err.message })));
@@ -452,20 +434,31 @@ async function processVideos() {
         fetchedVideos = results;
         renderVideoCards(fetchedVideos, false, 0);
     } catch (error) { showError("Lỗi: " + error.message); } 
-    finally { showLoading(false); document.getElementById('fetch-video-btn').disabled = false; }
+    finally { showLoading(false); if(fetchBtn) fetchBtn.disabled = false; }
 }
 
+// 2. TÌM KIẾM
 async function searchTikTok(type = 'video', isLoadMore = false) {
     let kw = document.getElementById('tiktok-keyword').value.trim();
     if(!kw && !isLoadMore) return showError("Nhập từ khóa vô!");
 
+    const searchBtn = document.getElementById('fetch-search-btn');
+    const searchImgBtn = document.getElementById('fetch-search-img-btn');
+    const randomBtn = document.getElementById('random-btn');
+
     if (!isLoadMore) {
         clearResults();
         currentSearchKeyword = kw; searchCursor = 0; currentSearchType = type;
+        if(searchBtn) searchBtn.disabled = true;
+        if(searchImgBtn) searchImgBtn.disabled = true;
+        if(randomBtn) randomBtn.disabled = true;
         showLoading(true, `Đang tìm ${type === 'image' ? 'Ảnh' : 'Video'}: "${kw}"...`);
     } else {
-        document.getElementById('load-more-btn').disabled = true;
-        document.getElementById('load-more-btn').innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Đang tải...`;
+        const loadBtn = document.getElementById('load-more-btn');
+        if(loadBtn) {
+            loadBtn.disabled = true;
+            loadBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Đang tải...`;
+        }
     }
 
     try {
@@ -487,19 +480,36 @@ async function searchTikTok(type = 'video', isLoadMore = false) {
         checkLoadMoreUI(resData.data.hasMore);
 
         const specialBox = document.getElementById('special-action-container');
-        specialBox.innerHTML = `
-            <button onclick="searchRandom()" class="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-bold py-3 px-6 rounded-xl shadow-lg transition-transform hover:-translate-y-1 flex items-center gap-2">
-                <i class="fa-solid fa-dice text-lg"></i> Lấy Ngẫu Nhiên
-            </button>
-        `;
-        specialBox.classList.remove('hidden');
+        if(specialBox) {
+            specialBox.innerHTML = `
+                <button id="random-btn" onclick="searchRandom()" class="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-bold py-3 px-6 rounded-xl shadow-lg transition-transform hover:-translate-y-1 flex items-center gap-2">
+                    <i class="fa-solid fa-dice text-lg"></i> Lấy Ngẫu Nhiên
+                </button>
+            `;
+            specialBox.classList.remove('hidden');
+        }
 
     } catch (error) { if(!isLoadMore) showError(error.message); else alert("Lỗi: " + error.message); } 
-    finally { showLoading(false); }
+    finally { 
+        showLoading(false); 
+        if(searchBtn) searchBtn.disabled = false;
+        if(searchImgBtn) searchImgBtn.disabled = false;
+        if(randomBtn) randomBtn.disabled = false;
+    }
 }
 
+// 2b. TÌM KIẾM NGẪU NHIÊN
 async function searchRandom() {
     if(fetchedVideos.length === 0) return;
+    
+    const searchBtn = document.getElementById('fetch-search-btn');
+    const searchImgBtn = document.getElementById('fetch-search-img-btn');
+    const randomBtn = document.getElementById('random-btn');
+    
+    if(searchBtn) searchBtn.disabled = true;
+    if(searchImgBtn) searchImgBtn.disabled = true;
+    if(randomBtn) randomBtn.disabled = true;
+
     showLoading(true, `Đang bốc thăm ngẫu nhiên...`);
     try {
         const randomCursor = Math.floor(Math.random() * 20);
@@ -519,30 +529,43 @@ async function searchRandom() {
             renderVideoCards(fetchedVideos, false, 0);
             
             const specialBox = document.getElementById('special-action-container');
-            specialBox.innerHTML = `
-                <button onclick="searchRandom()" class="bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-bold py-3 px-6 rounded-xl shadow-lg transition-transform hover:-translate-y-1 flex items-center gap-2">
-                    <i class="fa-solid fa-dice text-lg"></i> Lấy Ngẫu Nhiên Khác
-                </button>
-            `;
-            specialBox.classList.remove('hidden');
+            if(specialBox) {
+                specialBox.innerHTML = `
+                    <button id="random-btn" onclick="searchRandom()" class="bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-bold py-3 px-6 rounded-xl shadow-lg transition-transform hover:-translate-y-1 flex items-center gap-2">
+                        <i class="fa-solid fa-dice text-lg"></i> Lấy Ngẫu Nhiên Khác
+                    </button>
+                `;
+                specialBox.classList.remove('hidden');
+            }
         }
     } catch (error) { showError(error.message); } 
-    finally { showLoading(false); }
+    finally { 
+        showLoading(false); 
+        if(searchBtn) searchBtn.disabled = false;
+        if(searchImgBtn) searchImgBtn.disabled = false;
+        if(randomBtn) randomBtn.disabled = false;
+    }
 }
 
+// 3. SOI KÊNH (ĐÃ FIX LỖI TÀNG HÌNH VÀ CRASH)
 async function fetchUserInfo(isLoadMore = false) {
     let user = isLoadMore ? currentUserProfile : document.getElementById('tiktok-username').value.trim();
     if (user.startsWith('@')) user = user.substring(1);
     if (!user) return showError("Nhập ID vô mới quét được!");
 
+    const infoBtn = document.getElementById('fetch-info-btn');
+
     if (!isLoadMore) {
         clearResults();
         currentUserProfile = user;
-        document.getElementById('fetch-info-btn').disabled = true;
+        if(infoBtn) infoBtn.disabled = true;
         showLoading(true, "Đang quét dữ liệu kênh...");
     } else {
-        document.getElementById('load-more-btn').disabled = true;
-        document.getElementById('load-more-btn').innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Đang tải...`;
+        const loadBtn = document.getElementById('load-more-btn');
+        if(loadBtn) {
+            loadBtn.disabled = true;
+            loadBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Đang tải...`;
+        }
     }
 
     try {
@@ -550,8 +573,12 @@ async function fetchUserInfo(isLoadMore = false) {
         const data = await response.json();
         if (data.status !== "Live") throw new Error(data.error || "Mục tiêu không tồn tại.");
 
-        if (!isLoadMore && data.author) {
-            fullUserData = data; 
+        if (!isLoadMore) {
+            if(data.author) {
+                fullUserData = data; 
+            } else {
+                fullUserData = { author: { uniqueId: user, nickname: user, avatar: "", verified: false }, stats_formatted: {} };
+            }
             
             const container = document.getElementById('user-info-area');
             const u = fullUserData.author;
@@ -584,7 +611,7 @@ async function fetchUserInfo(isLoadMore = false) {
                     </button>
                 </div>
             `;
-            container.classList.remove('hidden');
+            if(container) container.classList.remove('hidden');
         }
 
         if (data.videos && data.videos.length > 0) {
@@ -592,12 +619,7 @@ async function fetchUserInfo(isLoadMore = false) {
                 link: v.link,
                 data: {
                     status: "Live",
-                    author: { 
-                        uniqueId: user, 
-                        nickname: fullUserData.author.nickname || user, 
-                        avatar: fullUserData.author.avatar || "",
-                        verified: fullUserData.author.verified || false
-                    },
+                    author: { uniqueId: user, nickname: fullUserData.author.nickname || user, avatar: fullUserData.author.avatar || "", verified: fullUserData.author.verified || false },
                     video_data: { id: v.id, description: v.caption },
                     stats: v.stats, urls: v.urls, music: v.music, images: v.images || null
                 }
@@ -610,18 +632,21 @@ async function fetchUserInfo(isLoadMore = false) {
         userVideoCursor = data.cursor;
         checkLoadMoreUI(data.hasMore);
     } catch (error) { if (!isLoadMore) showError(error.message); else alert("Lỗi: " + error.message); } 
-    finally { showLoading(false); document.getElementById('fetch-info-btn').disabled = false; }
+    finally { showLoading(false); if(infoBtn) infoBtn.disabled = false; }
 }
 
+// 4. PHÂN TÍCH KÊNH
 async function fetchAnalytics() {
     let user = document.getElementById('tiktok-analytics-id').value.trim();
     if (user.startsWith('@')) user = user.substring(1);
     if (!user) return showError("Nhập ID kênh cần phân tích!");
 
+    const analyticsBtn = document.getElementById('fetch-analytics-btn');
+
     clearResults();
     currentMode = 'analytics';
-    document.getElementById('fetch-analytics-btn').disabled = true;
-    showLoading(true, "Đang quét 100% video của kênh (Có thể hơi lâu)...");
+    if(analyticsBtn) analyticsBtn.disabled = true;
+    showLoading(true, "Đang quét 100% video của kênh (Có thể hơi lâu)... Đã quét 0 video");
 
     try {
         let allVideos = [];
@@ -630,7 +655,7 @@ async function fetchAnalytics() {
         let hasMore = true;
         let limitPages = 0; 
         
-        while(hasMore && limitPages < 50) {
+        while(hasMore && limitPages < 100) {
             const response = await fetch(`/api/index?username=${user}&cursor=${cur}`);
             const data = await response.json();
             if (data.status !== "Live") break;
@@ -641,13 +666,16 @@ async function fetchAnalytics() {
             cur = data.cursor;
             hasMore = data.hasMore;
             limitPages++;
-            document.getElementById('loading-text').innerText = `Đang quét sâu 100% kênh... Đã phân tích ${allVideos.length} video`;
+            document.getElementById('loading-text').innerText = `Đang quét sâu 100% kênh... Đã gom ${allVideos.length} video`;
         }
 
         if (allVideos.length === 0) throw new Error("Kênh này chưa có video nào hoặc bị riêng tư.");
 
         let totalPlays = 0, totalLikes = 0, totalComments = 0, totalShares = 0;
         let hashtagCounts = {};
+
+        let newestVid = allVideos[0];
+        let oldestVid = allVideos[allVideos.length - 1];
 
         allVideos.forEach(v => {
             totalPlays += parseRawStats(v.stats.play);
@@ -666,14 +694,11 @@ async function fetchAnalytics() {
         let sortedTags = Object.entries(hashtagCounts).sort((a,b) => b[1] - a[1]).slice(0, 10);
         let tagsHtml = sortedTags.length > 0 
             ? sortedTags.map(t => `<span class="bg-sky-500/10 border border-sky-500/30 text-sky-400 px-3 py-1 rounded-full text-xs font-bold">${t[0]} <span class="opacity-60 ml-1">x${t[1]}</span></span>`).join('')
-            : '<span class="text-slate-500 text-sm italic">Kênh này không dùng Hashtag nào</span>';
+            : '<span class="text-slate-500 text-sm italic">Không dùng Hashtag</span>';
 
         const createDate = pAuthor?.createTime ? new Date(pAuthor.createTime * 1000).toLocaleDateString('vi-VN') : 'Không rõ';
-        let newestVid = allVideos[0];
-        let oldestVid = allVideos[allVideos.length - 1];
 
         const container = document.getElementById('user-info-area');
-        
         container.innerHTML = `
             <div class="w-full glass-panel rounded-[2rem] border border-white/10 shadow-2xl animate-fade-up relative">
                 <div id="analytics-profile-box" class="collapsible-box expanded p-8 md:p-10 relative">
@@ -686,7 +711,7 @@ async function fetchAnalytics() {
                                 ${pAuthor?.nickname || user}
                                 ${pAuthor?.verified ? '<i class="fa-solid fa-circle-check text-blue-500 drop-shadow-md" title="Tài khoản chính chủ"></i>' : ''}
                             </h2>
-                            <p class="text-sky-400 font-medium text-sm">Báo cáo Phân tích dựa trên ${videoCount} video đã quét</p>
+                            <p class="text-sky-400 font-medium text-sm">Đã quét 100% dữ liệu (${videoCount} Video)</p>
                         </div>
                     </div>
 
@@ -700,7 +725,7 @@ async function fetchAnalytics() {
                             <a href="${newestVid.link}" target="_blank" class="font-bold text-sky-400 text-sm hover:underline"><i class="fa-solid fa-link"></i> Xem Video</a>
                         </div>
                         <div class="text-center flex-1">
-                            <span class="block text-xs text-slate-400 uppercase font-bold mb-1">Video Đầu Tiên</span>
+                            <span class="block text-xs text-slate-400 uppercase font-bold mb-1">Video Cũ Nhất</span>
                             <a href="${oldestVid.link}" target="_blank" class="font-bold text-sky-400 text-sm hover:underline"><i class="fa-solid fa-link"></i> Xem Video</a>
                         </div>
                     </div>
@@ -738,9 +763,9 @@ async function fetchAnalytics() {
                 </button>
             </div>
             
-            <h3 class="text-center text-xl font-bold text-white mt-12 mb-2 flex items-center justify-center gap-2 animate-fade-up"><i class="fa-solid fa-crown text-yellow-400"></i> TOP 6 VIDEO VIRAL NHẤT</h3>
+            <h3 class="text-center text-xl font-bold text-white mt-12 mb-2 flex items-center justify-center gap-2 animate-fade-up"><i class="fa-solid fa-crown text-yellow-400"></i> TOP 6 VIDEO VIRAL NHẤT CỦA KÊNH</h3>
         `;
-        container.classList.remove('hidden');
+        if(container) container.classList.remove('hidden');
 
         let formattedResults = allVideos.map(v => ({
             link: v.link,
@@ -755,13 +780,13 @@ async function fetchAnalytics() {
 
         formattedResults.sort((a, b) => b.data.rawPlay - a.data.rawPlay);
         fetchedVideos = formattedResults.slice(0, 6); 
-        
         renderVideoCards(fetchedVideos, false, 0);
 
     } catch (error) { showError(error.message); } 
-    finally { showLoading(false); document.getElementById('fetch-analytics-btn').disabled = false; }
+    finally { showLoading(false); if(analyticsBtn) analyticsBtn.disabled = false; }
 }
 
+// RENDER GRID VIDEO CHUNG
 function renderVideoCards(results, append = false, startIndex = 0) {
     requestAnimationFrame(() => {
         const container = document.getElementById('result-area');
@@ -769,14 +794,16 @@ function renderVideoCards(results, append = false, startIndex = 0) {
 
         const specialAction = document.getElementById('special-action-container');
         if (fetchedVideos.length > 1 && (currentMode === 'video' && linkMode === 'multi')) {
-            specialAction.innerHTML = `
-                <button onclick="downloadAllVideos(this)" class="bg-gradient-to-r from-emerald-600 to-teal-500 text-white font-bold py-3 px-6 rounded-xl shadow-lg transition-transform hover:-translate-y-1 flex items-center gap-2">
-                    <i class="fa-solid fa-boxes-packing"></i> Tải Toàn Bộ Video Dưới Đây
-                </button>
-            `;
-            specialAction.classList.remove('hidden');
+            if(specialAction) {
+                specialAction.innerHTML = `
+                    <button onclick="downloadAllVideos(this)" class="bg-gradient-to-r from-emerald-600 to-teal-500 text-white font-bold py-3 px-6 rounded-xl shadow-lg transition-transform hover:-translate-y-1 flex items-center gap-2">
+                        <i class="fa-solid fa-boxes-packing"></i> Tải Toàn Bộ Video Dưới Đây
+                    </button>
+                `;
+                specialAction.classList.remove('hidden');
+            }
         } else if (currentMode === 'video' && linkMode === 'single') {
-            specialAction.classList.add('hidden'); 
+            if(specialAction) specialAction.classList.add('hidden'); 
         }
 
         if (!append) {
@@ -837,10 +864,15 @@ function renderVideoCards(results, append = false, startIndex = 0) {
 function checkLoadMoreUI(hasMore) {
     const loadMoreContainer = document.getElementById('load-more-container');
     if (hasMore) {
-        loadMoreContainer.classList.remove('hidden');
-        document.getElementById('load-more-btn').disabled = false;
-        document.getElementById('load-more-btn').innerHTML = `<i class="fa-solid fa-angle-down"></i> Tải Thêm Dữ Liệu`;
-    } else loadMoreContainer.classList.add('hidden');
+        if(loadMoreContainer) loadMoreContainer.classList.remove('hidden');
+        const loadBtn = document.getElementById('load-more-btn');
+        if(loadBtn) {
+            loadBtn.disabled = false;
+            loadBtn.innerHTML = `<i class="fa-solid fa-angle-down"></i> Tải Thêm Dữ Liệu`;
+        }
+    } else {
+        if(loadMoreContainer) loadMoreContainer.classList.add('hidden');
+    }
 }
 
 async function downloadAllVideos(btnObj) {
