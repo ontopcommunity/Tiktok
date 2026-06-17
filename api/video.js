@@ -2,116 +2,94 @@ import fs from 'fs';
 import path from 'path';
 
 export default async function handler(req, res) {
-  const { video } = req.query;
-  if (!video) return res.status(400).json({ error: "Thieu link video" });
-
-  // --- 1. RANDOM USER AGENT ---
-  let userAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36"; 
-  try {
-    const filePath = path.join(process.cwd(), 'user-agents.txt');
-    if (fs.existsSync(filePath)) {
-        const fileContent = fs.readFileSync(filePath, 'utf8');
-        const agents = fileContent.split('\n').filter(line => line.trim() !== '');
-        if (agents.length > 0) userAgent = agents[Math.floor(Math.random() * agents.length)].trim();
-    }
-  } catch (err) { console.error("Loi doc user-agent:", err); }
-
-  const formatStats = (num) => {
-    num = parseInt(num);
-    if (!num && num !== 0) return "0";
-    if (num < 1000) return num.toString();
-    if (num < 1000000) return (Math.floor(num / 100) / 10).toString().replace('.', ',') + "K";
-    return (Math.floor(num / 100000) / 10).toString().replace('.', ',') + "M";
-  };
-
-  try {
-    let targetUrl = video;
-    const response = await fetch(targetUrl, { headers: { "User-Agent": userAgent } });
-    if (!response.ok) return res.status(404).json({ status: "Die", error: "Video khong ton tai" });
-
-    const html = await response.text();
-    const dataMatch = html.match(/<script id="__UNIVERSAL_DATA_FOR_REHYDRATION__"[^>]*>([^<]+)<\/script>/) 
-                      || html.match(/<script id="SIGI_STATE"[^>]*>([^<]+)<\/script>/);
-
-    if (!dataMatch) return res.status(404).json({ status: "Die" });
-
-    const jsonData = JSON.parse(dataMatch[1]);
-    const defaultScope = jsonData.__DEFAULT_SCOPE__ || jsonData;
+    const videoUrl = req.query.video || req.body?.video;
+    if (!videoUrl) return res.status(400).json({ error: "Thiếu link video" });
     
-    const findKey = (obj, key) => {
-        if (typeof obj !== 'object' || obj === null) return null;
-        if (obj[key]) return obj[key];
-        for (const k in obj) {
-            const found = findKey(obj[k], key);
-            if (found) return found;
-        }
-        return null;
-    };
-    
-    const item = findKey(defaultScope, 'itemStruct');
-    if (!item) return res.status(404).json({ status: "Die" });
-
-    // --- BẢN VÁ: GỌI API TIKWM ĐỂ LẤY LINK THẬT ---
-    let noWatermarkUrl = "";
-    let mp3Url = "";
+    // Tích hợp random User-Agent để vượt rào TikTok khi cào HTML
+    let userAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36";
     try {
-        const tikwmRes = await fetch(`https://www.tikwm.com/api/?url=${video}`);
-        const tikwmData = await tikwmRes.json();
-        if (tikwmData && tikwmData.code === 0) {
-            noWatermarkUrl = tikwmData.data.play;
-            mp3Url = tikwmData.data.music;
+        const filePath = path.join(process.cwd(), 'user-agents.txt');
+        if (fs.existsSync(filePath)) {
+            const fileContent = fs.readFileSync(filePath, 'utf8');
+            const agents = fileContent.split('\n').filter(line => line.trim() !== '');
+            if (agents.length > 0) userAgent = agents[Math.floor(Math.random() * agents.length)].trim();
         }
-    } catch (e) {
-        console.error("Lỗi gọi API TikWM:", e);
+    } catch (err) {}
+
+    try {
+        let scrapedData = {};
+        let scrapedImages = null;
+        let createTime = null;
+
+        // BƯỚC 1: CÀO HTML (Ưu tiên lấy mảng Ảnh gốc và thông tin siêu tốc)
+        try {
+            const htmlRes = await fetch(videoUrl, { headers: { "User-Agent": userAgent } });
+            const html = await htmlRes.text();
+            const dataMatch = html.match(/<script id="__UNIVERSAL_DATA_FOR_REHYDRATION__"[^>]*>([^<]+)<\/script>/) || html.match(/<script id="SIGI_STATE"[^>]*>([^<]+)<\/script>/);
+            
+            if (dataMatch) {
+                const jsonData = JSON.parse(dataMatch[1]);
+                const defaultScope = jsonData.__DEFAULT_SCOPE__ || jsonData;
+                const itemStruct = defaultScope['webapp.video-detail']?.itemInfo?.itemStruct || defaultScope.ItemModule?.[Object.keys(defaultScope.ItemModule)[0]];
+                
+                if (itemStruct) {
+                    scrapedData = itemStruct;
+                    createTime = itemStruct.createTime;
+                    // Bóc mảng ảnh từ HTML nếu là dạng Slideshow
+                    if (itemStruct.imagePost && itemStruct.imagePost.images) {
+                        scrapedImages = itemStruct.imagePost.images.map(img => img.imageURL.urlList[0]);
+                    }
+                }
+            }
+        } catch (e) {
+            console.error("Lỗi cào HTML, chuyển sang API dự phòng...");
+        }
+
+        // BƯỚC 2: GỌI TIKWM (Lấy chính xác create_time, link video MP4 gốc)
+        const response = await fetch(`https://www.tikwm.com/api/?url=${encodeURIComponent(videoUrl)}`);
+        const tikwmData = await response.json();
+        const v = tikwmData.data || {};
+
+        if (!v.id && !scrapedData.id) {
+            throw new Error("Bài đăng lỗi hoặc bị khóa riêng tư.");
+        }
+
+        // KẾT HỢP DỮ LIỆU: Ưu tiên TikWM lấy Thời Gian, Ưu tiên HTML lấy Ảnh
+        const finalCreateTime = v.create_time || createTime || null;
+        const finalImages = scrapedImages || v.images || null;
+
+        const result = {
+            status: "Live",
+            author: { 
+                uniqueId: v.author?.unique_id || scrapedData.author?.uniqueId, 
+                nickname: v.author?.nickname || scrapedData.author?.nickname, 
+                avatar: v.author?.avatar || scrapedData.author?.avatarLarger || v.cover, 
+                verified: v.author?.is_verify || scrapedData.author?.verified || false 
+            },
+            video_data: { 
+                id: v.id || scrapedData.id, 
+                description: v.title || scrapedData.desc, 
+                create_time: finalCreateTime // Lấy được chuẩn xác thời gian
+            },
+            stats: { 
+                play: v.play_count || scrapedData.stats?.playCount || 0, 
+                like: v.digg_count || scrapedData.stats?.diggCount || 0, 
+                comment: v.comment_count || scrapedData.stats?.commentCount || 0, 
+                share: v.share_count || scrapedData.stats?.shareCount || 0 
+            },
+            urls: { 
+                cover: v.cover || scrapedData.video?.cover, 
+                no_watermark: v.play || scrapedData.video?.playAddr 
+            },
+            music: { 
+                playUrl: v.music || scrapedData.music?.playUrl, 
+                title: v.music_info?.title || scrapedData.music?.title || "Âm thanh gốc" 
+            },
+            images: finalImages // Album ảnh hoàn chỉnh
+        };
+        
+        return res.status(200).json(result);
+    } catch (error) { 
+        return res.status(500).json({ error: error.message }); 
     }
-
-    // --- NÂNG CẤP FULL THÔNG TIN VIDEO ---
-    const result = {
-      status: "Live",
-      video_data: {
-          id: item.id,
-          description: item.desc,
-          createTime: item.createTime,
-          duration: item.video.duration,
-          ratio: item.video.ratio,
-          definition: item.video.definition,
-          hashtags: item.challenges?.map(c => c.title) || [],
-          mentions: item.contents?.filter(c => c.type === 1).map(c => c.userUniqueId) || []
-      },
-      author: {
-          id: item.author.id,
-          uniqueId: item.author.uniqueId,
-          nickname: item.author.nickname,
-          avatar: item.author.avatarLarger,
-          verified: item.author.verified,
-          secUid: item.author.secUid
-      },
-      music: {
-          id: item.music.id,
-          title: item.music.title,
-          author: item.music.authorName,
-          // Đã sửa: Lấy link MP3 thật từ API, dự phòng link gốc của TikTok
-          playUrl: mp3Url || item.music.playUrl,
-          duration: item.music.duration,
-          cover: item.music.coverLarge
-      },
-      stats: {
-          play: formatStats(item.stats.playCount),
-          like: formatStats(item.stats.diggCount),
-          comment: formatStats(item.stats.commentCount),
-          share: formatStats(item.stats.shareCount),
-          save: formatStats(item.stats.collectCount),
-          raw: item.stats
-      },
-      urls: {
-          cover: item.video.cover,
-          origin: item.video.playAddr,
-          // Đã sửa: Lấy link không logo từ API, dự phòng link playAddr của TikTok
-          no_watermark: noWatermarkUrl || item.video.playAddr,
-          download: item.video.downloadAddr
-      }
-    };
-
-    return res.status(200).json(result);
-  } catch (error) { return res.status(500).json({ status: "Error", error: error.message }); }
 }
