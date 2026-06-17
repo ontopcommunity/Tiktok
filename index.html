@@ -88,7 +88,7 @@
                 <button id="subtab-multi" onclick="setLinkMode('multi')" class="px-5 py-2 rounded-lg text-slate-400 font-bold text-sm hover:text-white transition">Nhiều Video</button>
             </div>
             <div class="relative mb-4">
-                <textarea id="tiktok-links" rows="1" placeholder="Dán link video TikTok vào đây..." class="w-full px-6 py-4 bg-slate-900/80 rounded-2xl focus:outline-none focus:ring-2 focus:ring-pink-500/50 transition-all resize-none text-slate-200 placeholder-slate-600 border border-slate-700 shadow-inner custom-scroll-x"></textarea>
+                <textarea id="tiktok-links" rows="1" placeholder="Dán link bài đăng TikTok vào đây..." class="w-full px-6 py-4 bg-slate-900/80 rounded-2xl focus:outline-none focus:ring-2 focus:ring-pink-500/50 transition-all resize-none text-slate-200 placeholder-slate-600 border border-slate-700 shadow-inner custom-scroll-x"></textarea>
                 <div class="absolute top-4 right-4 text-slate-500 opacity-50 pointer-events-none"><i class="fa-solid fa-link"></i></div>
             </div>
             <button id="fetch-video-btn" onclick="processVideos()" class="w-full bg-white text-black hover:bg-gray-200 font-bold py-3.5 px-6 rounded-xl transition-all transform hover:scale-[1.01] active:scale-95 flex items-center justify-center gap-2 shadow-lg">
@@ -104,11 +104,8 @@
                     <input type="text" id="tiktok-keyword" placeholder="Nhập từ khóa..." class="w-full pl-12 pr-5 py-4 bg-slate-900/80 rounded-xl focus:outline-none focus:ring-2 focus:ring-rose-500/50 transition-all text-slate-200 border border-slate-700 shadow-inner">
                 </div>
                 <div class="flex gap-2 sm:gap-3">
-                    <button id="fetch-search-btn" onclick="searchTikTok('video')" class="bg-gradient-to-r from-pink-600 to-rose-500 hover:from-pink-500 hover:to-rose-400 text-white font-bold py-4 px-6 rounded-xl transition-all shadow-[0_0_15px_rgba(225,29,72,0.3)] border border-pink-500/30 flex items-center justify-center gap-2 flex-1">
-                        <i class="fa-solid fa-video"></i> Tìm Video
-                    </button>
-                    <button id="fetch-search-img-btn" onclick="searchTikTok('image')" class="bg-gradient-to-r from-emerald-600 to-teal-500 hover:from-emerald-500 hover:to-teal-400 text-white font-bold py-4 px-6 rounded-xl transition-all shadow-[0_0_15px_rgba(16,185,129,0.3)] border border-emerald-500/30 flex items-center justify-center gap-2 flex-1">
-                        <i class="fa-solid fa-images"></i> Tìm Ảnh
+                    <button id="fetch-search-btn" onclick="searchTikTok()" class="bg-gradient-to-r from-pink-600 to-rose-500 hover:from-pink-500 hover:to-rose-400 text-white font-bold py-4 px-6 md:px-8 rounded-xl transition-all duration-300 transform hover:-translate-y-1 active:scale-95 shadow-[0_0_20px_rgba(225,29,72,0.3)] hover:shadow-[0_0_30px_rgba(225,29,72,0.6)] border border-pink-500/30 flex items-center justify-center gap-2 flex-1 sm:flex-none w-full sm:w-auto">
+                        <i class="fa-solid fa-magnifying-glass"></i> Tìm kiếm
                     </button>
                 </div>
             </div>
@@ -141,7 +138,6 @@
         </div>
     </div>
 
-    <!-- UI Trạng thái -->
     <div id="loading" class="hidden z-10 mt-6 text-center animate-fade-up pointer-events-none">
         <div class="inline-flex items-center gap-3 bg-slate-800 border border-slate-700 px-6 py-3 rounded-full shadow-lg">
             <i class="fa-solid fa-circle-notch fa-spin text-pink-500"></i>
@@ -164,7 +160,6 @@
         </button>
     </div>
 
-    <!-- CỬA SỔ CHI TIẾT VIDEO -->
     <div id="video-detail-window" class="detail-window-overlay fixed inset-0 flex items-center justify-center p-3 md:p-6 bg-black/85">
         <div class="detail-window-content glass-panel w-full max-w-5xl rounded-3xl overflow-hidden flex flex-col md:flex-row max-h-[90vh] md:max-h-[85vh] relative border border-white/10 shadow-2xl">
             <button onclick="closeDetailWindow('video-detail-window')" class="absolute top-3 right-3 z-30 w-9 h-9 bg-black/60 hover:bg-red-500 text-white rounded-full flex items-center justify-center transition-colors backdrop-blur-md border border-white/10 shadow-lg">
@@ -178,7 +173,6 @@
         </div>
     </div>
 
-    <!-- BẢNG HƯỚNG DẪN SỬ DỤNG -->
     <div id="guide-window" class="detail-window-overlay fixed inset-0 flex items-center justify-center p-4 bg-black/80">
         <div class="detail-window-content glass-panel w-full max-w-3xl rounded-[2rem] p-8 overflow-y-auto max-h-[85vh] custom-scroll-x relative">
             <button onclick="closeDetailWindow('guide-window')" class="absolute top-5 right-5 w-8 h-8 bg-white/10 hover:bg-red-500 rounded-full flex justify-center items-center text-white transition"><i class="fa-solid fa-xmark"></i></button>
@@ -186,28 +180,28 @@
             
             <div class="space-y-6 text-slate-300 text-sm leading-relaxed">
                 <div class="bg-slate-800/50 p-5 rounded-2xl border border-white/5">
-                    <h3 class="text-pink-400 font-bold text-lg mb-2"><i class="fa-solid fa-layer-group"></i> 1. Tải Video (1 Video / Nhiều Video)</h3>
-                    <p>- <b>1 Video:</b> Dán 1 link duy nhất để phân tích chi tiết.<br>- <b>Nhiều Video:</b> Dán nhiều link (mỗi link 1 dòng). Nút <b>"Tải Toàn Bộ"</b> sẽ xuất hiện ở góc phải lưới video để tải tự động hàng loạt.</p>
+                    <h3 class="text-pink-400 font-bold text-lg mb-2"><i class="fa-solid fa-layer-group"></i> 1. Tải Dữ Liệu (1 Bài / Nhiều Bài)</h3>
+                    <p>- <b>1 Video:</b> Dán 1 link duy nhất để phân tích chi tiết.<br>- <b>Nhiều Video:</b> Dán nhiều link (mỗi link 1 dòng). Nút <b>"Tải Toàn Bộ"</b> sẽ xuất hiện ở góc phải lưới hiển thị để tải tự động hàng loạt.</p>
                 </div>
                 
                 <div class="bg-slate-800/50 p-5 rounded-2xl border border-white/5">
-                    <h3 class="text-rose-400 font-bold text-lg mb-2"><i class="fa-solid fa-magnifying-glass-chart"></i> 2. Tìm Kiếm & Random</h3>
-                    <p>- Nhập từ khóa bất kỳ. Nhấn <b>"Tìm Video"</b> hoặc <b>"Tìm Ảnh"</b>.<br>- Nút <i class="fa-solid fa-dice"></i> <b>Random</b> sẽ xuất hiện ở góc phải <b>SAU KHI</b> bạn tìm kiếm xong. Bấm vào để lấy ngẫu nhiên 1 bài đăng.</p>
+                    <h3 class="text-rose-400 font-bold text-lg mb-2"><i class="fa-solid fa-magnifying-glass-chart"></i> 2. Tìm Kiếm & Lấy Ngẫu Nhiên</h3>
+                    <p>- Nhập từ khóa bất kỳ để Tìm kiếm bài đăng.<br>- Nút <i class="fa-solid fa-dice"></i> <b>Lấy Ngẫu Nhiên</b> sẽ xuất hiện ở góc phải <b>SAU KHI</b> bạn tìm kiếm xong. Bấm vào để hệ thống chọn ra ngẫu nhiên 1 bài đăng hay nhất.</p>
                 </div>
 
                 <div class="bg-slate-800/50 p-5 rounded-2xl border border-white/5">
                     <h3 class="text-purple-400 font-bold text-lg mb-2"><i class="fa-solid fa-user-ninja"></i> 3. Soi Kênh & Soi Nhạc</h3>
-                    <p>- <b>Soi Kênh:</b> Nhập ID kênh. Hệ thống sẽ bung toàn bộ hồ sơ kênh (có tick xanh) và hiển thị toàn bộ video của kênh đó.<br>- <b>Soi Nhạc (Ẩn):</b> Khi đang xem chi tiết 1 video, bấm thẳng vào <b>Thanh Âm Thanh Đang Xoay</b>, hệ thống tự động quét toàn bộ video TikTok dùng chung nhạc đó.</p>
+                    <p>- <b>Soi Kênh:</b> Nhập ID kênh. Hệ thống sẽ bung toàn bộ hồ sơ kênh (có tick xanh) và hiển thị toàn bộ bài đăng của kênh đó.<br>- <b>Soi Nhạc:</b> Khi đang xem chi tiết 1 bài đăng, bấm thẳng vào <b>Thanh Âm Thanh Đang Xoay</b>, hệ thống tự động quét 100% video trên mạng dùng chung nhạc đó.</p>
                 </div>
 
                 <div class="bg-slate-800/50 p-5 rounded-2xl border border-white/5">
                     <h3 class="text-sky-400 font-bold text-lg mb-2"><i class="fa-solid fa-chart-pie"></i> 4. Phân Tích Kênh 100% (Analytics)</h3>
-                    <p>- Nhập ID kênh để quét <b>100% toàn bộ video</b>. Báo Cáo bao gồm: <b>View trung bình, Tỷ lệ ER (Tương tác), Top Hashtag, Ngày tạo, Video mới/cũ nhất</b>.<br>- Các bảng thông tin lớn có nút <b>mũi tên <i class="fa-solid fa-chevron-down"></i></b> ở dưới cùng. Bấm vào để Thu gọn/Mở rộng.</p>
+                    <p>- Nhập ID kênh để quét <b>100% toàn bộ video</b>. Báo Cáo bao gồm: <b>View trung bình, Tỷ lệ ER (Tương tác), Top Hashtag, Ngày tạo kênh, Video mới/cũ nhất</b>.<br>- Các bảng thông tin lớn có nút <b>mũi tên <i class="fa-solid fa-chevron-down"></i></b> ở dưới cùng. Bấm vào để Thu gọn/Mở rộng.</p>
                 </div>
 
                 <div class="bg-slate-800/50 p-5 rounded-2xl border border-white/5">
-                    <h3 class="text-amber-400 font-bold text-lg mb-2"><i class="fa-solid fa-wand-magic-sparkles"></i> 5. Phân Tích Từng Video</h3>
-                    <p>- Bấm vào video bất kỳ trên lưới để mở cửa sổ chi tiết. Sẽ có nút xanh <b>"Phân Tích Video"</b> <i class="fa-solid fa-chart-simple"></i> để soi tỷ lệ chuyển đổi, ngày giờ đăng chuẩn xác của video đó.</p>
+                    <h3 class="text-amber-400 font-bold text-lg mb-2"><i class="fa-solid fa-wand-magic-sparkles"></i> 5. Phân Tích Từng Bài Đăng</h3>
+                    <p>- Bấm vào video bất kỳ trên lưới để mở cửa sổ chi tiết. Sẽ có nút xanh <b>"Phân Tích Nhanh"</b> <i class="fa-solid fa-chart-simple"></i> để soi tỷ lệ chuyển đổi Like, giờ đăng chuẩn xác từng giây của bài đăng đó.</p>
                 </div>
             </div>
         </div>
