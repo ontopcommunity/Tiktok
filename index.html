@@ -10,7 +10,6 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
-        
         body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #020617; color: #f8fafc; overflow-x: hidden; -webkit-font-smoothing: antialiased; }
         ::-webkit-scrollbar { width: 5px; height: 5px; }
         ::-webkit-scrollbar-track { background: transparent; }
@@ -27,10 +26,10 @@
         .animate-fade-up { animation: fadeUpIn 0.5s cubic-bezier(0.25, 1, 0.5, 1) forwards; backface-visibility: hidden; }
         @keyframes popIn { 0% { opacity: 0; transform: scale(0.85) translateY(30px); } 60% { opacity: 1; transform: scale(1.02) translateY(-5px); } 100% { opacity: 1; transform: scale(1) translateY(0); } }
 
-        .modal-overlay { opacity: 0; visibility: hidden; transition: all 0.3s ease; pointer-events: none; backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }
-        .modal-overlay.active { opacity: 1; visibility: visible; pointer-events: auto; z-index: 999; }
-        .modal-content { opacity: 0; transform: scale(0.85); transition: none; will-change: transform, opacity; }
-        .modal-overlay.active .modal-content { animation: popIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards; }
+        .detail-window-overlay { opacity: 0; visibility: hidden; transition: all 0.3s ease; pointer-events: none; backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }
+        .detail-window-overlay.active { opacity: 1; visibility: visible; pointer-events: auto; z-index: 999; }
+        .detail-window-content { opacity: 0; transform: scale(0.85); transition: none; will-change: transform, opacity; }
+        .detail-window-overlay.active .detail-window-content { animation: popIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards; }
 
         .bg-blob { position: fixed; border-radius: 50%; filter: blur(120px); opacity: 0.15; pointer-events: none; z-index: 0; transform: translateZ(0); }
 
@@ -41,7 +40,6 @@
         .tab-inactive { color: #64748b; font-weight: 500; }
         .tab-inactive:hover { color: #cbd5e1; }
 
-        /* UI Expand/Collapse */
         .collapsible-box { max-height: 250px; overflow: hidden; position: relative; transition: max-height 0.5s ease; }
         .collapsible-box.expanded { max-height: 5000px; }
         .collapsible-box::after { content: ''; position: absolute; bottom: 0; left: 0; width: 100%; height: 80px; background: linear-gradient(to top, rgba(15,23,42,1), transparent); transition: opacity 0.3s; pointer-events: none; }
@@ -49,7 +47,6 @@
         .expand-btn { position: absolute; bottom: -15px; left: 50%; transform: translateX(-50%); z-index: 20; transition: transform 0.3s; }
         .expanded + .expand-btn { transform: translateX(-50%) rotate(180deg); bottom: 10px; }
         
-        /* Floating Guide Btn */
         .guide-btn { position: fixed; bottom: 30px; right: 30px; z-index: 50; animation: pulseGlow 2s infinite; }
         @keyframes pulseGlow { 0% { box-shadow: 0 0 0 0 rgba(236,72,153,0.7); } 70% { box-shadow: 0 0 0 15px rgba(236,72,153,0); } 100% { box-shadow: 0 0 0 0 rgba(236,72,153,0); } }
     </style>
@@ -60,7 +57,7 @@
     <div class="bg-blob bg-purple-600 w-[400px] h-[400px] top-[40%] right-[-10%] opacity-10"></div>
     <div class="bg-blob bg-sky-600 w-[600px] h-[600px] bottom-[-10%] left-[20%] opacity-10"></div>
 
-    <button onclick="openGuide()" class="guide-btn w-14 h-14 bg-gradient-to-tr from-pink-600 to-purple-600 rounded-full flex items-center justify-center text-white text-2xl shadow-lg border border-white/20 hover:scale-110 transition-transform">
+    <button onclick="openGuide()" class="guide-btn w-14 h-14 bg-gradient-to-tr from-pink-600 to-purple-600 rounded-full flex items-center justify-center text-white text-2xl shadow-lg border border-white/20 hover:scale-110 transition-transform" title="Hướng dẫn sử dụng">
         <i class="fa-solid fa-question"></i>
     </button>
 
@@ -89,7 +86,6 @@
                 <button id="subtab-single" onclick="setLinkMode('single')" class="px-5 py-2 rounded-lg bg-slate-700 text-white font-bold text-sm shadow-sm transition">1 Video</button>
                 <button id="subtab-multi" onclick="setLinkMode('multi')" class="px-5 py-2 rounded-lg text-slate-400 font-bold text-sm hover:text-white transition">Nhiều Video</button>
             </div>
-
             <div class="relative mb-4">
                 <textarea id="tiktok-links" rows="1" placeholder="Dán link video TikTok vào đây..." class="w-full px-6 py-4 bg-slate-900/80 rounded-2xl focus:outline-none focus:ring-2 focus:ring-pink-500/50 transition-all resize-none text-slate-200 placeholder-slate-600 border border-slate-700 shadow-inner custom-scroll-x"></textarea>
                 <div class="absolute top-4 right-4 text-slate-500 opacity-50 pointer-events-none"><i class="fa-solid fa-link"></i></div>
@@ -107,10 +103,10 @@
                     <input type="text" id="tiktok-keyword" placeholder="Nhập từ khóa..." class="w-full pl-12 pr-5 py-4 bg-slate-900/80 rounded-xl focus:outline-none focus:ring-2 focus:ring-rose-500/50 transition-all text-slate-200 border border-slate-700 shadow-inner">
                 </div>
                 <div class="flex gap-2 sm:gap-3">
-                    <button onclick="searchTikTok('video')" class="bg-gradient-to-r from-pink-600 to-rose-500 hover:from-pink-500 hover:to-rose-400 text-white font-bold py-4 px-6 rounded-xl transition-all shadow-[0_0_15px_rgba(225,29,72,0.3)] border border-pink-500/30 flex items-center gap-2 flex-1">
+                    <button onclick="searchTikTok('video')" class="bg-gradient-to-r from-pink-600 to-rose-500 hover:from-pink-500 hover:to-rose-400 text-white font-bold py-4 px-6 rounded-xl transition-all shadow-[0_0_15px_rgba(225,29,72,0.3)] border border-pink-500/30 flex items-center justify-center gap-2 flex-1">
                         <i class="fa-solid fa-video"></i> Tìm Video
                     </button>
-                    <button onclick="searchTikTok('image')" class="bg-gradient-to-r from-emerald-600 to-teal-500 hover:from-emerald-500 hover:to-teal-400 text-white font-bold py-4 px-6 rounded-xl transition-all shadow-[0_0_15px_rgba(16,185,129,0.3)] border border-emerald-500/30 flex items-center gap-2 flex-1">
+                    <button onclick="searchTikTok('image')" class="bg-gradient-to-r from-emerald-600 to-teal-500 hover:from-emerald-500 hover:to-teal-400 text-white font-bold py-4 px-6 rounded-xl transition-all shadow-[0_0_15px_rgba(16,185,129,0.3)] border border-emerald-500/30 flex items-center justify-center gap-2 flex-1">
                         <i class="fa-solid fa-images"></i> Tìm Ảnh
                     </button>
                 </div>
@@ -137,7 +133,7 @@
                     <div class="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none text-slate-500 font-bold">@</div>
                     <input type="text" id="tiktok-analytics-id" placeholder="hoaa.hanassii" class="w-full pl-10 pr-5 py-4 bg-slate-900/80 rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-500/50 transition-all text-slate-200 border border-slate-700 shadow-inner">
                 </div>
-                <button id="fetch-analytics-btn" onclick="fetchAnalytics()" class="bg-gradient-to-r from-sky-600 to-blue-500 hover:from-sky-500 hover:to-blue-400 text-white font-bold py-4 px-8 rounded-xl transition-all duration-300 transform hover:-translate-y-1 active:scale-95 shadow-[0_0_20px_rgba(2,132,199,0.3)] border border-sky-500/30 flex items-center justify-center gap-2">
+                <button id="fetch-analytics-btn" onclick="fetchAnalytics()" class="bg-gradient-to-r from-sky-600 to-blue-500 hover:from-sky-500 hover:to-blue-400 text-white font-bold py-4 px-8 rounded-xl transition-all duration-300 transform hover:-translate-y-1 active:scale-95 shadow-[0_0_20px_rgba(2,132,199,0.3)] hover:shadow-[0_0_30px_rgba(2,132,199,0.6)] border border-sky-500/30 flex items-center justify-center gap-2">
                     <i class="fa-solid fa-chart-pie"></i> Bắt đầu Phân Tích
                 </button>
             </div>
@@ -156,8 +152,7 @@
         <div id="user-info-area" class="w-full hidden animate-fade-up"></div>
     </div>
 
-    <div id="special-action-container" class="hidden w-full max-w-[98%] 2xl:max-w-[1600px] z-10 mt-2 flex justify-end animate-fade-up gap-3">
-        </div>
+    <div id="special-action-container" class="hidden w-full max-w-[98%] 2xl:max-w-[1600px] z-10 mt-2 flex justify-end animate-fade-up gap-3"></div>
 
     <div id="result-area" class="w-full max-w-[98%] 2xl:max-w-[1600px] mx-auto z-10 mt-6 pb-6" style="contain: content;"></div>
 
@@ -167,48 +162,48 @@
         </button>
     </div>
 
-    <div id="video-modal" class="modal-overlay fixed inset-0 flex items-center justify-center p-3 md:p-6 bg-black/85">
-        <div class="modal-content glass-panel w-full max-w-5xl rounded-3xl overflow-hidden flex flex-col md:flex-row max-h-[90vh] md:max-h-[85vh] relative border border-white/10 shadow-2xl">
-            <button onclick="closeModal('video-modal')" class="absolute top-3 right-3 z-30 w-9 h-9 bg-black/60 hover:bg-red-500 text-white rounded-full flex items-center justify-center transition-colors backdrop-blur-md">
+    <div id="video-detail-window" class="detail-window-overlay fixed inset-0 flex items-center justify-center p-3 md:p-6 bg-black/85">
+        <div class="detail-window-content glass-panel w-full max-w-5xl rounded-3xl overflow-hidden flex flex-col md:flex-row max-h-[90vh] md:max-h-[85vh] relative border border-white/10 shadow-2xl">
+            <button onclick="closeDetailWindow('video-detail-window')" class="absolute top-3 right-3 z-30 w-9 h-9 bg-black/60 hover:bg-red-500 text-white rounded-full flex items-center justify-center transition-colors backdrop-blur-md border border-white/10 shadow-lg">
                 <i class="fa-solid fa-xmark"></i>
             </button>
-            <div class="w-full md:w-[45%] bg-black relative flex items-center justify-center h-[40vh] md:h-auto" id="modal-video-container"></div>
+            <div class="w-full md:w-[45%] bg-black relative flex items-center justify-center h-[40vh] md:h-auto" id="detail-video-container"></div>
             <div class="w-full md:w-[55%] bg-slate-900/90 flex flex-col h-[50vh] md:h-auto relative">
-                <div id="modal-video-info" class="flex-1 overflow-y-auto custom-scroll-x p-6 md:p-8 relative z-10"></div>
-                <div id="modal-video-actions" class="p-5 border-t border-white/10 bg-slate-950/80 grid grid-cols-2 gap-3 relative z-10 backdrop-blur-md"></div>
+                <div id="detail-video-info" class="flex-1 overflow-y-auto custom-scroll-x p-6 md:p-8 relative z-10"></div>
+                <div id="detail-video-actions" class="p-5 border-t border-white/10 bg-slate-950/80 grid grid-cols-2 gap-3 relative z-10 backdrop-blur-md"></div>
             </div>
         </div>
     </div>
 
-    <div id="guide-modal" class="modal-overlay fixed inset-0 flex items-center justify-center p-4 bg-black/80">
-        <div class="modal-content glass-panel w-full max-w-3xl rounded-[2rem] p-8 overflow-y-auto max-h-[85vh] custom-scroll-x relative">
-            <button onclick="closeModal('guide-modal')" class="absolute top-5 right-5 w-8 h-8 bg-white/10 hover:bg-red-500 rounded-full flex justify-center items-center text-white"><i class="fa-solid fa-xmark"></i></button>
+    <div id="guide-window" class="detail-window-overlay fixed inset-0 flex items-center justify-center p-4 bg-black/80">
+        <div class="detail-window-content glass-panel w-full max-w-3xl rounded-[2rem] p-8 overflow-y-auto max-h-[85vh] custom-scroll-x relative">
+            <button onclick="closeDetailWindow('guide-window')" class="absolute top-5 right-5 w-8 h-8 bg-white/10 hover:bg-red-500 rounded-full flex justify-center items-center text-white transition"><i class="fa-solid fa-xmark"></i></button>
             <h2 class="text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-pink-500 to-indigo-500 mb-6 text-center"><i class="fa-solid fa-book-open"></i> Hướng Dẫn Sử Dụng Elite</h2>
             
             <div class="space-y-6 text-slate-300 text-sm leading-relaxed">
                 <div class="bg-slate-800/50 p-5 rounded-2xl border border-white/5">
-                    <h3 class="text-pink-400 font-bold text-lg mb-2"><i class="fa-solid fa-layer-group"></i> 1. Tải Video (Single / Multi)</h3>
-                    <p>- <b>1 Video:</b> Dán 1 link duy nhất để phân tích và tải nhanh.<br>- <b>Nhiều Video:</b> Dán nhiều link (mỗi link 1 dòng). Hệ thống sẽ hiện lưới video và nút <b>"Tải Toàn Bộ"</b> ở góc phải.</p>
+                    <h3 class="text-pink-400 font-bold text-lg mb-2"><i class="fa-solid fa-layer-group"></i> 1. Tải Video (1 Video / Nhiều Video)</h3>
+                    <p>- <b>1 Video:</b> Dán 1 link duy nhất để phân tích chi tiết.<br>- <b>Nhiều Video:</b> Dán nhiều link (mỗi link 1 dòng). Nút <b>"Tải Toàn Bộ"</b> sẽ xuất hiện ở góc phải lưới video để tải tự động hàng loạt.</p>
                 </div>
                 
                 <div class="bg-slate-800/50 p-5 rounded-2xl border border-white/5">
                     <h3 class="text-rose-400 font-bold text-lg mb-2"><i class="fa-solid fa-magnifying-glass-chart"></i> 2. Tìm Kiếm & Random</h3>
-                    <p>- Nhập từ khóa bất kỳ. Nhấn <b>"Tìm Video"</b> hoặc <b>"Tìm Ảnh"</b> (chỉ lọc bài đăng dạng slideshow ảnh).<br>- Nhấn <b>"Tải Thêm"</b> ở cuối trang để cuộn vô cực.<br>- <b>Nút Random:</b> Sau khi tìm kiếm, nút <i class="fa-solid fa-dice"></i> Random sẽ xuất hiện ở góc phải màn hình. Bấm vào để hệ thống "bốc thăm" ngẫu nhiên 1 video trong chủ đề đó.</p>
+                    <p>- Nhập từ khóa bất kỳ. Nhấn <b>"Tìm Video"</b> hoặc <b>"Tìm Ảnh"</b>.<br>- Nút <i class="fa-solid fa-dice"></i> <b>Random</b> sẽ xuất hiện ở góc phải <b>SAU KHI</b> bạn tìm kiếm xong. Bấm vào để lấy ngẫu nhiên 1 bài đăng.</p>
                 </div>
 
                 <div class="bg-slate-800/50 p-5 rounded-2xl border border-white/5">
                     <h3 class="text-purple-400 font-bold text-lg mb-2"><i class="fa-solid fa-user-ninja"></i> 3. Soi Kênh & Soi Nhạc</h3>
-                    <p>- <b>Soi Kênh:</b> Nhập ID kênh. Hệ thống sẽ bung toàn bộ hồ sơ kênh (có tick xanh) và hiển thị toàn bộ video của kênh đó.<br>- <b>Soi Nhạc:</b> Khi đang xem chi tiết 1 video trong bảng, bấm vào <b>Thanh Âm Thanh Đang Xoay</b>, hệ thống tự động quét toàn bộ video TikTok dùng chung nhạc đó.</p>
+                    <p>- <b>Soi Kênh:</b> Nhập ID kênh. Hệ thống sẽ bung toàn bộ hồ sơ kênh (có tick xanh) và hiển thị toàn bộ video của kênh đó.<br>- <b>Soi Nhạc (Ẩn):</b> Khi đang xem chi tiết 1 video, bấm thẳng vào <b>Thanh Âm Thanh Đang Xoay</b>, hệ thống tự động quét toàn bộ video TikTok dùng chung nhạc đó.</p>
                 </div>
 
                 <div class="bg-slate-800/50 p-5 rounded-2xl border border-white/5">
-                    <h3 class="text-sky-400 font-bold text-lg mb-2"><i class="fa-solid fa-chart-pie"></i> 4. Phân Tích Kênh (Analytics)</h3>
-                    <p>- Nhập ID kênh để lấy Báo Cáo. Hệ thống quét sâu các video gần nhất để tính: <b>View trung bình, Tỷ lệ ER (Tương tác), Top Hashtag, Ngày tạo, Video mới/cũ nhất</b>.<br>- Hiển thị Top 6 video Viral nhất của kênh đó xuống lưới.</p>
+                    <h3 class="text-sky-400 font-bold text-lg mb-2"><i class="fa-solid fa-chart-pie"></i> 4. Phân Tích Kênh 100% (Analytics)</h3>
+                    <p>- Nhập ID kênh để quét <b>100% toàn bộ video</b>. Báo Cáo bao gồm: <b>View trung bình, Tỷ lệ ER (Tương tác), Top Hashtag, Ngày tạo, Video mới/cũ nhất</b>.<br>- Các bảng thông tin lớn có nút <b>mũi tên <i class="fa-solid fa-chevron-down"></i></b> ở dưới cùng. Bấm vào để Thu gọn/Mở rộng.</p>
                 </div>
 
                 <div class="bg-slate-800/50 p-5 rounded-2xl border border-white/5">
-                    <h3 class="text-amber-400 font-bold text-lg mb-2"><i class="fa-solid fa-wand-magic-sparkles"></i> 5. Tính Năng Nâng Cao (Trong Modal)</h3>
-                    <p>- Mở xem video bất kỳ, bạn sẽ thấy nút <b>"Phân Tích Video"</b> <i class="fa-solid fa-chart-simple"></i> để soi các chỉ số ẩn của riêng video đó.<br>- Các thẻ thông tin lớn (như Analytics) có nút mũi tên ở dưới cùng. Bấm vào để <b>Mở Rộng / Thu Gọn</b> thẻ, giúp giao diện không bị choán chỗ.</p>
+                    <h3 class="text-amber-400 font-bold text-lg mb-2"><i class="fa-solid fa-wand-magic-sparkles"></i> 5. Phân Tích Từng Video</h3>
+                    <p>- Bấm vào video bất kỳ trên lưới để mở cửa sổ chi tiết. Sẽ có nút xanh <b>"Phân Tích Video"</b> <i class="fa-solid fa-chart-simple"></i> để soi tỷ lệ chuyển đổi, ngày giờ đăng chuẩn xác của video đó.</p>
                 </div>
             </div>
         </div>
