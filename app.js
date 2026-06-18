@@ -7,8 +7,6 @@ let searchCursor = 0;
 let currentUserProfile = "";
 let userVideoCursor = 0;
 let fullUserData = null;
-let currentMusicId = "";
-let musicCursor = 0;
 
 function switchTab(mode) {
     currentMode = mode;
@@ -72,7 +70,6 @@ function clearResults() {
     
     searchCursor = 0; currentSearchKeyword = "";
     userVideoCursor = 0; currentUserProfile = ""; fullUserData = null;
-    musicCursor = 0; currentMusicId = "";
 }
 
 function generateFileName(author, videoId, ext) { return `${author}_${videoId}.${ext}`; }
@@ -104,7 +101,6 @@ function openGuide() { document.getElementById('guide-window').classList.add('ac
 function loadMore() {
     if (currentMode === 'search') searchTikTok(true);
     else if (currentMode === 'info') fetchUserInfo(true);
-    else if (currentMode === 'music_scan') fetchMoreMusicVideos();
 }
 
 async function forceDownload(url, filename, btnObj) {
@@ -133,7 +129,6 @@ async function forceDownload(url, filename, btnObj) {
     }
 }
 
-// Bổ sung tải chùm Ảnh (Album)
 async function downloadImages(index, btnObj) {
     const d = fetchedVideos[index].data;
     if(!d.images) return;
@@ -169,83 +164,6 @@ function searchUserFromDetail(username) {
     window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
-// ================= SOI NHẠC TỪ CỬA SỔ CHI TIẾT =================
-async function scanMusicFromDetail(videoUrl, musicTitle) {
-    closeDetailWindow('video-detail-window');
-    await executeMusicScan(videoUrl, musicTitle);
-}
-
-async function executeMusicScan(videoUrl, musicTitle) {
-    clearResults();
-    currentMode = 'music_scan'; 
-    musicCursor = 0;
-    
-    ['video', 'search', 'info', 'analytics'].forEach(m => {
-        const btn = document.getElementById(`tab-${m}`);
-        if(btn) btn.className = 'tab-btn tab-inactive focus:outline-none flex items-center gap-2 text-base md:text-lg';
-    });
-
-    showLoading(true, `Đang truy vết toàn bộ bài đăng dùng chung âm thanh này...`);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-
-    try {
-        const response = await fetch(`/api/search?type=music&url=${encodeURIComponent(videoUrl)}`);
-        const resData = await response.json();
-        
-        if (resData.code !== 0 || !resData.data || !resData.data.videos || resData.data.videos.length === 0) {
-            throw new Error("Không tìm thấy bài đăng nào dùng chung bản nhạc này.");
-        }
-
-        fetchedVideos = formatTikWmToGrid(resData.data.videos);
-        musicCursor = resData.data.cursor;
-        currentMusicId = resData.music_id;
-        
-        const userInfoArea = document.getElementById('user-info-area');
-        userInfoArea.innerHTML = `
-            <div class="w-full glass-panel rounded-[2rem] p-6 md:p-10 text-center border border-purple-500/30 shadow-[0_0_30px_rgba(168,85,247,0.2)] animate-fade-up">
-                <div class="w-16 h-16 rounded-full bg-slate-800 mx-auto flex items-center justify-center border border-white/10 shadow-[0_0_15px_rgba(168,85,247,0.4)] mb-3 animate-[spin_4s_linear_infinite]">
-                    <i class="fa-solid fa-music text-purple-400 text-2xl drop-shadow-[0_0_8px_rgba(168,85,247,0.8)]"></i>
-                </div>
-                <h2 class="text-2xl font-extrabold text-white">Kết Quả Soi Âm Thanh</h2>
-                <p class="text-purple-400 font-bold text-sm mt-2 flex items-center justify-center gap-2">
-                    <i class="fa-solid fa-compact-disc"></i> ${musicTitle}
-                </p>
-                <p class="text-slate-400 text-xs mt-3 italic">Hệ thống đã lôi ra toàn bộ các bài đăng đang sử dụng chung đoạn nhạc này</p>
-            </div>
-        `;
-        userInfoArea.classList.remove('hidden'); 
-
-        renderVideoCards(fetchedVideos, false, 0);
-        checkLoadMoreUI(resData.data.hasMore);
-        
-    } catch (error) { showError(error.message); } 
-    finally { showLoading(false); }
-}
-
-async function fetchMoreMusicVideos() {
-    const loadBtn = document.getElementById('load-more-btn');
-    if (loadBtn) {
-        loadBtn.disabled = true;
-        loadBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Đang tải...`;
-    }
-
-    try {
-        const response = await fetch(`/api/search?type=music&music_id=${currentMusicId}&cursor=${musicCursor}`);
-        const resData = await response.json();
-
-        if (resData.code !== 0 || !resData.data || !resData.data.videos) throw new Error("Không thể tải thêm dữ liệu.");
-
-        const formattedResults = formatTikWmToGrid(resData.data.videos);
-        const startIndex = fetchedVideos.length;
-        fetchedVideos.push(...formattedResults);
-        musicCursor = resData.data.cursor;
-
-        renderVideoCards(formattedResults, true, startIndex);
-        checkLoadMoreUI(resData.data.hasMore);
-    } catch (error) { alert("Lỗi tải thêm: " + error.message); } 
-    finally { if (loadBtn) loadBtn.disabled = false; }
-}
-
 // ================= PHÂN TÍCH RIÊNG 1 BÀI ĐĂNG =================
 window.analyzeSingleVideo = function(index) {
     const d = fetchedVideos[index].data;
@@ -257,7 +175,6 @@ window.analyzeSingleVideo = function(index) {
     const er = play > 0 ? (((likes + comments + shares) / play) * 100).toFixed(2) : 0;
     const likeRatio = play > 0 ? ((likes / play) * 100).toFixed(1) : 0;
     
-    // Đã fix lấy chuẩn ngày giờ bằng create_time
     const timestamp = d.video_data.create_time || d.video_data.createTime || null;
     let uploadDate = "Không xác định";
     if (timestamp) {
@@ -308,14 +225,13 @@ window.analyzeSingleVideo = function(index) {
     }
 }
 
-// ================= CỬA SỔ HIỂN THỊ CHI TIẾT ĐA PHƯƠNG TIỆN =================
+// ================= CỬA SỔ HIỂN THỊ CHI TIẾT =================
 function openVideoDetail(index) {
     const d = fetchedVideos[index].data;
     const fileNameMp4 = generateFileName(d.author.uniqueId, d.video_data.id, 'mp4');
     const fileNameMp3 = generateFileName(d.author.uniqueId, d.video_data.id, 'mp3');
     const isImagePost = d.images && d.images.length > 0;
 
-    // Dựng Media: Video hoặc Album Ảnh lướt ngang
     let mediaHtml = '';
     if (isImagePost) {
         let slides = d.images.map((img, i) => `
@@ -328,14 +244,11 @@ function openVideoDetail(index) {
         mediaHtml = `
             <div class="relative w-full h-full flex bg-slate-900 shadow-[inset_0_0_50px_rgba(0,0,0,0.8)] overflow-hidden group">
                 <img src="${d.urls.cover}" class="w-full h-full object-cover blur-xl absolute opacity-30 z-0 pointer-events-none">
-                
                 <div class="w-full h-full flex overflow-x-auto snap-x snap-mandatory custom-scroll-x relative z-10 scroll-smooth" id="album-scroll-container">
                     ${slides}
                 </div>
-                
                 <button onclick="document.getElementById('album-scroll-container').scrollBy({left: -300, behavior: 'smooth'})" class="absolute left-3 top-1/2 -translate-y-1/2 w-10 h-10 bg-black/60 hover:bg-pink-600 border border-white/10 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all z-20 active:scale-95 shadow-lg"><i class="fa-solid fa-chevron-left"></i></button>
                 <button onclick="document.getElementById('album-scroll-container').scrollBy({left: 300, behavior: 'smooth'})" class="absolute right-3 top-1/2 -translate-y-1/2 w-10 h-10 bg-black/60 hover:bg-pink-600 border border-white/10 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all z-20 active:scale-95 shadow-lg"><i class="fa-solid fa-chevron-right"></i></button>
-
                 <div class="absolute top-4 left-4 bg-pink-600/90 backdrop-blur-md text-white font-bold text-xs px-3 py-1.5 rounded-full z-20 shadow-lg border border-pink-400/50 flex items-center gap-1.5">
                     <i class="fa-regular fa-images"></i> Album ${d.images.length} Ảnh
                 </div>
@@ -373,13 +286,13 @@ function openVideoDetail(index) {
             </div>
         </div>
 
-        <div class="flex items-center gap-3 bg-slate-900/40 p-3 rounded-xl border border-white/5 mb-5 cursor-pointer hover:border-purple-500/50 hover:bg-slate-800/80 transition group" onclick="scanMusicFromDetail('${d.link}', '${safeMusicTitle}')">
+        <div class="flex items-center gap-3 bg-slate-900/40 p-3 rounded-xl border border-white/5 mb-5 shadow-inner">
             <div class="w-9 h-9 rounded-full bg-slate-800 flex items-center justify-center border border-white/10 animate-[spin_4s_linear_infinite]">
-                <i class="fa-solid fa-music text-purple-400 text-xs"></i>
+                <i class="fa-solid fa-music text-purple-400 text-xs drop-shadow-[0_0_5px_rgba(168,85,247,0.8)]"></i>
             </div>
             <div class="flex-1 truncate">
-                <p class="text-white text-sm font-bold truncate group-hover:text-purple-400 transition">${d.music.title}</p>
-                <p class="text-[10px] text-slate-400 uppercase font-semibold mt-0.5">Bấm để soi nhạc <i class="fa-solid fa-arrow-right"></i></p>
+                <p class="text-white text-sm font-bold truncate tracking-wide">${d.music.title}</p>
+                <p class="text-[10px] text-slate-500 uppercase font-semibold mt-0.5 tracking-widest">Âm thanh gốc</p>
             </div>
             <div class="px-2 flex gap-1 items-end h-3">
                 <div class="w-1 bg-purple-500 rounded-full animate-[bounce_1s_infinite] opacity-80 h-2"></div>
@@ -450,7 +363,6 @@ function closeDetailWindow(windowId) {
     }
 }
 
-// FORMAT API DATA TIKWM CHUNG
 function formatTikWmToGrid(videosArray) {
     return videosArray.map(v => ({
         link: `https://www.tiktok.com/@${v.author.unique_id}/video/${v.video_id}`,
@@ -467,7 +379,7 @@ function formatTikWmToGrid(videosArray) {
     }));
 }
 
-// ================= 1. TẢI BẰNG LINK =================
+// ================= CÁC API CALLS CHÍNH =================
 async function processVideos() {
     const input = document.getElementById('tiktok-links').value;
     const links = input.split('\n').map(l => l.trim()).filter(l => l !== '');
@@ -490,7 +402,6 @@ async function processVideos() {
     finally { showLoading(false); if(fetchBtn) fetchBtn.disabled = false; }
 }
 
-// ================= 2. TÌM KIẾM =================
 async function searchTikTok(isLoadMore = false) {
     let kw = document.getElementById('tiktok-keyword').value.trim();
     if(!kw && !isLoadMore) return showError("Nhập từ khóa vô!");
@@ -501,7 +412,7 @@ async function searchTikTok(isLoadMore = false) {
         clearResults();
         currentSearchKeyword = kw; searchCursor = 0;
         if(searchBtn) searchBtn.disabled = true;
-        showLoading(true, `Đang tìm Video: "${kw}"...`);
+        showLoading(true, `Đang tìm kiếm dữ liệu: "${kw}"...`);
     } else {
         const loadBtn = document.getElementById('load-more-btn');
         if(loadBtn) {
@@ -547,6 +458,13 @@ async function searchTikTok(isLoadMore = false) {
 
 async function searchRandom() {
     if(fetchedVideos.length === 0) return;
+    
+    const searchBtn = document.getElementById('fetch-search-btn');
+    const randomBtn = document.getElementById('random-btn');
+    
+    if(searchBtn) searchBtn.disabled = true;
+    if(randomBtn) randomBtn.disabled = true;
+
     showLoading(true, `Đang bốc thăm ngẫu nhiên...`);
     try {
         const randomCursor = Math.floor(Math.random() * 20);
@@ -576,10 +494,13 @@ async function searchRandom() {
             }
         }
     } catch (error) { showError(error.message); } 
-    finally { showLoading(false); }
+    finally { 
+        showLoading(false); 
+        if(searchBtn) searchBtn.disabled = false;
+        if(randomBtn) randomBtn.disabled = false;
+    }
 }
 
-// ================= 3. SOI KÊNH (BUNG FULL) =================
 async function fetchUserInfo(isLoadMore = false) {
     let user = isLoadMore ? currentUserProfile : document.getElementById('tiktok-username').value.trim();
     if (user.startsWith('@')) user = user.substring(1);
@@ -667,7 +588,6 @@ async function fetchUserInfo(isLoadMore = false) {
     finally { showLoading(false); if(infoBtn) infoBtn.disabled = false; }
 }
 
-// ================= 4. PHÂN TÍCH KÊNH (100% VIDEO) =================
 async function fetchAnalytics() {
     let user = document.getElementById('tiktok-analytics-id').value.trim();
     if (user.startsWith('@')) user = user.substring(1);
@@ -678,7 +598,7 @@ async function fetchAnalytics() {
     clearResults();
     currentMode = 'analytics';
     if(analyticsBtn) analyticsBtn.disabled = true;
-    showLoading(true, "Đang quét 100% bài đăng của kênh (Có thể hơi lâu)... Đã quét 0 bài");
+    showLoading(true, "Đang quét 100% video của kênh (Có thể hơi lâu)... Đã quét 0 video");
 
     try {
         let allVideos = [];
@@ -818,7 +738,6 @@ async function fetchAnalytics() {
     finally { showLoading(false); if(analyticsBtn) analyticsBtn.disabled = false; }
 }
 
-// RENDER GRID VIDEO (GPU ACCELERATION)
 function renderVideoCards(results, append = false, startIndex = 0) {
     requestAnimationFrame(() => {
         const container = document.getElementById('result-area');
