@@ -5,7 +5,6 @@ export default async function handler(req, res) {
     const videoUrl = req.query.video || req.body?.video;
     if (!videoUrl) return res.status(400).json({ error: "Thiếu link video" });
     
-    // Tích hợp random User-Agent để vượt rào TikTok khi cào HTML
     let userAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36";
     try {
         const filePath = path.join(process.cwd(), 'user-agents.txt');
@@ -21,7 +20,6 @@ export default async function handler(req, res) {
         let scrapedImages = null;
         let createTime = null;
 
-        // BƯỚC 1: CÀO HTML (Ưu tiên lấy mảng Ảnh gốc và thông tin siêu tốc)
         try {
             const htmlRes = await fetch(videoUrl, { headers: { "User-Agent": userAgent } });
             const html = await htmlRes.text();
@@ -35,7 +33,6 @@ export default async function handler(req, res) {
                 if (itemStruct) {
                     scrapedData = itemStruct;
                     createTime = itemStruct.createTime;
-                    // Bóc mảng ảnh từ HTML nếu là dạng Slideshow
                     if (itemStruct.imagePost && itemStruct.imagePost.images) {
                         scrapedImages = itemStruct.imagePost.images.map(img => img.imageURL.urlList[0]);
                     }
@@ -45,7 +42,6 @@ export default async function handler(req, res) {
             console.error("Lỗi cào HTML, chuyển sang API dự phòng...");
         }
 
-        // BƯỚC 2: GỌI TIKWM (Lấy chính xác create_time, link video MP4 gốc)
         const response = await fetch(`https://www.tikwm.com/api/?url=${encodeURIComponent(videoUrl)}`);
         const tikwmData = await response.json();
         const v = tikwmData.data || {};
@@ -54,7 +50,6 @@ export default async function handler(req, res) {
             throw new Error("Bài đăng lỗi hoặc bị khóa riêng tư.");
         }
 
-        // KẾT HỢP DỮ LIỆU: Ưu tiên TikWM lấy Thời Gian, Ưu tiên HTML lấy Ảnh
         const finalCreateTime = v.create_time || createTime || null;
         const finalImages = scrapedImages || v.images || null;
 
@@ -69,13 +64,16 @@ export default async function handler(req, res) {
             video_data: { 
                 id: v.id || scrapedData.id, 
                 description: v.title || scrapedData.desc, 
-                create_time: finalCreateTime // Lấy được chuẩn xác thời gian
+                create_time: finalCreateTime,
+                duration: v.duration || 0,
+                region: v.region || 'VN'
             },
             stats: { 
                 play: v.play_count || scrapedData.stats?.playCount || 0, 
                 like: v.digg_count || scrapedData.stats?.diggCount || 0, 
                 comment: v.comment_count || scrapedData.stats?.commentCount || 0, 
-                share: v.share_count || scrapedData.stats?.shareCount || 0 
+                share: v.share_count || scrapedData.stats?.shareCount || 0,
+                download: v.download_count || 0
             },
             urls: { 
                 cover: v.cover || scrapedData.video?.cover, 
@@ -85,7 +83,7 @@ export default async function handler(req, res) {
                 playUrl: v.music || scrapedData.music?.playUrl, 
                 title: v.music_info?.title || scrapedData.music?.title || "Âm thanh gốc" 
             },
-            images: finalImages // Album ảnh hoàn chỉnh
+            images: finalImages 
         };
         
         return res.status(200).json(result);
