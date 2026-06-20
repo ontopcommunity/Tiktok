@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>TikTok Studio Pro | Premium Elite</title>
-    <!-- Chống TikTok chặn tải ảnh bìa -->
     <meta name="referrer" content="no-referrer">
     
     <link rel="preconnect" href="https://p16-sign-va.tiktokcdn.com">
@@ -82,6 +81,7 @@
             <button onclick="switchTab('video')" id="tab-video" class="tab-btn tab-active focus:outline-none flex items-center gap-2 text-base md:text-lg"><i class="fa-solid fa-layer-group"></i> Tải Dữ Liệu</button>
             <button onclick="switchTab('search')" id="tab-search" class="tab-btn tab-inactive focus:outline-none flex items-center gap-2 text-base md:text-lg"><i class="fa-solid fa-magnifying-glass-chart"></i> Tìm Kiếm</button>
             <button onclick="switchTab('info')" id="tab-info" class="tab-btn tab-inactive focus:outline-none flex items-center gap-2 text-base md:text-lg"><i class="fa-solid fa-user-ninja"></i> Soi Kênh</button>
+            <button onclick="switchTab('analytics')" id="tab-analytics" class="tab-btn tab-inactive focus:outline-none flex items-center gap-2 text-base md:text-lg"><i class="fa-solid fa-chart-pie text-sky-400"></i> Phân Tích</button>
             <button onclick="switchTab('shadowban')" id="tab-shadowban" class="tab-btn tab-inactive focus:outline-none flex items-center gap-2 text-base md:text-lg"><i class="fa-solid fa-user-doctor text-orange-400"></i> Khám Kênh</button>
         </div>
 
@@ -127,6 +127,19 @@
             </div>
         </div>
 
+        <div id="mode-analytics" class="hidden transition-opacity duration-300 relative z-20">
+            <label class="block text-sm font-semibold text-slate-300 mb-2 ml-1">Nhập ID Kênh để trích xuất Báo cáo (Analytics)</label>
+            <div class="flex flex-col sm:flex-row gap-3 mb-2">
+                <div class="relative flex-1">
+                    <div class="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none text-slate-500 font-bold">@</div>
+                    <input type="text" id="tiktok-analytics-id" placeholder="hoaa.hanassii" class="w-full pl-10 pr-5 py-4 bg-slate-900/80 rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-500/50 transition-all text-slate-200 border border-slate-700 shadow-inner">
+                </div>
+                <button id="fetch-analytics-btn" onclick="fetchAnalytics()" class="bg-gradient-to-r from-sky-600 to-blue-500 hover:from-sky-500 hover:to-blue-400 text-white font-bold py-4 px-8 rounded-xl transition-all duration-300 transform hover:-translate-y-1 active:scale-95 shadow-[0_0_20px_rgba(2,132,199,0.3)] hover:shadow-[0_0_30px_rgba(2,132,199,0.6)] border border-sky-500/30 flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-chart-pie"></i> Bắt đầu Phân Tích
+                </button>
+            </div>
+        </div>
+
         <div id="mode-shadowban" class="hidden transition-opacity duration-300 relative z-20">
             <label class="block text-sm font-semibold text-slate-300 mb-2 ml-1">Nhập ID Kênh để chẩn đoán lượng View (Kiểm tra Flop/Shadowban)</label>
             <div class="flex flex-col sm:flex-row gap-3 mb-2">
@@ -154,7 +167,6 @@
         <div id="user-info-area" class="w-full hidden animate-fade-up"></div>
     </div>
 
-    <!-- KHU VỰC HIỂN THỊ BIỂU ĐỒ KHÁM KÊNH -->
     <div id="shadowban-area" class="w-full max-w-4xl mx-auto z-10 mt-2 mb-6 hidden animate-fade-up flex-col gap-4"></div>
 
     <div id="special-action-container" class="hidden w-full max-w-[98%] 2xl:max-w-[1600px] z-10 mt-2 flex justify-end animate-fade-up gap-3"></div>
@@ -167,7 +179,6 @@
         </button>
     </div>
 
-    <!-- CỬA SỔ XEM CHI TIẾT BÀI ĐĂNG -->
     <div id="video-detail-window" class="detail-window-overlay fixed inset-0 flex items-center justify-center p-3 md:p-6 bg-black/85">
         <div class="detail-window-content glass-panel w-full max-w-5xl rounded-3xl overflow-hidden flex flex-col md:flex-row max-h-[90vh] md:max-h-[85vh] relative border border-white/10 shadow-2xl">
             <button onclick="closeDetailWindow('video-detail-window')" class="absolute top-3 right-3 z-30 w-9 h-9 bg-black/60 hover:bg-red-500 text-white rounded-full flex items-center justify-center transition-colors backdrop-blur-md border border-white/10 shadow-lg">
@@ -181,7 +192,6 @@
         </div>
     </div>
 
-    <!-- BẢNG HƯỚNG DẪN SỬ DỤNG -->
     <div id="guide-window" class="detail-window-overlay fixed inset-0 flex items-center justify-center p-4 bg-black/80">
         <div class="detail-window-content glass-panel w-full max-w-3xl rounded-[2rem] p-8 overflow-y-auto max-h-[85vh] custom-scroll-x relative">
             <button onclick="closeDetailWindow('guide-window')" class="absolute top-5 right-5 w-8 h-8 bg-white/10 hover:bg-red-500 rounded-full flex justify-center items-center text-white transition"><i class="fa-solid fa-xmark"></i></button>
@@ -204,12 +214,17 @@
                 </div>
 
                 <div class="bg-slate-800/50 p-5 rounded-2xl border border-white/5">
-                    <h3 class="text-orange-400 font-bold text-lg mb-2"><i class="fa-solid fa-user-doctor"></i> 4. Khám Kênh (Shadowban Checker)</h3>
+                    <h3 class="text-sky-400 font-bold text-lg mb-2"><i class="fa-solid fa-chart-pie"></i> 4. Phân Tích Kênh 100% (Analytics)</h3>
+                    <p>- Nhập ID kênh để quét <b>100% toàn bộ video</b>. Báo Cáo bao gồm: <b>View trung bình, Tỷ lệ ER (Tương tác), Top Hashtag, Ngày tạo kênh, Video mới/cũ nhất</b>.<br>- Các bảng thông tin lớn có nút <b>mũi tên <i class="fa-solid fa-chevron-down"></i></b> ở dưới cùng. Bấm vào để Thu gọn/Mở rộng.</p>
+                </div>
+
+                <div class="bg-slate-800/50 p-5 rounded-2xl border border-white/5">
+                    <h3 class="text-orange-400 font-bold text-lg mb-2"><i class="fa-solid fa-user-doctor"></i> 5. Khám Kênh (Shadowban Checker)</h3>
                     <p>- Dán ID kênh. Hệ thống sẽ vẽ biểu đồ cột 15 video gần nhất để chẩn đoán xem kênh của bạn có bị bóp tương tác do vi phạm hay đang lên xu hướng hay không.</p>
                 </div>
 
                 <div class="bg-slate-800/50 p-5 rounded-2xl border border-white/5">
-                    <h3 class="text-sky-400 font-bold text-lg mb-2"><i class="fa-solid fa-chart-column"></i> 5. Phân Tích Dạng Cột Từng Bài</h3>
+                    <h3 class="text-emerald-400 font-bold text-lg mb-2"><i class="fa-solid fa-chart-column"></i> 6. Phân Tích Dạng Cột Từng Bài</h3>
                     <p>- Bấm vào video bất kỳ trên lưới để mở cửa sổ chi tiết. Bấm tiếp nút <b>"Phân Tích Dạng Cột"</b> <i class="fa-solid fa-chart-column"></i> để hiển thị ngay một biểu đồ Bar Chart động về: Tỷ lệ Tim, Bình luận, Lượt chia sẻ và Lượt lưu video.</p>
                 </div>
             </div>
