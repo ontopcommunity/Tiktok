@@ -10,7 +10,7 @@ let fullUserData = null;
 
 function switchTab(mode) {
     currentMode = mode;
-    ['video', 'search', 'info', 'shadowban'].forEach(m => {
+    ['video', 'search', 'info', 'analytics', 'shadowban'].forEach(m => {
         const btn = document.getElementById(`mode-${m}`);
         const tabBtn = document.getElementById(`tab-${m}`);
         if(btn && tabBtn) {
@@ -108,6 +108,157 @@ function openGuide() { document.getElementById('guide-window').classList.add('ac
 function loadMore() {
     if (currentMode === 'search') searchTikTok(true);
     else if (currentMode === 'info') fetchUserInfo(true);
+}
+
+// ================= TÍNH NĂNG ĐƯỢC PHỤC HỒI: PHÂN TÍCH KÊNH =================
+async function fetchAnalytics() {
+    let user = document.getElementById('tiktok-analytics-id').value.trim();
+    if (user.startsWith('@')) user = user.substring(1);
+    if (!user) return showError("Nhập ID kênh cần phân tích!");
+
+    const analyticsBtn = document.getElementById('fetch-analytics-btn');
+
+    clearResults();
+    currentMode = 'analytics';
+    if(analyticsBtn) analyticsBtn.disabled = true;
+    showLoading(true, "Đang quét 100% video của kênh (Có thể hơi lâu)... Đã quét 0 video");
+
+    try {
+        let allVideos = [];
+        let cur = 0;
+        let pAuthor = null;
+        let hasMore = true;
+        let limitPages = 0; 
+        
+        while(hasMore && limitPages < 100) {
+            const response = await fetch(`/api/index?username=${user}&cursor=${cur}`);
+            const data = await response.json();
+            if (data.status !== "Live") break;
+            
+            if(!pAuthor && data.author) pAuthor = data.author;
+            if(data.videos) allVideos.push(...data.videos);
+            
+            cur = data.cursor;
+            hasMore = data.hasMore;
+            limitPages++;
+            document.getElementById('loading-text').innerText = `Đang quét sâu 100% kênh... Đã gom ${allVideos.length} bài đăng`;
+        }
+
+        if (allVideos.length === 0) throw new Error("Kênh này chưa có bài đăng nào hoặc bị riêng tư.");
+
+        let totalPlays = 0, totalLikes = 0, totalComments = 0, totalShares = 0;
+        let hashtagCounts = {};
+
+        let newestVid = allVideos[0];
+        let oldestVid = allVideos[allVideos.length - 1];
+
+        allVideos.forEach(v => {
+            totalPlays += parseRawStats(v.stats.play);
+            totalLikes += parseRawStats(v.stats.like);
+            totalComments += parseRawStats(v.stats.comment);
+            totalShares += parseRawStats(v.stats.share);
+
+            let tags = (v.caption || "").match(/#[\w_À-ỹ]+/g);
+            if(tags) tags.forEach(t => { let ct = t.toLowerCase(); hashtagCounts[ct] = (hashtagCounts[ct] || 0) + 1; });
+        });
+
+        const videoCount = allVideos.length;
+        const avgViews = (totalPlays / videoCount);
+        const er = totalPlays > 0 ? ((totalLikes + totalComments + totalShares) / totalPlays * 100).toFixed(2) : 0;
+        
+        let sortedTags = Object.entries(hashtagCounts).sort((a,b) => b[1] - a[1]).slice(0, 10);
+        let tagsHtml = sortedTags.length > 0 
+            ? sortedTags.map(t => `<span class="bg-sky-500/10 border border-sky-500/30 text-sky-400 px-3 py-1 rounded-full text-xs font-bold">${t[0]} <span class="opacity-60 ml-1">x${t[1]}</span></span>`).join('')
+            : '<span class="text-slate-500 text-sm italic">Không dùng Hashtag</span>';
+
+        const createDate = pAuthor?.createTime ? new Date(pAuthor.createTime * 1000).toLocaleDateString('vi-VN') : 'Không rõ';
+
+        const container = document.getElementById('user-info-area');
+        container.innerHTML = `
+            <div class="w-full glass-panel rounded-[2rem] border border-white/10 shadow-2xl animate-fade-up relative">
+                <div id="analytics-profile-box" class="collapsible-box expanded p-8 md:p-10 relative">
+                    <div class="absolute top-0 right-0 w-64 h-64 bg-sky-500 rounded-full blur-[100px] opacity-20 pointer-events-none"></div>
+                    
+                    <div class="flex items-center gap-4 mb-8 pb-6 border-b border-white/10">
+                        <img src="${pAuthor?.avatar}" class="w-16 h-16 rounded-full object-cover border-2 border-sky-500 shadow-[0_0_15px_rgba(14,165,233,0.3)] bg-slate-800" referrerpolicy="no-referrer">
+                        <div>
+                            <h2 class="text-2xl font-extrabold text-white flex items-center gap-2">
+                                ${pAuthor?.nickname || user}
+                                ${pAuthor?.verified ? '<i class="fa-solid fa-circle-check text-blue-500 drop-shadow-md" title="Tài khoản chính chủ"></i>' : ''}
+                            </h2>
+                            <p class="text-sky-400 font-medium text-sm">Báo cáo Phân tích dựa trên ${videoCount} bài đăng đã quét</p>
+                        </div>
+                    </div>
+
+                    <div class="flex justify-between items-center bg-slate-800/40 p-4 rounded-xl border border-white/5 mb-6">
+                        <div class="text-center flex-1 border-r border-white/10">
+                            <span class="block text-xs text-slate-400 uppercase font-bold mb-1">Ngày Lập Kênh</span>
+                            <span class="font-black text-white text-base">${createDate}</span>
+                        </div>
+                        <div class="text-center flex-1 border-r border-white/10">
+                            <span class="block text-xs text-slate-400 uppercase font-bold mb-1">Bài Đăng Mới Nhất</span>
+                            <a href="${newestVid.link}" target="_blank" class="font-bold text-sky-400 text-sm hover:underline"><i class="fa-solid fa-link"></i> Xem Bài</a>
+                        </div>
+                        <div class="text-center flex-1">
+                            <span class="block text-xs text-slate-400 uppercase font-bold mb-1">Bài Đăng Cũ Nhất</span>
+                            <a href="${oldestVid.link}" target="_blank" class="font-bold text-sky-400 text-sm hover:underline"><i class="fa-solid fa-link"></i> Xem Bài</a>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+                        <div class="bg-slate-800/60 border border-white/5 p-5 rounded-2xl flex flex-col items-center justify-center shadow-inner hover:-translate-y-1 transition">
+                            <i class="fa-solid fa-fire text-orange-500 text-2xl mb-2 drop-shadow-[0_0_8px_rgba(249,115,22,0.6)]"></i>
+                            <span class="text-2xl font-black text-white">${formatStatsClient(avgViews)}</span>
+                            <span class="text-[10px] text-slate-400 uppercase mt-1 font-bold text-center">View Trung Bình</span>
+                        </div>
+                        <div class="bg-slate-800/60 border border-white/5 p-5 rounded-2xl flex flex-col items-center justify-center shadow-inner hover:-translate-y-1 transition">
+                            <i class="fa-solid fa-percent text-sky-500 text-2xl mb-2 drop-shadow-[0_0_8px_rgba(14,165,233,0.6)]"></i>
+                            <span class="text-2xl font-black text-white">${er}%</span>
+                            <span class="text-[10px] text-slate-400 uppercase mt-1 font-bold text-center">Tỷ lệ ER</span>
+                        </div>
+                        <div class="bg-slate-800/60 border border-white/5 p-5 rounded-2xl flex flex-col items-center justify-center shadow-inner hover:-translate-y-1 transition">
+                            <i class="fa-solid fa-heart text-pink-500 text-2xl mb-2 drop-shadow-[0_0_8px_rgba(236,72,153,0.6)]"></i>
+                            <span class="text-2xl font-black text-white">${formatStatsClient(totalLikes / videoCount)}</span>
+                            <span class="text-[10px] text-slate-400 uppercase mt-1 font-bold text-center">Like Trung Bình</span>
+                        </div>
+                        <div class="bg-slate-800/60 border border-white/5 p-5 rounded-2xl flex flex-col items-center justify-center shadow-inner hover:-translate-y-1 transition">
+                            <i class="fa-solid fa-play text-emerald-500 text-2xl mb-2 drop-shadow-[0_0_8px_rgba(16,185,129,0.6)]"></i>
+                            <span class="text-2xl font-black text-white">${formatStatsClient(totalPlays)}</span>
+                            <span class="text-[10px] text-slate-400 uppercase mt-1 font-bold text-center">Tổng View Đã Quét</span>
+                        </div>
+                    </div>
+
+                    <div class="mb-2 text-left">
+                        <h4 class="text-xs text-slate-300 font-bold uppercase tracking-widest mb-3 flex items-center gap-2"><i class="fa-solid fa-hashtag text-sky-400"></i> Top Hashtag Sử Dụng</h4>
+                        <div class="flex flex-wrap gap-2">${tagsHtml}</div>
+                    </div>
+                </div>
+                <button class="expand-btn w-10 h-10 bg-slate-800 border border-slate-600 rounded-full text-white shadow-lg flex items-center justify-center hover:bg-sky-500 transition" onclick="toggleExpand('analytics-profile-box')">
+                    <i class="fa-solid fa-chevron-down"></i>
+                </button>
+            </div>
+            
+            <h3 class="text-center text-xl font-bold text-white mt-12 mb-2 flex items-center justify-center gap-2 animate-fade-up"><i class="fa-solid fa-crown text-yellow-400"></i> TOP 6 BÀI ĐĂNG VIRAL NHẤT</h3>
+        `;
+        if(container) container.classList.remove('hidden');
+
+        let formattedResults = allVideos.map(v => ({
+            link: v.link,
+            data: {
+                status: "Live",
+                author: { uniqueId: user, nickname: pAuthor?.nickname || user, avatar: pAuthor?.avatar || "", verified: pAuthor?.verified || false },
+                video_data: { id: v.id, description: v.caption, create_time: v.createTime || null },
+                stats: v.stats, urls: v.urls, music: v.music, images: v.images || null,
+                rawPlay: parseRawStats(v.stats.play)
+            }
+        }));
+
+        formattedResults.sort((a, b) => b.data.rawPlay - a.data.rawPlay);
+        fetchedVideos = formattedResults.slice(0, 6); 
+        renderVideoCards(fetchedVideos, false, 0);
+
+    } catch (error) { showError(error.message); } 
+    finally { showLoading(false); if(analyticsBtn) analyticsBtn.disabled = false; }
 }
 
 // KHÁM KÊNH SHADOWBAN 
@@ -265,7 +416,7 @@ function searchUserFromDetail(username) {
     window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
-// TÍNH NĂNG ĐƯỢC NÂNG CẤP: PHÂN TÍCH BÀI ĐĂNG DẠNG BIỂU ĐỒ CỘT
+// ================= PHÂN TÍCH CHUYÊN SÂU 1 BÀI ĐĂNG DẠNG CỘT =================
 window.analyzeSingleVideo = function(index) {
     const d = fetchedVideos[index].data;
     const play = parseRawStats(d.stats.play);
@@ -419,6 +570,16 @@ function openVideoDetail(index) {
                 </div>
             </div>
         </div>
+
+        <div class="flex items-center gap-3 bg-slate-900/40 p-3 rounded-xl border border-white/5 mb-5 shadow-inner">
+            <div class="w-9 h-9 rounded-full bg-slate-800 flex items-center justify-center border border-white/10">
+                <i class="fa-solid fa-music text-purple-400 text-xs drop-shadow-[0_0_5px_rgba(168,85,247,0.8)]"></i>
+            </div>
+            <div class="flex-1 truncate">
+                <p class="text-white text-sm font-bold truncate tracking-wide">${d.music.title}</p>
+                <p class="text-[10px] text-slate-500 uppercase font-semibold mt-0.5 tracking-widest">Âm thanh gốc</p>
+            </div>
+        </div>
         
         <div class="relative bg-slate-800/60 p-5 rounded-2xl border border-slate-700/50 shadow-inner mb-6">
             <i class="fa-solid fa-quote-left absolute top-3 right-4 text-4xl text-white/5"></i>
@@ -461,7 +622,7 @@ function openVideoDetail(index) {
 
     document.getElementById('detail-video-actions').innerHTML = isImagePost ? `
         <button onclick="downloadImages(${index}, this)" class="w-full col-span-2 bg-gradient-to-r from-emerald-600 to-teal-500 hover:from-emerald-500 hover:to-teal-400 text-white font-bold py-4 rounded-xl transition-transform active:scale-95 shadow-lg flex items-center justify-center gap-2 text-base">
-            <i class="fa-solid fa-images text-lg"></i> Tải Trọn Bộ ${d.images.length} Ảnh
+            <i class="fa-solid fa-images text-lg"></i> Tải Trọn Bộ ${d.images.length} Ảnh (Nhật Ký)
         </button>
         <button onclick="forceDownload('${d.music.playUrl}', '${fileNameMp3}', this)" class="w-full col-span-2 bg-slate-800 hover:bg-slate-700 text-white font-bold py-4 rounded-xl transition-transform active:scale-95 border border-slate-600 shadow-lg flex items-center justify-center gap-2 text-base mt-1">
             <i class="fa-solid fa-music text-purple-400 text-lg"></i> Tải Nhạc MP3
