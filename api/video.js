@@ -64,13 +64,13 @@ export default async function handler(req, res) {
                 uniqueId: v.author?.unique_id || scrapedData.author?.uniqueId, 
                 nickname: v.author?.nickname || scrapedData.author?.nickname, 
                 avatar: v.author?.avatar || scrapedData.author?.avatarLarger || v.cover, 
-                avatarHD: scrapedData.author?.avatarLarger || v.author?.avatar_larger || v.author?.avatar, 
+                avatarHD: scrapedData.author?.avatarLarger || v.author?.avatar_larger || v.author?.avatar, // Bóc Avatar siêu nét
                 verified: v.author?.is_verify || scrapedData.author?.verified || false 
             },
             video_data: { 
                 id: v.id || scrapedData.id, 
                 description: v.title || scrapedData.desc, 
-                create_time: finalCreateTime,
+                create_time: finalCreateTime, // Đã lấy được chuẩn xác thời gian
                 duration: v.duration || 0,
                 region: v.region || 'VN'
             },
@@ -83,14 +83,14 @@ export default async function handler(req, res) {
             },
             urls: { 
                 cover: v.cover || scrapedData.video?.cover, 
-                coverHD: scrapedData.video?.cover || v.cover,
+                coverHD: scrapedData.video?.cover || v.cover, // Bóc Ảnh bìa gốc
                 no_watermark: v.play || scrapedData.video?.playAddr 
             },
             music: { 
                 playUrl: v.music || scrapedData.music?.playUrl, 
                 title: v.music_info?.title || scrapedData.music?.title || "Âm thanh gốc" 
             },
-            images: finalImages 
+            images: finalImages // Album ảnh hoàn chỉnh
         };
         
         return res.status(200).json(result);
