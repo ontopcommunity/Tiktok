@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TikTok Studio Pro | Bento Elite</title>
+    <title>TikTok Studio | Bento Elite</title>
     <meta name="referrer" content="no-referrer">
     
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -49,7 +49,7 @@
         .tab-inactive { color: #a3a3a3; }
         .tab-inactive:hover { color: #ffffff; background: rgba(255,255,255,0.05); }
 
-        /* GRID ITEM */
+        /* GRID ITEM VỚI ANIMATION TRƯỢT 2 BÊN */
         .grid-item { background: #111111; border: 1px solid #222222; border-radius: 20px; overflow: hidden; position: relative; cursor: pointer; transition: all 0.3s; }
         .grid-item:hover { transform: translateY(-4px); border-color: #3b82f6; box-shadow: 0 15px 30px -10px rgba(59, 130, 246, 0.2); z-index: 10; }
         .grid-item img.thumb { transition: transform 0.5s ease; }
@@ -59,6 +59,15 @@
 
         @keyframes slideUp { 0% { opacity: 0; transform: translateY(15px); } 100% { opacity: 1; transform: translateY(0); } }
         .animate-slide-up { animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+
+        @keyframes slideLeftIn { 0% { opacity: 0; transform: translateX(-40px); } 100% { opacity: 1; transform: translateX(0); } }
+        @keyframes slideRightIn { 0% { opacity: 0; transform: translateX(40px); } 100% { opacity: 1; transform: translateX(0); } }
+        .animate-slide-left { animation: slideLeftIn 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards; opacity: 0; }
+        .animate-slide-right { animation: slideRightIn 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards; opacity: 0; }
+
+        /* GÕ CHỮ BIO */
+        .typewriter-cursor::after { content: '|'; animation: blink 1s step-end infinite; color: #3b82f6; }
+        @keyframes blink { 50% { opacity: 0; } }
 
         /* MODAL */
         .modal-overlay { opacity: 0; visibility: hidden; transition: all 0.3s ease; background: rgba(0,0,0,0.9); backdrop-filter: blur(10px); z-index: 999; }
@@ -72,21 +81,30 @@
         .collapsible-box.expanded::after { opacity: 0; }
         .expand-btn { position: absolute; bottom: -15px; left: 50%; transform: translateX(-50%); z-index: 20; transition: transform 0.3s; }
         .expanded + .expand-btn { transform: translateX(-50%) rotate(180deg); bottom: 10px; }
+        
+        /* GỐC DƯỚI PHẢI */
+        .guide-btn { position: fixed; bottom: 30px; right: 30px; z-index: 50; animation: pulseGlow 2s infinite; }
+        @keyframes pulseGlow { 0% { box-shadow: 0 0 0 0 rgba(59,130,246,0.5); } 70% { box-shadow: 0 0 0 15px rgba(59,130,246,0); } 100% { box-shadow: 0 0 0 0 rgba(59,130,246,0); } }
     </style>
 </head>
 <body class="min-h-screen pb-20">
 
+    <!-- Thanh Điều Hướng Trên Cùng -->
     <nav class="fixed top-4 left-1/2 -translate-x-1/2 z-50 nav-dock rounded-full p-1.5 flex gap-1 shadow-2xl overflow-x-auto max-w-[95%] custom-scroll-x">
         <button onclick="switchTab('video')" id="tab-video" class="tab-btn tab-active"><i class="fa-solid fa-download"></i> Dữ Liệu</button>
         <button onclick="switchTab('search')" id="tab-search" class="tab-btn tab-inactive"><i class="fa-solid fa-magnifying-glass"></i> Tìm Kiếm</button>
         <button onclick="switchTab('info')" id="tab-info" class="tab-btn tab-inactive"><i class="fa-solid fa-user"></i> Hồ Sơ</button>
         <button onclick="switchTab('analytics')" id="tab-analytics" class="tab-btn tab-inactive"><i class="fa-solid fa-chart-pie text-cyan-400"></i> Phân Tích</button>
-        <button onclick="switchTab('shadowban')" id="tab-shadowban" class="tab-btn tab-inactive"><i class="fa-solid fa-stethoscope text-orange-400"></i> Khám Kênh</button>
-        <button onclick="openGuide()" class="tab-btn bg-[#222] text-zinc-300 hover:bg-[#333] hover:text-white ml-2"><i class="fa-solid fa-circle-question"></i></button>
     </nav>
+
+    <!-- Nút Hướng Dẫn Góc Dưới Phải -->
+    <button onclick="openGuide()" class="guide-btn w-12 h-12 bg-[#1a1a1a] border border-[#333] hover:bg-white rounded-full flex items-center justify-center text-zinc-300 hover:text-black transition-all shadow-xl">
+        <i class="fa-solid fa-bolt"></i>
+    </button>
 
     <main class="w-full max-w-4xl mx-auto pt-28 px-4 flex flex-col items-center">
         
+        <!-- Header -->
         <div class="text-center mb-10 w-full animate-slide-up">
             <div class="inline-block px-3 py-1 bg-zinc-900 border border-zinc-800 rounded-lg text-[10px] font-bold tracking-widest text-zinc-400 mb-4 uppercase">
                 Bento Box Edition
@@ -97,8 +115,10 @@
             <p class="text-zinc-500 font-medium text-sm">Hệ thống phân tích dữ liệu chuyên nghiệp</p>
         </div>
 
+        <!-- BẢNG ĐIỀU KHIỂN CHÍNH (BENTO CARD) -->
         <div class="bento-card w-full p-6 md:p-8 animate-slide-up relative z-10 shadow-2xl">
             
+            <!-- MODE: TẢI VIDEO -->
             <div id="mode-video" class="transition-opacity duration-300">
                 <div class="flex items-center justify-between mb-4">
                     <h2 class="text-lg font-bold text-white"><i class="fa-solid fa-download text-blue-500 mr-2"></i>Truy Xuất Tệp</h2>
@@ -116,6 +136,7 @@
                 </button>
             </div>
 
+            <!-- MODE: TÌM KIẾM -->
             <div id="mode-search" class="hidden transition-opacity duration-300">
                 <h2 class="text-lg font-bold text-white mb-4"><i class="fa-solid fa-magnifying-glass text-blue-500 mr-2"></i>Tìm Kiếm Nội Dung</h2>
                 <div class="flex flex-col sm:flex-row gap-3">
@@ -129,6 +150,7 @@
                 </div>
             </div>
 
+            <!-- MODE: SOI KÊNH -->
             <div id="mode-info" class="hidden transition-opacity duration-300">
                 <h2 class="text-lg font-bold text-white mb-4"><i class="fa-solid fa-user text-blue-500 mr-2"></i>Trích Xuất Hồ Sơ Kênh</h2>
                 <div class="flex flex-col sm:flex-row gap-3">
@@ -142,6 +164,7 @@
                 </div>
             </div>
 
+            <!-- MODE: PHÂN TÍCH 100% -->
             <div id="mode-analytics" class="hidden transition-opacity duration-300">
                 <h2 class="text-lg font-bold text-white mb-2"><i class="fa-solid fa-chart-pie text-cyan-500 mr-2"></i>Phân Tích Kênh Chuyên Sâu</h2>
                 <p class="text-xs text-zinc-500 mb-4 border-l-2 border-[#333] pl-2">Hệ thống sẽ quét 100% video trên kênh để tính ER và trung bình View.</p>
@@ -156,22 +179,9 @@
                 </div>
             </div>
 
-            <div id="mode-shadowban" class="hidden transition-opacity duration-300">
-                <h2 class="text-lg font-bold text-white mb-2"><i class="fa-solid fa-stethoscope text-orange-500 mr-2"></i>Chẩn Đoán Flop / Shadowban</h2>
-                <p class="text-xs text-zinc-500 mb-4 border-l-2 border-[#333] pl-2">Kiểm tra tình trạng phân phối View của 15 video gần nhất để tìm bệnh.</p>
-                <div class="flex flex-col sm:flex-row gap-3">
-                    <div class="relative flex-1">
-                        <div class="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none text-zinc-600 font-bold">@</div>
-                        <input type="text" id="shadowban-input" placeholder="Nhập ID kênh cần kiểm tra..." class="w-full pl-10 pr-5 py-4 bento-input text-sm">
-                    </div>
-                    <button onclick="checkShadowban()" class="bento-btn !bg-orange-500 !text-white hover:!bg-orange-600 py-4 px-8 flex items-center justify-center gap-2 text-sm sm:w-auto w-full">
-                        Khám Bệnh
-                    </button>
-                </div>
-            </div>
-
         </div>
 
+        <!-- Trạng thái Loading / Lỗi -->
         <div id="loading" class="hidden w-full text-center mt-6 animate-slide-up">
             <div class="inline-flex items-center gap-2 bg-[#111] border border-[#222] px-5 py-2.5 rounded-full shadow-lg">
                 <i class="fa-solid fa-circle-notch fa-spin text-blue-500"></i>
@@ -180,11 +190,14 @@
         </div>
         <div id="error-msg" class="hidden mt-4 w-full bento-card bg-red-950/20 border-red-900/50 p-4 text-center text-sm font-medium text-red-400 animate-slide-up"></div>
 
+        <!-- KHU VỰC ĐỔ DỮ LIỆU CHUYÊN SÂU -->
         <div id="user-info-area" class="w-full mt-6 hidden animate-slide-up"></div>
-        <div id="shadowban-area" class="w-full mt-6 hidden animate-slide-up"></div>
-        <div id="special-action-container" class="w-full mt-6 hidden justify-end animate-slide-up gap-2"></div>
+        
+        <!-- THANH CÔNG CỤ SẮP XẾP SẼ XUẤT HIỆN Ở ĐÂY -->
+        <div id="special-action-container" class="w-full max-w-[98%] xl:max-w-6xl mx-auto mt-6 hidden justify-end items-center animate-slide-up gap-2"></div>
 
-        <div id="result-area" class="w-full max-w-[98%] xl:max-w-6xl mx-auto mt-6 pb-6"></div>
+        <!-- LƯỚI BÀI ĐĂNG (GRID AREA) -->
+        <div id="result-area" class="w-full max-w-[98%] xl:max-w-6xl mx-auto mt-4 pb-6"></div>
 
         <div id="load-more-container" class="hidden w-full flex justify-center pb-10 animate-slide-up">
             <button onclick="loadMore()" id="load-more-btn" class="bento-btn-secondary py-3 px-6 text-sm flex items-center gap-2">
@@ -194,6 +207,7 @@
 
     </main>
 
+    <!-- CỬA SỔ MODAL XEM CHI TIẾT -->
     <div id="video-detail-window" class="modal-overlay fixed inset-0 flex items-center justify-center p-3 md:p-6">
         <div class="modal-content w-full max-w-5xl rounded-[28px] overflow-hidden flex flex-col md:flex-row max-h-[90vh] md:max-h-[85vh] relative shadow-2xl">
             <button onclick="closeDetailWindow('video-detail-window')" class="absolute top-4 right-4 z-30 w-8 h-8 bg-[#1a1a1a] hover:bg-red-500 text-zinc-400 hover:text-white rounded-full flex items-center justify-center transition-colors border border-[#333]">
@@ -207,30 +221,27 @@
         </div>
     </div>
 
+    <!-- BẢNG HƯỚNG DẪN -->
     <div id="guide-window" class="modal-overlay fixed inset-0 flex items-center justify-center p-4">
         <div class="modal-content w-full max-w-2xl rounded-[28px] p-8 overflow-y-auto max-h-[85vh] custom-scroll-x relative">
             <button onclick="closeDetailWindow('guide-window')" class="absolute top-5 right-5 w-8 h-8 bg-[#1a1a1a] hover:bg-white text-zinc-400 hover:text-black rounded-full flex justify-center items-center transition-colors border border-[#333]"><i class="fa-solid fa-xmark"></i></button>
-            <h2 class="text-2xl font-extrabold text-white mb-6">Tài Liệu Hướng Dẫn</h2>
+            <h2 class="text-2xl font-extrabold text-white mb-6">Tài Liệu Hướng Dẫn Bento</h2>
             <div class="space-y-3 text-zinc-400 text-sm">
                 <div class="bento-card p-5 bg-[#111] border-none">
                     <h3 class="text-white font-bold mb-1 flex items-center gap-2"><i class="fa-solid fa-download text-blue-500"></i> Tải Dữ Liệu</h3>
                     <p>Dán link Video hoặc <b>Nhật ký (Story)</b> để tải xuống. Nếu nhật ký là dạng ảnh, hệ thống tự động bóc mảng ảnh gốc để tải rời từng ảnh hoặc trọn bộ.</p>
                 </div>
                 <div class="bento-card p-5 bg-[#111] border-none">
-                    <h3 class="text-white font-bold mb-1 flex items-center gap-2"><i class="fa-solid fa-magnifying-glass text-blue-500"></i> Tìm Kiếm & Random</h3>
-                    <p>Nhập từ khóa để quét. Sau khi có danh sách, nhấn <b>"Lấy Ngẫu Nhiên"</b> để chắt lọc tự động 1 bài đăng.</p>
+                    <h3 class="text-white font-bold mb-1 flex items-center gap-2"><i class="fa-solid fa-bars text-blue-500"></i> Sắp Xếp & Random</h3>
+                    <p>Hệ thống tự động hiện nút Sắp xếp <b>Mới Nhất / Phổ Biến</b> ở góc lưới video. Ngoài ra còn có nút Lấy Ngẫu Nhiên tiện lợi.</p>
                 </div>
                 <div class="bento-card p-5 bg-[#111] border-none">
-                    <h3 class="text-white font-bold mb-1 flex items-center gap-2"><i class="fa-solid fa-chart-pie text-cyan-500"></i> Phân Tích Kênh 100%</h3>
-                    <p>Mục Phân tích sẽ quét toàn bộ số lượng video trên kênh, tính toán điểm ER tổng và xuất thống kê View.</p>
+                    <h3 class="text-white font-bold mb-1 flex items-center gap-2"><i class="fa-solid fa-link text-cyan-500"></i> Bóc Tách Bio Link</h3>
+                    <p>Quét kênh có gắn link, hệ thống sẽ tự động bọc đường dẫn đó vào một khung viền cực rõ ràng, bấm là chuyển hướng ngay lập tức.</p>
                 </div>
                 <div class="bento-card p-5 bg-[#111] border-none">
-                    <h3 class="text-white font-bold mb-1 flex items-center gap-2"><i class="fa-solid fa-stethoscope text-orange-500"></i> Khám Bệnh Kênh</h3>
-                    <p>Nhập ID kênh để kiểm tra <b>Shadowban</b> (Bóp view) hoặc Flop dựa trên biểu đồ cột của 15 video gần nhất.</p>
-                </div>
-                <div class="bento-card p-5 bg-[#111] border-none">
-                    <h3 class="text-white font-bold mb-1 flex items-center gap-2"><i class="fa-solid fa-chart-column text-emerald-500"></i> Soi Cột Từng Bài</h3>
-                    <p>Mở chi tiết một video trên lưới, chọn "Cột Phân Tích" để hiển thị Bar Chart động của Tim, Cmt, Share, Save.</p>
+                    <h3 class="text-white font-bold mb-1 flex items-center gap-2"><i class="fa-solid fa-chart-pie text-emerald-500"></i> Phân Tích Kênh & Video</h3>
+                    <p>Quét 100% kênh để tìm điểm ER. Ngoài ra, khi xem chi tiết video, bấm nút "Cột Phân Tích" để hiển thị Bar Chart động.</p>
                 </div>
             </div>
         </div>
