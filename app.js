@@ -8,9 +8,9 @@ let searchCursor = 0;
 let currentUserProfile = "";
 let userVideoCursor = 0;
 let fullUserData = null;
+let currentSortType = 'latest'; // Lưu trạng thái Sắp xếp
 
-// ================= HÀM XỬ LÝ CHUỖI SỐ LIỆU CHUẨN XÁC 100% =================
-// Hàm này bóc tách dù là "1.5M", "10K" hay số nguyên 1500000 về đúng số nguyên gốc
+// ================= HÀM XỬ LÝ CHUỖI SỐ LIỆU CHUẨN XÁC =================
 window.parseRawStats = function(str) {
     if (str === null || str === undefined) return 0;
     if (typeof str === 'number') return str;
@@ -23,9 +23,8 @@ window.parseRawStats = function(str) {
     return isNaN(parsed) ? 0 : parsed * multi;
 };
 
-// Hàm này chuẩn hóa từ số nguyên sang dạng hiển thị ngắn gọn (10.5K, 1.2M)
 window.formatStatsClient = function(num) {
-    let rawNum = window.parseRawStats(num); // Đảm bảo đầu vào luôn là số nguyên, chống lỗi "format 2 lần"
+    let rawNum = window.parseRawStats(num);
     if (rawNum === 0) return "0";
     if (rawNum < 1000) return rawNum.toString();
     if (rawNum < 1000000) return (Math.floor(rawNum / 100) / 10).toString().replace('.', ',') + "K";
@@ -35,7 +34,7 @@ window.formatStatsClient = function(num) {
 // ================= HÀM ĐIỀU HƯỚNG GIAO DIỆN =================
 window.switchTab = function(mode) {
     currentMode = mode;
-    ['video', 'search', 'info', 'analytics', 'shadowban'].forEach(m => {
+    ['video', 'search', 'info', 'analytics'].forEach(m => {
         const btn = document.getElementById(`mode-${m}`);
         const tabBtn = document.getElementById(`tab-${m}`);
         if(btn && tabBtn) {
@@ -94,7 +93,7 @@ window.clearResults = function() {
     if(userInfoArea) { userInfoArea.innerHTML = ''; userInfoArea.classList.add('hidden'); }
     
     const resultArea = document.getElementById('result-area');
-    if(resultArea) { resultArea.innerHTML = ''; resultArea.className = "w-full max-w-[98%] xl:max-w-6xl mx-auto mt-6 pb-6"; }
+    if(resultArea) { resultArea.innerHTML = ''; }
     
     const specAction = document.getElementById('special-action-container');
     if(specAction) { specAction.innerHTML = ''; specAction.classList.add('hidden'); }
@@ -102,13 +101,11 @@ window.clearResults = function() {
     const loadMoreBtn = document.getElementById('load-more-container');
     if(loadMoreBtn) loadMoreBtn.classList.add('hidden');
     
-    const sbArea = document.getElementById('shadowban-area');
-    if(sbArea) { sbArea.innerHTML = ''; sbArea.classList.add('hidden'); }
-    
     showError('');
     fetchedVideos = [];
     searchCursor = 0; currentSearchKeyword = "";
     userVideoCursor = 0; currentUserProfile = ""; fullUserData = null;
+    currentSortType = 'latest'; 
 }
 
 window.generateFileName = function(author, videoId, ext) { 
@@ -144,193 +141,52 @@ window.checkLoadMoreUI = function(hasMore) {
     }
 }
 
-// ================= TẢI & TRUY XUẤT MEDIA =================
-window.forceDownload = async function(url, filename, btnObj) {
-    const originalHTML = btnObj.innerHTML;
-    btnObj.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Đang tải...`;
-    btnObj.style.pointerEvents = 'none';
-
-    const triggerDownload = async (targetUrl) => {
-        const response = await fetch(targetUrl);
-        if (!response.ok) throw new Error("CORS Blocked");
-        const blob = await response.blob();
-        const downloadUrl = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.style.display = 'none'; a.href = downloadUrl; a.download = filename; 
-        document.body.appendChild(a); a.click();
-        window.URL.revokeObjectURL(downloadUrl); a.remove();
-    };
-
-    try { await triggerDownload(url); } 
-    catch (error) {
-        try { await triggerDownload(`https://corsproxy.io/?${encodeURIComponent(url)}`); } 
-        catch (e) { window.open(url, '_blank'); }
-    } finally {
-        btnObj.innerHTML = `<i class="fa-solid fa-check"></i> Hoàn Tất`;
-        setTimeout(() => { btnObj.innerHTML = originalHTML; btnObj.style.pointerEvents = 'auto'; }, 2000);
-    }
-}
-
-window.downloadImages = async function(index, btnObj) {
-    const d = fetchedVideos[index].data;
-    if(!d.images) return;
-    const originalHTML = btnObj.innerHTML;
-    btnObj.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Tải ${d.images.length} ảnh...`;
-    btnObj.style.pointerEvents = 'none';
-
-    for (let i = 0; i < d.images.length; i++) {
-        const filename = `${d.author.uniqueId}_${d.video_data.id}_img_${i+1}.jpg`;
-        try {
-            const res = await fetch(d.images[i]);
-            const blob = await res.blob();
-            const downloadUrl = window.URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.style.display = 'none'; a.href = downloadUrl; a.download = filename; 
-            document.body.appendChild(a); a.click();
-            window.URL.revokeObjectURL(downloadUrl); a.remove();
-        } catch(e) {
-            window.open(d.images[i], '_blank');
+// HIỆU ỨNG GÕ CHỮ BIO MƯỢT MÀ
+window.typeWriter = function(element, text, speed=25) {
+    element.innerHTML = '';
+    element.classList.add('typewriter-cursor');
+    let i = 0;
+    function type() {
+        if (i < text.length) {
+            element.innerHTML += text.charAt(i);
+            i++;
+            setTimeout(type, speed);
+        } else {
+            element.classList.remove('typewriter-cursor');
         }
-        await new Promise(r => setTimeout(r, 400));
+    }
+    type();
+};
+
+// ================= LOGIC SẮP XẾP MỚI NHẤT / PHỔ BIẾN =================
+window.sortVideos = function(type) {
+    if(!fetchedVideos || fetchedVideos.length === 0) return;
+    currentSortType = type;
+    
+    if (type === 'popular') {
+        fetchedVideos.sort((a, b) => b.data.stats.play - a.data.stats.play);
+    } else {
+        fetchedVideos.sort((a, b) => {
+            let tA = a.data.video_data.create_time || 0;
+            let tB = b.data.video_data.create_time || 0;
+            return tB - tA; // Lớn nhất xếp trước
+        });
     }
     
-    btnObj.innerHTML = `<i class="fa-solid fa-check"></i> Xong`;
-    setTimeout(() => { btnObj.innerHTML = originalHTML; btnObj.style.pointerEvents = 'auto'; }, 2000);
-}
-
-window.downloadAllVideos = async function(btnObj) {
-    if (!fetchedVideos || fetchedVideos.length === 0) return;
-    const originalHTML = btnObj.innerHTML;
-    btnObj.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Đang tải...`;
-    btnObj.disabled = true;
-
-    for (let i = 0; i < fetchedVideos.length; i++) {
-        const d = fetchedVideos[i].data;
-        if (d.images && d.images.length > 0) {
-            for (let j=0; j<d.images.length; j++){
-                const fname = `${d.author.uniqueId}_${d.video_data.id}_img_${j+1}.jpg`;
-                try {
-                    const res = await fetch(d.images[j]);
-                    const blob = await res.blob();
-                    const downloadUrl = window.URL.createObjectURL(blob);
-                    const a = document.createElement('a');
-                    a.style.display = 'none'; a.href = downloadUrl; a.download = fname; 
-                    document.body.appendChild(a); a.click();
-                    window.URL.revokeObjectURL(downloadUrl); a.remove();
-                } catch(e) { window.open(d.images[j], '_blank'); }
-                await new Promise(r => setTimeout(r, 400));
-            }
+    // Render lại video nhưng KHÔNG render lại Action Bar để tránh mất focus
+    window.renderVideoCards(fetchedVideos, false, 0, true);
+    
+    // Đổi màu nút
+    const btnLatest = document.getElementById('sort-latest-btn');
+    const btnPop = document.getElementById('sort-popular-btn');
+    if(btnLatest && btnPop) {
+        if(type === 'popular') {
+            btnPop.className = "px-4 py-2 rounded-lg bg-zinc-700 text-white font-bold text-xs flex items-center gap-2 shadow-sm transition";
+            btnLatest.className = "px-4 py-2 rounded-lg text-zinc-400 font-bold text-xs hover:text-white transition flex items-center gap-2";
         } else {
-            const filename = window.generateFileName(d.author.uniqueId, d.video_data.id, 'mp4');
-            try {
-                const response = await fetch(d.urls.no_watermark);
-                const blob = await response.blob();
-                const url = window.URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.style.display = 'none'; a.href = url; a.download = filename;
-                document.body.appendChild(a); a.click();
-                window.URL.revokeObjectURL(url); a.remove();
-            } catch(e) { window.open(d.urls.no_watermark, '_blank'); }
+            btnLatest.className = "px-4 py-2 rounded-lg bg-zinc-700 text-white font-bold text-xs flex items-center gap-2 shadow-sm transition";
+            btnPop.className = "px-4 py-2 rounded-lg text-zinc-400 font-bold text-xs hover:text-white transition flex items-center gap-2";
         }
-        await new Promise(r => setTimeout(r, 800)); 
-    }
-    btnObj.innerHTML = `<i class="fa-solid fa-check"></i> Hoàn Tất`;
-    setTimeout(() => { btnObj.innerHTML = originalHTML; btnObj.disabled = false; }, 3000);
-}
-
-window.searchUserFromDetail = function(username) {
-    window.closeDetailWindow('video-detail-window');
-    window.switchTab('info');
-    document.getElementById('tiktok-username').value = username;
-    window.fetchUserInfo();
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-}
-
-// ================= KHÁM KÊNH SHADOWBAN =================
-window.checkShadowban = async function() {
-    let user = document.getElementById('shadowban-input').value.trim();
-    if (user.startsWith('@')) user = user.substring(1);
-    if(!user) return window.showError("Vui lòng nhập ID kênh để khám!");
-
-    window.showLoading(true, "Cào dữ liệu vẽ biểu đồ...");
-    window.clearResults();
-    const sbArea = document.getElementById('shadowban-area');
-
-    try {
-        const response = await fetch(`/api/index?username=${user}&cursor=0`);
-        const data = await response.json();
-        
-        if (data.status !== "Live" || !data.videos || data.videos.length < 5) {
-            throw new Error("Kênh không tồn tại hoặc quá ít bài đăng (cần ít nhất 5).");
-        }
-
-        const sampleSize = Math.min(data.videos.length, 15);
-        const videos = data.videos.slice(0, sampleSize).reverse();
-        // Áp dụng parseRawStats chuẩn bọc thép
-        const viewsArray = videos.map(v => window.parseRawStats(v.stats.play));
-        
-        const recentCount = Math.min(5, Math.floor(sampleSize / 2));
-        const recentViews = viewsArray.slice(-recentCount);
-        const oldViews = viewsArray.slice(0, -recentCount);
-
-        const avgRecent = recentViews.reduce((a,b)=>a+b, 0) / recentViews.length;
-        const avgOld = oldViews.length > 0 ? (oldViews.reduce((a,b)=>a+b, 0) / oldViews.length) : avgRecent;
-        const maxView = Math.max(...viewsArray) || 1;
-
-        let statusText = "PHONG ĐỘ ỔN ĐỊNH";
-        let statusColor = "text-emerald-500";
-        let message = "Kênh phân phối hiển thị ổn định, không có dấu hiệu bị bóp tương tác.";
-
-        if (avgRecent < 200 && avgOld > 1000) {
-            statusText = "SHADOWBAN NẶNG";
-            statusColor = "text-red-500";
-            message = "CẢNH BÁO ĐỎ: Lượt xem rớt thê thảm. Khả năng cao kênh đã bị TikTok đánh gậy ẩn do vi phạm.";
-        } else if (avgRecent < avgOld * 0.4 && avgOld > 500) {
-            statusText = "FLOP / TỤT ĐỀ XUẤT";
-            statusColor = "text-orange-500";
-            message = "Lượt xem xu hướng giảm mạnh. Rà soát lại chất lượng nội dung ngay.";
-        } else if (avgRecent > avgOld * 1.5 && avgRecent > 1000) {
-            statusText = "ĐANG LÊN XU HƯỚNG";
-            statusColor = "text-blue-500";
-            message = "Tuyệt vời! Kênh đang có đà tăng trưởng cực kỳ tốt. Tiếp tục phát huy.";
-        }
-
-        let barsHtml = '';
-        viewsArray.forEach((view, idx) => {
-            const heightPct = Math.max((view / maxView) * 100, 2); 
-            const isRecent = idx >= (viewsArray.length - recentCount);
-            const barBg = isRecent ? (statusColor.includes('red') ? 'bg-red-500' : (statusColor.includes('orange') ? 'bg-orange-500' : 'bg-blue-500')) : 'bg-[#333]';
-            
-            barsHtml += `
-                <div class="flex flex-col items-center justify-end h-40 group relative w-full mx-1">
-                    <div class="absolute -top-7 bg-white text-black text-[10px] py-1 px-2 rounded opacity-0 group-hover:opacity-100 transition-opacity font-bold whitespace-nowrap z-10">${window.formatStatsClient(view)}</div>
-                    <div class="w-full max-w-[24px] ${barBg} rounded-t transition-all duration-700 ease-out" style="height: ${heightPct}%"></div>
-                </div>
-            `;
-        });
-
-        sbArea.innerHTML = `
-            <div class="bento-card p-6 md:p-8 animate-slide-up w-full">
-                <div class="text-center mb-6">
-                    <h3 class="text-2xl font-black ${statusColor} mb-2 uppercase">${statusText}</h3>
-                    <p class="text-zinc-400 text-sm leading-relaxed">${message}</p>
-                </div>
-                <div class="w-full bg-[#0a0a0a] rounded-2xl p-4 border border-[#222] flex items-end justify-between h-52">
-                    ${barsHtml}
-                </div>
-                <div class="mt-4 flex justify-between items-center text-xs font-bold text-zinc-500">
-                    <span class="flex items-center gap-1"><i class="fa-solid fa-clock-rotate-left"></i> Cũ hơn</span>
-                    <span class="flex items-center gap-1"><div class="w-2 h-2 rounded bg-blue-500"></div> ${recentCount} Mới nhất</span>
-                </div>
-            </div>
-        `;
-        sbArea.classList.remove('hidden');
-        sbArea.classList.add('flex');
-
-    } catch (error) {
-        window.showError(error.message);
-    } finally {
-        window.showLoading(false);
     }
 }
 
@@ -400,8 +256,8 @@ window.fetchAnalytics = async function() {
 
         const container = document.getElementById('user-info-area');
         container.innerHTML = `
-            <div class="w-full bg-[#111] rounded-[28px] border border-[#222] shadow-2xl animate-fade-up relative">
-                <div id="analytics-profile-box" class="collapsible-box expanded p-8 md:p-10 relative">
+            <div class="w-full bento-card p-6 md:p-8 animate-slide-up relative">
+                <div id="analytics-profile-box" class="collapsible-box expanded relative">
                     <div class="flex items-center gap-4 mb-8 pb-6 border-b border-[#222]">
                         <img src="${pAuthor?.avatar}" class="w-16 h-16 rounded-full object-cover border border-[#333] bg-black" referrerpolicy="no-referrer">
                         <div>
@@ -456,8 +312,8 @@ window.fetchAnalytics = async function() {
                         <div class="flex flex-wrap gap-2">${tagsHtml}</div>
                     </div>
                 </div>
-                <button class="expand-btn w-10 h-10 bg-zinc-800 border border-zinc-700 rounded-full text-zinc-300 shadow-lg flex items-center justify-center hover:bg-cyan-600 hover:text-white transition" onclick="toggleExpand('analytics-profile-box')">
-                    <i class="fa-solid fa-chevron-down"></i>
+                <button class="expand-btn w-8 h-8 bg-[#1a1a1a] border border-[#333] rounded-full text-zinc-400 flex items-center justify-center hover:bg-white hover:text-black transition" onclick="toggleExpand('analytics-profile-box')">
+                    <i class="fa-solid fa-chevron-down text-xs"></i>
                 </button>
             </div>
             
@@ -476,18 +332,118 @@ window.fetchAnalytics = async function() {
             }
         }));
 
-        formattedResults.sort((a, b) => b.data.rawPlay - a.data.rawPlay);
-        fetchedVideos = formattedResults.slice(0, 6); 
-        window.renderVideoCards(fetchedVideos, false, 0);
+        fetchedVideos = formattedResults;
+        window.sortVideos('popular'); 
 
     } catch (error) { window.showError(error.message); } 
     finally { window.showLoading(false); if(analyticsBtn) analyticsBtn.disabled = false; }
 }
 
-// ================= CỬA SỔ PHÂN TÍCH DẠNG CỘT TỪNG BÀI ĐĂNG =================
+// ================= TẢI MEDIA =================
+window.forceDownload = async function(url, filename, btnObj) {
+    const originalHTML = btnObj.innerHTML;
+    btnObj.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Tải...`;
+    btnObj.style.pointerEvents = 'none';
+
+    const triggerDownload = async (targetUrl) => {
+        const response = await fetch(targetUrl);
+        if (!response.ok) throw new Error("CORS Blocked");
+        const blob = await response.blob();
+        const downloadUrl = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.style.display = 'none'; a.href = downloadUrl; a.download = filename; 
+        document.body.appendChild(a); a.click();
+        window.URL.revokeObjectURL(downloadUrl); a.remove();
+    };
+
+    try { await triggerDownload(url); } 
+    catch (error) {
+        try { await triggerDownload(`https://corsproxy.io/?${encodeURIComponent(url)}`); } 
+        catch (e) { window.open(url, '_blank'); }
+    } finally {
+        btnObj.innerHTML = `<i class="fa-solid fa-check"></i> Xong`;
+        setTimeout(() => { btnObj.innerHTML = originalHTML; btnObj.style.pointerEvents = 'auto'; }, 2000);
+    }
+}
+
+window.downloadImages = async function(index, btnObj) {
+    const d = fetchedVideos[index].data;
+    if(!d.images) return;
+    const originalHTML = btnObj.innerHTML;
+    btnObj.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Tải ${d.images.length} ảnh...`;
+    btnObj.style.pointerEvents = 'none';
+
+    for (let i = 0; i < d.images.length; i++) {
+        const filename = `${d.author.uniqueId}_${d.video_data.id}_img_${i+1}.jpg`;
+        try {
+            const res = await fetch(d.images[i]);
+            const blob = await res.blob();
+            const downloadUrl = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.style.display = 'none'; a.href = downloadUrl; a.download = filename; 
+            document.body.appendChild(a); a.click();
+            window.URL.revokeObjectURL(downloadUrl); a.remove();
+        } catch(e) {
+            window.open(d.images[i], '_blank');
+        }
+        await new Promise(r => setTimeout(r, 400));
+    }
+    
+    btnObj.innerHTML = `<i class="fa-solid fa-check"></i> Xong ${d.images.length} Ảnh`;
+    setTimeout(() => { btnObj.innerHTML = originalHTML; btnObj.style.pointerEvents = 'auto'; }, 2000);
+}
+
+window.downloadAllVideos = async function(btnObj) {
+    if (!fetchedVideos || fetchedVideos.length === 0) return;
+    const originalHTML = btnObj.innerHTML;
+    btnObj.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Đang tải...`;
+    btnObj.disabled = true;
+
+    for (let i = 0; i < fetchedVideos.length; i++) {
+        const d = fetchedVideos[i].data;
+        if (d.images && d.images.length > 0) {
+            for (let j=0; j<d.images.length; j++){
+                const fname = `${d.author.uniqueId}_${d.video_data.id}_img_${j+1}.jpg`;
+                try {
+                    const res = await fetch(d.images[j]);
+                    const blob = await res.blob();
+                    const downloadUrl = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.style.display = 'none'; a.href = downloadUrl; a.download = fname; 
+                    document.body.appendChild(a); a.click();
+                    window.URL.revokeObjectURL(downloadUrl); a.remove();
+                } catch(e) { window.open(d.images[j], '_blank'); }
+                await new Promise(r => setTimeout(r, 400));
+            }
+        } else {
+            const filename = window.generateFileName(d.author.uniqueId, d.video_data.id, 'mp4');
+            try {
+                const response = await fetch(d.urls.no_watermark);
+                const blob = await response.blob();
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.style.display = 'none'; a.href = url; a.download = filename;
+                document.body.appendChild(a); a.click();
+                window.URL.revokeObjectURL(url); a.remove();
+            } catch(e) { window.open(d.urls.no_watermark, '_blank'); }
+        }
+        await new Promise(r => setTimeout(r, 800)); 
+    }
+    btnObj.innerHTML = `<i class="fa-solid fa-check"></i> Hoàn Tất`;
+    setTimeout(() => { btnObj.innerHTML = originalHTML; btnObj.disabled = false; }, 3000);
+}
+
+window.searchUserFromDetail = function(username) {
+    window.closeDetailWindow('video-detail-window');
+    window.switchTab('info');
+    document.getElementById('tiktok-username').value = username;
+    window.fetchUserInfo();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+// ================= PHÂN TÍCH DẠNG CỘT BENTO STYLE =================
 window.analyzeSingleVideo = function(index) {
     const d = fetchedVideos[index].data;
-    // Bóc tách siêu chuẩn qua hàm parseRawStats
     const play = window.parseRawStats(d.stats.play);
     const likes = window.parseRawStats(d.stats.like);
     const comments = window.parseRawStats(d.stats.comment);
@@ -576,7 +532,6 @@ window.analyzeSingleVideo = function(index) {
     }
 }
 
-// ================= HIỂN THỊ CHI TIẾT ĐA PHƯƠNG TIỆN =================
 window.openVideoDetail = function(index) {
     const d = fetchedVideos[index].data;
     const fileNameMp4 = window.generateFileName(d.author.uniqueId, d.video_data.id, 'mp4');
@@ -597,8 +552,8 @@ window.openVideoDetail = function(index) {
                 <div class="w-full h-full flex overflow-x-auto snap-x snap-mandatory custom-scroll-x relative z-10 scroll-smooth" id="album-scroll-container">
                     ${slides}
                 </div>
-                <button onclick="document.getElementById('album-scroll-container').scrollBy({left: -300, behavior: 'smooth'})" class="absolute left-3 top-1/2 -translate-y-1/2 w-8 h-8 bg-black/60 hover:bg-white border border-[#333] text-white hover:text-black rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all z-20"><i class="fa-solid fa-chevron-left text-xs"></i></button>
-                <button onclick="document.getElementById('album-scroll-container').scrollBy({left: 300, behavior: 'smooth'})" class="absolute right-3 top-1/2 -translate-y-1/2 w-8 h-8 bg-black/60 hover:bg-white border border-[#333] text-white hover:text-black rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all z-20"><i class="fa-solid fa-chevron-right text-xs"></i></button>
+                <button onclick="let c=document.getElementById('album-scroll-container'); c.scrollBy({left: -c.clientWidth, behavior: 'smooth'})" class="absolute left-3 top-1/2 -translate-y-1/2 w-8 h-8 bg-black/60 hover:bg-white border border-[#333] text-white hover:text-black rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all z-20"><i class="fa-solid fa-chevron-left text-xs"></i></button>
+                <button onclick="let c=document.getElementById('album-scroll-container'); c.scrollBy({left: c.clientWidth, behavior: 'smooth'})" class="absolute right-3 top-1/2 -translate-y-1/2 w-8 h-8 bg-black/60 hover:bg-white border border-[#333] text-white hover:text-black rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all z-20"><i class="fa-solid fa-chevron-right text-xs"></i></button>
                 <div class="absolute top-4 left-4 bg-[#111]/90 text-white font-bold text-[10px] uppercase tracking-widest px-3 py-1.5 rounded-lg border border-[#222] z-20">
                     <i class="fa-regular fa-images"></i> Nhật Ký Ảnh
                 </div>
@@ -667,6 +622,11 @@ window.openVideoDetail = function(index) {
                 <span class="text-[9px] text-zinc-500 uppercase font-bold">Share</span>
             </div>
         </div>
+
+        <!-- Nút Đi Đến TikTok -->
+        <a href="${d.link}" target="_blank" class="w-full bg-[#111] hover:bg-white text-white hover:text-black border border-[#333] font-black py-4 rounded-2xl transition-all shadow-md flex items-center justify-center gap-2 text-sm mt-6">
+            <i class="fa-brands fa-tiktok text-lg"></i> Đi Đến TikTok
+        </a>
     `;
 
     document.getElementById('detail-video-actions').innerHTML = isImagePost ? `
@@ -702,7 +662,6 @@ window.closeDetailWindow = function(windowId) {
     }
 }
 
-// ================= CORE FORMATTING VÀ TẠO GRID =================
 window.formatTikWmToGrid = function(videosArray) {
     return videosArray.map(v => ({
         link: `https://www.tiktok.com/@${v.author.unique_id}/video/${v.video_id}`,
@@ -712,7 +671,6 @@ window.formatTikWmToGrid = function(videosArray) {
                 uniqueId: v.author.unique_id, nickname: v.author.nickname, avatar: v.author.avatar || v.cover, verified: v.author.is_verify || v.author.verified || false
             },
             video_data: { id: v.video_id, description: v.title, create_time: v.create_time, duration: v.duration || 0, region: v.region || 'VN' }, 
-            // Lưu gốc bằng RAW STATS để chống lỗi Double Formatting
             stats: { 
                 play: window.parseRawStats(v.play_count), 
                 like: window.parseRawStats(v.digg_count), 
@@ -743,19 +701,17 @@ window.processVideos = async function() {
         let results = await Promise.all(promises);
         results = results.filter(r => r.data && r.data.status === "Live");
         
-        // Cập nhật lại stats thành raw cho đồng bộ với Search
         fetchedVideos = results.map(r => {
             if(r.data && r.data.stats) {
                 r.data.stats.play = window.parseRawStats(r.data.stats.play);
                 r.data.stats.like = window.parseRawStats(r.data.stats.like);
                 r.data.stats.comment = window.parseRawStats(r.data.stats.comment);
                 r.data.stats.share = window.parseRawStats(r.data.stats.share);
-                r.data.stats.download = window.parseRawStats(r.data.stats.download);
             }
             return r;
         });
 
-        window.renderVideoCards(fetchedVideos, false, 0);
+        window.sortVideos(currentSortType);
     } catch (error) { window.showError("Lỗi: " + error.message); } 
     finally { window.showLoading(false); if(fetchBtn) fetchBtn.disabled = false; }
 }
@@ -791,10 +747,9 @@ window.searchTikTok = async function(isLoadMore = false) {
         searchCursor = resData.data.cursor;
 
         let formattedResults = window.formatTikWmToGrid(videos);
-        const startIndex = fetchedVideos.length;
         fetchedVideos.push(...formattedResults);
         
-        window.renderVideoCards(formattedResults, isLoadMore, startIndex);
+        window.sortVideos(currentSortType);
         window.checkLoadMoreUI(resData.data.hasMore);
     } catch (error) { if(!isLoadMore) window.showError(error.message); else alert("Lỗi: " + error.message); } 
     finally { 
@@ -846,8 +801,8 @@ window.fetchUserInfo = async function(isLoadMore = false) {
                         </h2>
                         <p class="text-zinc-500 font-medium text-xs mt-1">@${u.uniqueId}</p>
                         
-                        <p class="mt-4 text-zinc-400 text-sm leading-relaxed max-w-xl mx-auto">${u.signature || 'Chưa có tiểu sử.'}</p>
-                        ${u.bioLink ? `<a href="${u.bioLink}" target="_blank" class="inline-block mt-3 text-cyan-400 text-xs bg-[#0a0a0a] px-3 py-1.5 rounded border border-[#222]"><i class="fa-solid fa-link mr-1"></i>Link Profile</a>` : ''}
+                        <p id="channel-bio-text" class="mt-4 text-zinc-400 text-sm max-w-xl mx-auto min-h-[40px]"></p>
+                        ${u.bioLink ? `<a href="${u.bioLink}" target="_blank" class="inline-flex mt-4 items-center justify-center gap-2 text-blue-400 text-[11px] bg-[#0a0a0a] px-4 py-2.5 rounded-lg border border-[#222] break-all w-full max-w-sm mx-auto shadow-sm hover:border-blue-500/50 hover:bg-[#111] transition-all"><i class="fa-solid fa-link text-zinc-500"></i> <span class="truncate">${u.bioLink}</span></a>` : ''}
                         
                         <div class="grid grid-cols-3 gap-3 mt-6 pt-6 border-t border-[#222]">
                             <div class="bg-[#0a0a0a] p-3 rounded-2xl border border-[#262626] flex flex-col"><span class="text-lg font-black text-white">${s.following || '0'}</span><span class="text-[9px] text-zinc-500 uppercase mt-0.5 font-bold">Đang FL</span></div>
@@ -861,6 +816,11 @@ window.fetchUserInfo = async function(isLoadMore = false) {
                 </div>
             `;
             if(container) container.classList.remove('hidden');
+
+            setTimeout(() => {
+                const bioEl = document.getElementById('channel-bio-text');
+                if(bioEl) window.typeWriter(bioEl, u.signature || 'Chưa có tiểu sử.', 25);
+            }, 100);
         }
 
         if (data.videos && data.videos.length > 0) {
@@ -870,14 +830,12 @@ window.fetchUserInfo = async function(isLoadMore = false) {
                     status: "Live",
                     author: { uniqueId: user, nickname: fullUserData.author.nickname || user, avatar: fullUserData.author.avatar || "", verified: fullUserData.author.verified || false },
                     video_data: { id: v.id, description: v.caption, create_time: v.createTime || null },
-                    // Dùng parseRawStats bọc thép
                     stats: { play: window.parseRawStats(v.stats.play), like: window.parseRawStats(v.stats.like), comment: window.parseRawStats(v.stats.comment), share: window.parseRawStats(v.stats.share) }, 
                     urls: v.urls, music: v.music, images: v.images || null
                 }
             }));
-            const startIndex = fetchedVideos.length;
             fetchedVideos.push(...formattedResults);
-            window.renderVideoCards(formattedResults, isLoadMore, startIndex);
+            window.sortVideos(currentSortType);
         }
 
         userVideoCursor = data.cursor;
@@ -886,28 +844,80 @@ window.fetchUserInfo = async function(isLoadMore = false) {
     finally { window.showLoading(false); if(infoBtn) infoBtn.disabled = false; }
 }
 
-window.renderVideoCards = function(results, append = false, startIndex = 0) {
+window.searchRandom = async function() {
+    if(fetchedVideos.length === 0) return;
+    
+    const searchBtn = document.getElementById('fetch-search-btn');
+    if(searchBtn) searchBtn.disabled = true;
+
+    window.showLoading(true, "Đang chắt lọc ngẫu nhiên...");
+    try {
+        const randomCursor = Math.floor(Math.random() * 20);
+        let response = await fetch(`/api/search?keywords=${encodeURIComponent(currentSearchKeyword)}&cursor=${randomCursor}&count=20`);
+        let resData = await response.json();
+        
+        if (resData.code !== 0 || !resData.data?.videos?.length) {
+            response = await fetch(`/api/search?keywords=${encodeURIComponent(currentSearchKeyword)}&cursor=0&count=20`);
+            resData = await response.json();
+        }
+
+        let videos = resData.data?.videos;
+        if(videos && videos.length > 0) {
+            window.clearResults();
+            const luckyVideo = videos[Math.floor(Math.random() * videos.length)];
+            fetchedVideos = window.formatTikWmToGrid([luckyVideo]);
+            window.renderVideoCards(fetchedVideos, false, 0);
+            
+            const specialAction = document.getElementById('special-action-container');
+            if(specialAction) {
+                specialAction.innerHTML = `
+                    <button onclick="searchRandom()" class="px-5 py-2.5 rounded-xl bg-zinc-800 text-white font-bold text-sm shadow-md transition-colors hover:bg-zinc-700 flex items-center gap-2">
+                        <i class="fa-solid fa-dice"></i> Random Khác
+                    </button>
+                `;
+                specialAction.classList.remove('hidden');
+                specialAction.classList.add('flex');
+            }
+        }
+    } catch (error) { window.showError(error.message); } 
+    finally { window.showLoading(false); if(searchBtn) searchBtn.disabled = false; }
+}
+
+window.renderVideoCards = function(results, append = false, startIndex = 0, keepActionUI = false) {
     requestAnimationFrame(() => {
         const container = document.getElementById('result-area');
         let html = '';
 
-        const specialAction = document.getElementById('special-action-container');
-        if (fetchedVideos.length > 1 && (currentMode === 'video' && linkMode === 'multi')) {
+        if (!keepActionUI) {
+            const specialAction = document.getElementById('special-action-container');
             if(specialAction) {
-                specialAction.innerHTML = `
-                    <button onclick="downloadAllVideos(this)" class="bg-[#111] text-white font-bold py-2.5 px-5 rounded-lg border border-[#222] shadow-md transition-colors hover:bg-blue-600 hover:border-blue-500 flex items-center gap-2 text-sm">
-                        <i class="fa-solid fa-download"></i> Tải Tất Cả File
-                    </button>
-                `;
-                specialAction.classList.remove('hidden');
+                if (fetchedVideos.length > 1 && currentMode !== 'video') {
+                    specialAction.innerHTML = `
+                        <div class="flex items-center gap-1 bg-[#111] border border-[#222] p-1.5 rounded-xl">
+                            <button id="sort-latest-btn" onclick="sortVideos('latest')" class="px-4 py-2 rounded-lg ${currentSortType === 'latest' ? 'bg-zinc-700 text-white shadow-sm' : 'text-zinc-400 hover:text-white'} font-bold text-xs flex items-center gap-2 transition"><i class="fa-solid fa-bars"></i> Mới Nhất</button>
+                            <button id="sort-popular-btn" onclick="sortVideos('popular')" class="px-4 py-2 rounded-lg ${currentSortType === 'popular' ? 'bg-zinc-700 text-white shadow-sm' : 'text-zinc-400 hover:text-white'} font-bold text-xs flex items-center gap-2 transition"><i class="fa-solid fa-fire"></i> Phổ Biến</button>
+                        </div>
+                        ${currentMode === 'search' ? `<button onclick="searchRandom()" class="px-4 py-2.5 rounded-xl bg-[#1a1a1a] text-zinc-300 border border-[#333] font-bold text-xs hover:bg-white hover:text-black transition flex items-center gap-2 ml-2"><i class="fa-solid fa-dice"></i> Lấy Ngẫu Nhiên</button>` : ''}
+                    `;
+                    specialAction.classList.remove('hidden');
+                    specialAction.classList.add('flex');
+                } else if (currentMode === 'video' && linkMode === 'multi' && fetchedVideos.length > 1) {
+                    specialAction.innerHTML = `
+                        <button onclick="downloadAllVideos(this)" class="bg-[#111] text-white font-bold py-2.5 px-5 rounded-lg border border-[#222] shadow-md transition-colors hover:bg-blue-600 hover:border-blue-500 flex items-center gap-2 text-sm">
+                            <i class="fa-solid fa-download"></i> Tải Tất Cả
+                        </button>
+                    `;
+                    specialAction.classList.remove('hidden');
+                    specialAction.classList.add('flex');
+                } else {
+                    specialAction.classList.add('hidden');
+                }
             }
-        } else if (currentMode === 'video' && linkMode === 'single') {
-            if(specialAction) specialAction.classList.add('hidden'); 
         }
 
         if (!append) {
             container.innerHTML = '';
-            if (fetchedVideos.length === 1) container.className = "w-full max-w-[340px] mx-auto z-10 mt-6 pb-8";
+            if (results.length === 1) container.className = "w-full max-w-[340px] mx-auto z-10 mt-6 pb-8";
             else container.className = "w-full max-w-[98%] xl:max-w-6xl mx-auto z-10 mt-6 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-4 pb-8";
         }
 
@@ -916,12 +926,15 @@ window.renderVideoCards = function(results, append = false, startIndex = 0) {
             const d = item.data;
             const currentIndex = startIndex + index; 
             
+            // Animation xen kẽ trái/phải
+            const animClass = (index % 2 === 0) ? 'animate-slide-left' : 'animate-slide-right';
+            
             const mediaTypeBadge = (d.images && d.images.length > 0) 
                 ? `<div class="absolute top-2 left-2 bg-white text-black text-[9px] font-bold px-1.5 py-0.5 rounded shadow-sm z-20"><i class="fa-regular fa-images"></i> ${d.images.length}</div>` 
                 : '';
 
             html += `
-                <div class="grid-item animate-fade-up w-full aspect-[3/4]" onclick="openVideoDetail(${currentIndex})" style="animation-delay: ${(index % 20) * 0.02}s">
+                <div class="grid-item w-full aspect-[3/4] ${animClass}" onclick="openVideoDetail(${currentIndex})" style="animation-delay: ${(index % 10) * 0.05}s">
                     <img src="${d.urls.cover}" class="thumb absolute inset-0 w-full h-full object-cover" loading="lazy" decoding="async" referrerpolicy="no-referrer">
                     ${mediaTypeBadge}
                     
