@@ -10,7 +10,7 @@ let userVideoCursor = 0;
 let fullUserData = null;
 let currentSortType = 'latest'; // Lưu trạng thái Sắp xếp
 
-// ================= HÀM XỬ LÝ CHUỖI SỐ LIỆU CHUẨN XÁC =================
+// ================= HÀM XỬ LÝ CHUỖI SỐ LIỆU CHUẨN XÁC 100% =================
 window.parseRawStats = function(str) {
     if (str === null || str === undefined) return 0;
     if (typeof str === 'number') return str;
@@ -24,7 +24,7 @@ window.parseRawStats = function(str) {
 };
 
 window.formatStatsClient = function(num) {
-    let rawNum = window.parseRawStats(num);
+    let rawNum = window.parseRawStats(num); // Bảo vệ kép
     if (rawNum === 0) return "0";
     if (rawNum < 1000) return rawNum.toString();
     if (rawNum < 1000000) return (Math.floor(rawNum / 100) / 10).toString().replace('.', ',') + "K";
@@ -34,7 +34,7 @@ window.formatStatsClient = function(num) {
 // ================= HÀM ĐIỀU HƯỚNG GIAO DIỆN =================
 window.switchTab = function(mode) {
     currentMode = mode;
-    ['video', 'search', 'info', 'analytics'].forEach(m => {
+    ['video', 'search', 'info', 'analytics', 'shadowban'].forEach(m => {
         const btn = document.getElementById(`mode-${m}`);
         const tabBtn = document.getElementById(`tab-${m}`);
         if(btn && tabBtn) {
@@ -100,6 +100,9 @@ window.clearResults = function() {
     
     const loadMoreBtn = document.getElementById('load-more-container');
     if(loadMoreBtn) loadMoreBtn.classList.add('hidden');
+    
+    const sbArea = document.getElementById('shadowban-area');
+    if(sbArea) { sbArea.innerHTML = ''; sbArea.classList.add('hidden'); }
     
     showError('');
     fetchedVideos = [];
@@ -173,176 +176,101 @@ window.sortVideos = function(type) {
         });
     }
     
-    // Render lại video nhưng KHÔNG render lại Action Bar để tránh mất focus
-    window.renderVideoCards(fetchedVideos, false, 0, true);
-    
-    // Đổi màu nút
-    const btnLatest = document.getElementById('sort-latest-btn');
-    const btnPop = document.getElementById('sort-popular-btn');
-    if(btnLatest && btnPop) {
-        if(type === 'popular') {
-            btnPop.className = "px-4 py-2 rounded-lg bg-zinc-700 text-white font-bold text-xs flex items-center gap-2 shadow-sm transition";
-            btnLatest.className = "px-4 py-2 rounded-lg text-zinc-400 font-bold text-xs hover:text-white transition flex items-center gap-2";
-        } else {
-            btnLatest.className = "px-4 py-2 rounded-lg bg-zinc-700 text-white font-bold text-xs flex items-center gap-2 shadow-sm transition";
-            btnPop.className = "px-4 py-2 rounded-lg text-zinc-400 font-bold text-xs hover:text-white transition flex items-center gap-2";
+    // Đã fix lỗi mất nút: Đặt false để đảm bảo Block Nút luôn được in lại
+    window.renderVideoCards(fetchedVideos, false, 0, false);
+}
+
+// ================= KHÁM KÊNH SHADOWBAN BENTO STYLE =================
+window.checkShadowban = async function() {
+    let user = document.getElementById('shadowban-input').value.trim();
+    if (user.startsWith('@')) user = user.substring(1);
+    if(!user) return window.showError("Vui lòng nhập ID kênh để khám!");
+
+    window.showLoading(true, "Cào dữ liệu vẽ biểu đồ...");
+    window.clearResults();
+    const sbArea = document.getElementById('shadowban-area');
+
+    try {
+        const response = await fetch(`/api/index?username=${user}&cursor=0`);
+        const data = await response.json();
+        
+        if (data.status !== "Live" || !data.videos || data.videos.length < 5) {
+            throw new Error("Kênh không tồn tại hoặc quá ít bài đăng (cần ít nhất 5).");
         }
+
+        const sampleSize = Math.min(data.videos.length, 15);
+        const videos = data.videos.slice(0, sampleSize).reverse();
+        const viewsArray = videos.map(v => window.parseRawStats(v.stats.play));
+        
+        const recentCount = Math.min(5, Math.floor(sampleSize / 2));
+        const recentViews = viewsArray.slice(-recentCount);
+        const oldViews = viewsArray.slice(0, -recentCount);
+
+        const avgRecent = recentViews.reduce((a,b)=>a+b, 0) / recentViews.length;
+        const avgOld = oldViews.length > 0 ? (oldViews.reduce((a,b)=>a+b, 0) / oldViews.length) : avgRecent;
+        const maxView = Math.max(...viewsArray) || 1;
+
+        let statusText = "PHONG ĐỘ ỔN ĐỊNH";
+        let statusColor = "text-emerald-500";
+        let message = "Kênh phân phối hiển thị ổn định, không có dấu hiệu bị bóp tương tác.";
+
+        if (avgRecent < 200 && avgOld > 1000) {
+            statusText = "SHADOWBAN NẶNG";
+            statusColor = "text-red-500";
+            message = "CẢNH BÁO ĐỎ: Lượt xem rớt thê thảm. Khả năng cao kênh đã bị TikTok đánh gậy ẩn do vi phạm.";
+        } else if (avgRecent < avgOld * 0.4 && avgOld > 500) {
+            statusText = "FLOP / TỤT ĐỀ XUẤT";
+            statusColor = "text-orange-500";
+            message = "Lượt xem xu hướng giảm mạnh. Rà soát lại chất lượng nội dung ngay.";
+        } else if (avgRecent > avgOld * 1.5 && avgRecent > 1000) {
+            statusText = "ĐANG LÊN XU HƯỚNG";
+            statusColor = "text-blue-500";
+            message = "Tuyệt vời! Kênh đang có đà tăng trưởng cực kỳ tốt. Tiếp tục phát huy.";
+        }
+
+        let barsHtml = '';
+        viewsArray.forEach((view, idx) => {
+            const heightPct = Math.max((view / maxView) * 100, 2); 
+            const isRecent = idx >= (viewsArray.length - recentCount);
+            const barBg = isRecent ? (statusColor.includes('red') ? 'bg-red-500' : (statusColor.includes('orange') ? 'bg-orange-500' : 'bg-blue-500')) : 'bg-[#333]';
+            
+            barsHtml += `
+                <div class="flex flex-col items-center justify-end h-40 group relative w-full mx-1">
+                    <div class="absolute -top-7 bg-white text-black text-[10px] py-1 px-2 rounded opacity-0 group-hover:opacity-100 transition-opacity font-bold whitespace-nowrap z-10">${window.formatStatsClient(view)}</div>
+                    <div class="w-full max-w-[24px] ${barBg} rounded-t transition-all duration-700 ease-out" style="height: ${heightPct}%"></div>
+                </div>
+            `;
+        });
+
+        sbArea.innerHTML = `
+            <div class="bento-card p-6 md:p-8 animate-slide-up w-full">
+                <div class="text-center mb-6">
+                    <h3 class="text-2xl font-black ${statusColor} mb-2 uppercase">${statusText}</h3>
+                    <p class="text-zinc-400 text-sm leading-relaxed">${message}</p>
+                </div>
+                <div class="w-full bg-[#0a0a0a] rounded-2xl p-4 border border-[#222] flex items-end justify-between h-52">
+                    ${barsHtml}
+                </div>
+                <div class="mt-4 flex justify-between items-center text-xs font-bold text-zinc-500">
+                    <span class="flex items-center gap-1"><i class="fa-solid fa-clock-rotate-left"></i> Cũ hơn</span>
+                    <span class="flex items-center gap-1"><div class="w-2 h-2 rounded bg-blue-500"></div> ${recentCount} Mới nhất</span>
+                </div>
+            </div>
+        `;
+        sbArea.classList.remove('hidden');
+        sbArea.classList.add('flex');
+
+    } catch (error) {
+        window.showError(error.message);
+    } finally {
+        window.showLoading(false);
     }
 }
 
-// ================= PHÂN TÍCH KÊNH 100% =================
-window.fetchAnalytics = async function() {
-    let user = document.getElementById('tiktok-analytics-id').value.trim();
-    if (user.startsWith('@')) user = user.substring(1);
-    if (!user) return window.showError("Nhập ID kênh cần phân tích!");
 
-    const analyticsBtn = document.getElementById('fetch-analytics-btn');
-
-    window.clearResults();
-    currentMode = 'analytics';
-    if(analyticsBtn) analyticsBtn.disabled = true;
-    window.showLoading(true, "Quét sâu 100% video kênh...");
-
-    try {
-        let allVideos = [];
-        let cur = 0;
-        let pAuthor = null;
-        let hasMore = true;
-        let limitPages = 0; 
-        
-        while(hasMore && limitPages < 100) {
-            const response = await fetch(`/api/index?username=${user}&cursor=${cur}`);
-            const data = await response.json();
-            if (data.status !== "Live") break;
-            
-            if(!pAuthor && data.author) pAuthor = data.author;
-            if(data.videos) allVideos.push(...data.videos);
-            
-            cur = data.cursor;
-            hasMore = data.hasMore;
-            limitPages++;
-            document.getElementById('loading-text').innerText = `Đang quét... gom được ${allVideos.length} bài`;
-        }
-
-        if (allVideos.length === 0) throw new Error("Kênh trống hoặc bị riêng tư.");
-
-        let totalPlays = 0, totalLikes = 0, totalComments = 0, totalShares = 0;
-        let hashtagCounts = {};
-
-        let newestVid = allVideos[0];
-        let oldestVid = allVideos[allVideos.length - 1];
-
-        allVideos.forEach(v => {
-            // Áp dụng bóc tách dữ liệu tuyệt đối
-            totalPlays += window.parseRawStats(v.stats.play);
-            totalLikes += window.parseRawStats(v.stats.like);
-            totalComments += window.parseRawStats(v.stats.comment);
-            totalShares += window.parseRawStats(v.stats.share);
-
-            let tags = (v.caption || "").match(/#[\w_À-ỹ]+/g);
-            if(tags) tags.forEach(t => { let ct = t.toLowerCase(); hashtagCounts[ct] = (hashtagCounts[ct] || 0) + 1; });
-        });
-
-        const videoCount = allVideos.length;
-        const avgViews = (totalPlays / videoCount);
-        const er = totalPlays > 0 ? ((totalLikes + totalComments + totalShares) / totalPlays * 100).toFixed(2) : 0;
-        
-        let sortedTags = Object.entries(hashtagCounts).sort((a,b) => b[1] - a[1]).slice(0, 10);
-        let tagsHtml = sortedTags.length > 0 
-            ? sortedTags.map(t => `<span class="bg-zinc-800 border border-zinc-700 text-cyan-400 px-3 py-1 rounded-full text-xs font-bold">${t[0]} <span class="opacity-60 ml-1">x${t[1]}</span></span>`).join('')
-            : '<span class="text-zinc-600 text-sm italic">Không dùng Hashtag</span>';
-
-        const createDate = pAuthor?.createTime ? new Date(pAuthor.createTime * 1000).toLocaleDateString('vi-VN') : 'Không rõ';
-
-        const container = document.getElementById('user-info-area');
-        container.innerHTML = `
-            <div class="w-full bento-card p-6 md:p-8 animate-slide-up relative">
-                <div id="analytics-profile-box" class="collapsible-box expanded relative">
-                    <div class="flex items-center gap-4 mb-8 pb-6 border-b border-[#222]">
-                        <img src="${pAuthor?.avatar}" class="w-16 h-16 rounded-full object-cover border border-[#333] bg-black" referrerpolicy="no-referrer">
-                        <div>
-                            <h2 class="text-2xl font-extrabold text-white flex items-center gap-2">
-                                ${pAuthor?.nickname || user}
-                                ${pAuthor?.verified ? '<i class="fa-solid fa-circle-check text-cyan-500"></i>' : ''}
-                            </h2>
-                            <p class="text-cyan-400 font-medium text-sm">Báo cáo Phân tích từ ${videoCount} bài đăng</p>
-                        </div>
-                    </div>
-
-                    <div class="flex justify-between items-center bg-[#0a0a0a] p-4 rounded-[20px] border border-[#222] mb-6">
-                        <div class="text-center flex-1 border-r border-[#222]">
-                            <span class="block text-xs text-zinc-500 uppercase font-bold mb-1">Ngày Lập Kênh</span>
-                            <span class="font-black text-white text-base">${createDate}</span>
-                        </div>
-                        <div class="text-center flex-1 border-r border-[#222]">
-                            <span class="block text-xs text-zinc-500 uppercase font-bold mb-1">Video Mới</span>
-                            <a href="${newestVid.link}" target="_blank" class="font-bold text-cyan-400 text-sm hover:underline"><i class="fa-solid fa-link"></i> Xem</a>
-                        </div>
-                        <div class="text-center flex-1">
-                            <span class="block text-xs text-zinc-500 uppercase font-bold mb-1">Video Cũ</span>
-                            <a href="${oldestVid.link}" target="_blank" class="font-bold text-cyan-400 text-sm hover:underline"><i class="fa-solid fa-link"></i> Xem</a>
-                        </div>
-                    </div>
-
-                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-                        <div class="bg-[#0a0a0a] border border-[#222] p-5 rounded-[20px] flex flex-col items-center justify-center">
-                            <i class="fa-solid fa-fire text-orange-500 text-xl mb-2"></i>
-                            <span class="text-xl font-black text-white">${window.formatStatsClient(avgViews)}</span>
-                            <span class="text-[10px] text-zinc-500 uppercase mt-1 font-bold text-center">View TB</span>
-                        </div>
-                        <div class="bg-[#0a0a0a] border border-[#222] p-5 rounded-[20px] flex flex-col items-center justify-center">
-                            <i class="fa-solid fa-percent text-cyan-500 text-xl mb-2"></i>
-                            <span class="text-xl font-black text-white">${er}%</span>
-                            <span class="text-[10px] text-zinc-500 uppercase mt-1 font-bold text-center">Tỷ lệ ER</span>
-                        </div>
-                        <div class="bg-[#0a0a0a] border border-[#222] p-5 rounded-[20px] flex flex-col items-center justify-center">
-                            <i class="fa-solid fa-heart text-violet-500 text-xl mb-2"></i>
-                            <span class="text-xl font-black text-white">${window.formatStatsClient(totalLikes / videoCount)}</span>
-                            <span class="text-[10px] text-zinc-500 uppercase mt-1 font-bold text-center">Tim TB</span>
-                        </div>
-                        <div class="bg-[#0a0a0a] border border-[#222] p-5 rounded-[20px] flex flex-col items-center justify-center">
-                            <i class="fa-solid fa-play text-emerald-500 text-xl mb-2"></i>
-                            <span class="text-xl font-black text-white">${window.formatStatsClient(totalPlays)}</span>
-                            <span class="text-[10px] text-zinc-500 uppercase mt-1 font-bold text-center">Tổng View</span>
-                        </div>
-                    </div>
-
-                    <div class="mb-2 text-left">
-                        <h4 class="text-xs text-zinc-400 font-bold uppercase tracking-widest mb-3 flex items-center gap-2"><i class="fa-solid fa-hashtag text-cyan-400"></i> Top Hashtag</h4>
-                        <div class="flex flex-wrap gap-2">${tagsHtml}</div>
-                    </div>
-                </div>
-                <button class="expand-btn w-8 h-8 bg-[#1a1a1a] border border-[#333] rounded-full text-zinc-400 flex items-center justify-center hover:bg-white hover:text-black transition" onclick="toggleExpand('analytics-profile-box')">
-                    <i class="fa-solid fa-chevron-down text-xs"></i>
-                </button>
-            </div>
-            
-            <h3 class="text-center text-sm font-bold text-zinc-400 mt-10 mb-2 uppercase tracking-[0.2em]">TOP 6 BÀI ĐĂNG VIRAL NHẤT</h3>
-        `;
-        if(container) container.classList.remove('hidden');
-
-        let formattedResults = allVideos.map(v => ({
-            link: v.link,
-            data: {
-                status: "Live",
-                author: { uniqueId: user, nickname: pAuthor?.nickname || user, avatar: pAuthor?.avatar || "", verified: pAuthor?.verified || false },
-                video_data: { id: v.id, description: v.caption, create_time: v.createTime || null },
-                stats: v.stats, urls: v.urls, music: v.music, images: v.images || null,
-                rawPlay: window.parseRawStats(v.stats.play)
-            }
-        }));
-
-        fetchedVideos = formattedResults;
-        window.sortVideos('popular'); 
-
-    } catch (error) { window.showError(error.message); } 
-    finally { window.showLoading(false); if(analyticsBtn) analyticsBtn.disabled = false; }
-}
-
-// ================= TẢI MEDIA =================
 window.forceDownload = async function(url, filename, btnObj) {
     const originalHTML = btnObj.innerHTML;
-    btnObj.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Tải...`;
+    btnObj.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Đang tải...`;
     btnObj.style.pointerEvents = 'none';
 
     const triggerDownload = async (targetUrl) => {
@@ -361,7 +289,7 @@ window.forceDownload = async function(url, filename, btnObj) {
         try { await triggerDownload(`https://corsproxy.io/?${encodeURIComponent(url)}`); } 
         catch (e) { window.open(url, '_blank'); }
     } finally {
-        btnObj.innerHTML = `<i class="fa-solid fa-check"></i> Xong`;
+        btnObj.innerHTML = `<i class="fa-solid fa-check"></i> Hoàn Tất`;
         setTimeout(() => { btnObj.innerHTML = originalHTML; btnObj.style.pointerEvents = 'auto'; }, 2000);
     }
 }
@@ -389,48 +317,8 @@ window.downloadImages = async function(index, btnObj) {
         await new Promise(r => setTimeout(r, 400));
     }
     
-    btnObj.innerHTML = `<i class="fa-solid fa-check"></i> Xong ${d.images.length} Ảnh`;
+    btnObj.innerHTML = `<i class="fa-solid fa-check"></i> Xong`;
     setTimeout(() => { btnObj.innerHTML = originalHTML; btnObj.style.pointerEvents = 'auto'; }, 2000);
-}
-
-window.downloadAllVideos = async function(btnObj) {
-    if (!fetchedVideos || fetchedVideos.length === 0) return;
-    const originalHTML = btnObj.innerHTML;
-    btnObj.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Đang tải...`;
-    btnObj.disabled = true;
-
-    for (let i = 0; i < fetchedVideos.length; i++) {
-        const d = fetchedVideos[i].data;
-        if (d.images && d.images.length > 0) {
-            for (let j=0; j<d.images.length; j++){
-                const fname = `${d.author.uniqueId}_${d.video_data.id}_img_${j+1}.jpg`;
-                try {
-                    const res = await fetch(d.images[j]);
-                    const blob = await res.blob();
-                    const downloadUrl = window.URL.createObjectURL(blob);
-                    const a = document.createElement('a');
-                    a.style.display = 'none'; a.href = downloadUrl; a.download = fname; 
-                    document.body.appendChild(a); a.click();
-                    window.URL.revokeObjectURL(downloadUrl); a.remove();
-                } catch(e) { window.open(d.images[j], '_blank'); }
-                await new Promise(r => setTimeout(r, 400));
-            }
-        } else {
-            const filename = window.generateFileName(d.author.uniqueId, d.video_data.id, 'mp4');
-            try {
-                const response = await fetch(d.urls.no_watermark);
-                const blob = await response.blob();
-                const url = window.URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.style.display = 'none'; a.href = url; a.download = filename;
-                document.body.appendChild(a); a.click();
-                window.URL.revokeObjectURL(url); a.remove();
-            } catch(e) { window.open(d.urls.no_watermark, '_blank'); }
-        }
-        await new Promise(r => setTimeout(r, 800)); 
-    }
-    btnObj.innerHTML = `<i class="fa-solid fa-check"></i> Hoàn Tất`;
-    setTimeout(() => { btnObj.innerHTML = originalHTML; btnObj.disabled = false; }, 3000);
 }
 
 window.searchUserFromDetail = function(username) {
@@ -441,7 +329,7 @@ window.searchUserFromDetail = function(username) {
     window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
-// ================= PHÂN TÍCH DẠNG CỘT BENTO STYLE =================
+// ================= ĐÃ KHÔI PHỤC: PHÂN TÍCH TỪNG MỤC LIST CHI TIẾT =================
 window.analyzeSingleVideo = function(index) {
     const d = fetchedVideos[index].data;
     const play = window.parseRawStats(d.stats.play);
@@ -459,70 +347,60 @@ window.analyzeSingleVideo = function(index) {
         uploadDate = new Date(timestamp * 1000).toLocaleString('vi-VN');
     }
 
-    const logMax = Math.log10(play + 1) || 1;
-    const getH = (val) => Math.max((Math.log10(val + 1) / logMax) * 100, 5); 
-
-    const chartHtml = `
-        <div class="w-full bg-[#0a0a0a] rounded-[20px] p-5 border border-[#222] flex items-end justify-around h-48 mt-2">
-            <div class="flex flex-col items-center justify-end h-full w-full group relative">
-                <span class="absolute -top-7 text-black font-bold text-[10px] bg-white px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-10">${window.formatStatsClient(play)}</span>
-                <div class="w-full max-w-[30px] bg-blue-500 rounded-t transition-all duration-700" style="height: ${getH(play)}%"></div>
-                <span class="text-[9px] text-zinc-500 font-bold mt-2 uppercase">View</span>
-            </div>
-            <div class="flex flex-col items-center justify-end h-full w-full group relative">
-                <span class="absolute -top-7 text-black font-bold text-[10px] bg-white px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-10">${window.formatStatsClient(likes)}</span>
-                <div class="w-full max-w-[30px] bg-pink-500 rounded-t transition-all duration-700" style="height: ${getH(likes)}%"></div>
-                <span class="text-[9px] text-zinc-500 font-bold mt-2 uppercase">Tim</span>
-            </div>
-            <div class="flex flex-col items-center justify-end h-full w-full group relative">
-                <span class="absolute -top-7 text-black font-bold text-[10px] bg-white px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-10">${window.formatStatsClient(comments)}</span>
-                <div class="w-full max-w-[30px] bg-emerald-500 rounded-t transition-all duration-700" style="height: ${getH(comments)}%"></div>
-                <span class="text-[9px] text-zinc-500 font-bold mt-2 uppercase">Cmt</span>
-            </div>
-            <div class="flex flex-col items-center justify-end h-full w-full group relative">
-                <span class="absolute -top-7 text-black font-bold text-[10px] bg-white px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-10">${window.formatStatsClient(shares)}</span>
-                <div class="w-full max-w-[30px] bg-orange-500 rounded-t transition-all duration-700" style="height: ${getH(shares)}%"></div>
-                <span class="text-[9px] text-zinc-500 font-bold mt-2 uppercase">Share</span>
-            </div>
-            <div class="flex flex-col items-center justify-end h-full w-full group relative">
-                <span class="absolute -top-7 text-black font-bold text-[10px] bg-white px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-10">${window.formatStatsClient(downloads)}</span>
-                <div class="w-full max-w-[30px] bg-zinc-600 rounded-t transition-all duration-700" style="height: ${getH(downloads)}%"></div>
-                <span class="text-[9px] text-zinc-500 font-bold mt-2 uppercase">Save</span>
-            </div>
-        </div>
-    `;
+    const typeStr = (d.images && d.images.length > 0) ? `<i class="fa-solid fa-images text-emerald-400"></i> Slideshow Ảnh (${d.images.length} ảnh)` : `<i class="fa-solid fa-video text-sky-400"></i> Video Ngắn`;
+    const durationStr = d.video_data.duration ? `${d.video_data.duration} giây` : 'Không xác định';
+    const regionStr = d.video_data.region || 'Quốc tế';
 
     const infoBox = document.getElementById('detail-video-info');
     const oldHtml = infoBox.innerHTML;
     const oldActions = document.getElementById('detail-video-actions').innerHTML;
 
+    // Giao diện list từng mục bọc trong khung Bento
     infoBox.innerHTML = `
         <button onclick="restoreVideoDetail()" class="mb-4 text-zinc-400 font-bold flex items-center gap-2 hover:text-white transition text-sm">
             <i class="fa-solid fa-arrow-left"></i> Quay lại
         </button>
-        <h3 class="text-xl font-bold text-white mb-2">Thống Kê Chi Tiết</h3>
+        <h3 class="text-xl font-bold text-white mb-4">Phân Tích Chi Tiết</h3>
         
-        ${chartHtml}
-        
-        <div class="grid grid-cols-2 gap-3 mt-4">
-            <div class="bg-[#111] p-4 rounded-[20px] border border-[#222] flex flex-col justify-center items-center">
-                <span class="text-zinc-500 font-bold text-[10px] uppercase tracking-wider mb-1">Tỷ lệ ER</span>
-                <span class="text-white font-black text-xl">${er}%</span>
+        <div class="space-y-3">
+            <div class="bg-[#111] p-4 rounded-xl border border-[#222] flex justify-between items-center transition hover:border-[#333]">
+                <span class="text-zinc-400 font-bold text-xs"><i class="fa-solid fa-hashtag text-violet-400 w-4"></i> ID Bài Đăng:</span>
+                <span class="text-white font-bold text-xs">${d.video_data.id}</span>
             </div>
-            <div class="bg-[#111] p-4 rounded-[20px] border border-[#222] flex flex-col justify-center items-center">
-                <span class="text-zinc-500 font-bold text-[10px] uppercase tracking-wider mb-1">Chuyển đổi Like</span>
-                <span class="text-white font-black text-xl">${likeRatio}%</span>
+            <div class="bg-[#111] p-4 rounded-xl border border-[#222] flex justify-between items-center transition hover:border-[#333]">
+                <span class="text-zinc-400 font-bold text-xs"><i class="fa-solid fa-file-code text-emerald-400 w-4"></i> Định Dạng:</span>
+                <span class="text-white font-bold text-xs">${typeStr}</span>
             </div>
-            <div class="col-span-2 bg-[#111] p-3 px-4 rounded-[16px] border border-[#222] flex justify-between items-center">
-                <span class="text-zinc-500 font-bold text-xs uppercase tracking-widest">Giờ Đăng:</span>
-                <span class="text-zinc-300 font-medium text-xs">${uploadDate}</span>
+            <div class="bg-[#111] p-4 rounded-xl border border-[#222] flex justify-between items-center transition hover:border-[#333]">
+                <span class="text-zinc-400 font-bold text-xs"><i class="fa-solid fa-clock text-orange-400 w-4"></i> Thời Gian Đăng:</span>
+                <span class="text-white font-bold text-xs">${uploadDate}</span>
+            </div>
+            <div class="bg-[#111] p-4 rounded-xl border border-[#222] flex justify-between items-center transition hover:border-[#333]">
+                <span class="text-zinc-400 font-bold text-xs"><i class="fa-solid fa-earth-asia text-blue-400 w-4"></i> Phân Phối Vùng:</span>
+                <span class="text-white font-bold text-xs uppercase">${regionStr}</span>
+            </div>
+            <div class="bg-[#111] p-4 rounded-xl border border-[#222] flex justify-between items-center transition hover:border-[#333]">
+                <span class="text-zinc-400 font-bold text-xs"><i class="fa-solid fa-stopwatch text-rose-400 w-4"></i> Thời Lượng:</span>
+                <span class="text-white font-bold text-xs">${durationStr}</span>
+            </div>
+            <div class="bg-[#111] p-4 rounded-xl border border-[#222] flex justify-between items-center transition hover:border-[#333]">
+                <span class="text-zinc-400 font-bold text-xs"><i class="fa-solid fa-percent text-cyan-400 w-4"></i> Tương Tác (ER):</span>
+                <span class="text-white font-black text-sm ${er > 10 ? 'text-emerald-400' : ''}">${er}%</span>
+            </div>
+            <div class="bg-[#111] p-4 rounded-xl border border-[#222] flex justify-between items-center transition hover:border-[#333]">
+                <span class="text-zinc-400 font-bold text-xs"><i class="fa-solid fa-heart-pulse text-pink-500 w-4"></i> Chuyển Đổi Like:</span>
+                <span class="text-white font-bold text-xs">${likeRatio}%</span>
+            </div>
+            <div class="bg-[#111] p-4 rounded-xl border border-[#222] flex justify-between items-center transition hover:border-[#333]">
+                <span class="text-zinc-400 font-bold text-xs"><i class="fa-solid fa-download text-zinc-400 w-4"></i> Lượt Save:</span>
+                <span class="text-white font-bold text-xs">${window.formatStatsClient(downloads)}</span>
             </div>
         </div>
     `;
 
     document.getElementById('detail-video-actions').innerHTML = `
         <button onclick="restoreVideoDetail()" class="w-full col-span-2 bento-btn-secondary py-3 text-sm">
-            Đóng Biểu Đồ
+            Đóng Phân Tích
         </button>
     `;
 
@@ -599,8 +477,8 @@ window.openVideoDetail = function(index) {
         
         <div class="flex justify-between items-center mb-3">
             <h4 class="text-[10px] text-zinc-500 font-bold uppercase tracking-widest">Tương tác</h4>
-            <button onclick="analyzeSingleVideo(${index})" class="text-[10px] bg-[#111] text-white hover:bg-white hover:text-black px-3 py-1.5 rounded-lg font-bold transition border border-[#222]">
-                <i class="fa-solid fa-chart-column"></i> Cột Phân Tích
+            <button onclick="analyzeSingleVideo(${index})" class="text-[10px] bg-[#111] text-white hover:bg-white hover:text-black px-3 py-1.5 rounded-lg font-bold transition border border-[#222] flex items-center gap-1">
+                <i class="fa-solid fa-chart-simple"></i> Phân Tích Nhanh
             </button>
         </div>
 
@@ -623,7 +501,6 @@ window.openVideoDetail = function(index) {
             </div>
         </div>
 
-        <!-- Nút Đi Đến TikTok -->
         <a href="${d.link}" target="_blank" class="w-full bg-[#111] hover:bg-white text-white hover:text-black border border-[#333] font-black py-4 rounded-2xl transition-all shadow-md flex items-center justify-center gap-2 text-sm mt-6">
             <i class="fa-brands fa-tiktok text-lg"></i> Đi Đến TikTok
         </a>
