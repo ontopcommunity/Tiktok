@@ -928,3 +928,24 @@ function renderVideoCards(results, append = false, startIndex = 0, keepActionUI 
         else container.innerHTML = html;
     });
 }
+
+// ================= EXPOSE TẤT CẢ HÀM RA GLOBAL (CẦN CHO onclick TRONG HTML) =================
+window.switchTab = switchTab;
+window.setLinkMode = setLinkMode;
+window.openGuide = openGuide;
+window.loadMore = loadMore;
+window.toggleExpand = toggleExpand;
+window.sortVideos = sortVideos;
+window.processVideos = processVideos;
+window.searchTikTok = searchTikTok;
+window.searchRandom = searchRandom;
+window.fetchUserInfo = fetchUserInfo;
+window.fetchAnalytics = fetchAnalytics;
+window.openVideoDetail = openVideoDetail;
+window.closeDetailWindow = closeDetailWindow;
+window.analyzeSingleVideo = analyzeSingleVideo;
+window.searchUserFromDetail = searchUserFromDetail;
+window.forceDownload = forceDownload;
+window.downloadImages = downloadImages;
+window.downloadAllVideos = downloadAllVideos;
+window.formatStatsClient = formatStatsClient;
