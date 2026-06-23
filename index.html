@@ -3,205 +3,288 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TikTok Studio Pro | Bento Elite</title>
+    <title>TikTok Studio Pro</title>
     <meta name="referrer" content="no-referrer">
-    
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-    
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    
     <script>
-        tailwind.config = {
-            theme: { extend: { fontFamily: { sans: ['Outfit', 'sans-serif'], } } }
-        }
+        tailwind.config = { theme: { extend: { fontFamily: { sans: ['Inter', 'sans-serif'] } } } }
     </script>
-
     <style>
-        body { background-color: #050505; color: #f4f4f5; -webkit-font-smoothing: antialiased; }
-        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        * { box-sizing: border-box; }
+        body { background: #080808; color: #f0f0f0; -webkit-font-smoothing: antialiased; font-family: 'Inter', sans-serif; }
+
+        /* ── SCROLLBAR ── */
+        ::-webkit-scrollbar { width: 4px; height: 4px; }
         ::-webkit-scrollbar-track { background: transparent; }
-        ::-webkit-scrollbar-thumb { background-color: #262626; border-radius: 10px; }
-        ::-webkit-scrollbar-thumb:hover { background-color: #404040; }
-        .custom-scroll-x::-webkit-scrollbar { height: 4px; }
+        ::-webkit-scrollbar-thumb { background: #2a2a2a; border-radius: 99px; }
 
-        /* BENTO BOX STYLING */
-        .bento-card { background: #111111; border: 1px solid #222222; border-radius: 28px; transition: all 0.3s ease; }
-        .bento-card:hover { border-color: #333333; box-shadow: 0 10px 30px -10px rgba(0,0,0,0.8); }
-        
-        .bento-input { background: #0a0a0a; border: 1px solid #262626; border-radius: 16px; transition: all 0.2s; }
-        .bento-input:focus { border-color: #3b82f6; outline: none; background: #000000; box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1); }
+        /* ── GLASS NAV ── */
+        .glass-nav {
+            background: rgba(12,12,12,0.88);
+            backdrop-filter: blur(24px);
+            -webkit-backdrop-filter: blur(24px);
+            border: 1px solid rgba(255,255,255,0.06);
+        }
 
-        .bento-btn { background: #ffffff; color: #000000; font-weight: 700; border-radius: 16px; transition: transform 0.1s, opacity 0.2s; cursor: pointer; }
-        .bento-btn:active { transform: scale(0.97); }
-        .bento-btn:hover { opacity: 0.9; }
+        /* ── TAB PILLS ── */
+        .tab-pill { padding: 7px 16px; border-radius: 99px; font-weight: 600; font-size: 12.5px; transition: all 0.2s; cursor: pointer; display: flex; align-items: center; gap: 6px; white-space: nowrap; }
+        .tab-on  { background: #fff; color: #000; }
+        .tab-off { color: #666; }
+        .tab-off:hover { color: #ccc; background: rgba(255,255,255,0.05); }
 
-        .bento-btn-secondary { background: #1a1a1a; color: #e5e5e5; border: 1px solid #333333; font-weight: 600; border-radius: 16px; transition: all 0.2s; cursor: pointer; }
-        .bento-btn-secondary:hover { background: #262626; color: #ffffff; }
-        .bento-btn-secondary:active { transform: scale(0.97); }
+        /* ── CARD ── */
+        .card { background: #111; border: 1px solid #1e1e1e; border-radius: 22px; }
+        .card-hover { transition: border-color 0.2s, box-shadow 0.2s, transform 0.2s; }
+        .card-hover:hover { border-color: #333; box-shadow: 0 12px 32px -8px rgba(0,0,0,0.7); transform: translateY(-2px); }
 
-        /* TABS FIXED TOP DOCK */
-        .nav-dock { background: rgba(17, 17, 17, 0.85); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border: 1px solid #262626; }
-        .tab-btn { padding: 8px 16px; border-radius: 100px; font-weight: 600; font-size: 13px; transition: all 0.2s; display: flex; align-items: center; gap: 6px; white-space: nowrap; cursor: pointer; }
-        .tab-active { background: #ffffff; color: #000000; box-shadow: 0 4px 10px rgba(255,255,255,0.1); }
-        .tab-inactive { color: #a3a3a3; }
-        .tab-inactive:hover { color: #ffffff; background: rgba(255,255,255,0.05); }
+        /* ── INPUT ── */
+        .inp { background: #0d0d0d; border: 1px solid #222; border-radius: 14px; transition: border-color 0.2s, box-shadow 0.2s; color: #f0f0f0; }
+        .inp:focus { border-color: #3b82f6; outline: none; box-shadow: 0 0 0 3px rgba(59,130,246,0.12); }
+        .inp::placeholder { color: #444; }
 
-        /* GRID ITEM VỚI ANIMATION TRƯỢT SANG 2 BÊN KHI LOAD */
-        .grid-item { background: #111111; border: 1px solid #222222; border-radius: 20px; overflow: hidden; position: relative; cursor: pointer; transition: all 0.3s; }
-        .grid-item:hover { transform: translateY(-4px); border-color: #3b82f6; box-shadow: 0 15px 30px -10px rgba(59, 130, 246, 0.2); z-index: 10; }
-        .grid-item img.thumb { transition: transform 0.5s ease; }
-        .grid-item:hover img.thumb { transform: scale(1.05); opacity: 0.8; }
-        
-        .overlay-gradient { background: linear-gradient(to top, #000000 0%, rgba(0,0,0,0.5) 40%, transparent 100%); pointer-events: none; }
+        /* ── BUTTONS ── */
+        .btn-primary { background: #fff; color: #000; font-weight: 700; border-radius: 14px; cursor: pointer; transition: opacity 0.15s, transform 0.1s; }
+        .btn-primary:hover { opacity: 0.88; }
+        .btn-primary:active { transform: scale(0.97); }
+        .btn-ghost  { background: #191919; color: #ccc; border: 1px solid #2a2a2a; font-weight: 600; border-radius: 14px; cursor: pointer; transition: all 0.2s; }
+        .btn-ghost:hover { background: #222; color: #fff; }
+        .btn-cyan { background: #06b6d4; color: #000; font-weight: 700; border-radius: 14px; cursor: pointer; transition: opacity 0.15s; }
+        .btn-cyan:hover { opacity: 0.85; }
 
-        @keyframes slideUp { 0% { opacity: 0; transform: translateY(15px); } 100% { opacity: 1; transform: translateY(0); } }
-        .animate-slide-up { animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+        /* ── VIDEO GRID ── */
+        .video-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 12px; }
+        @media (min-width: 640px)  { .video-grid { grid-template-columns: repeat(auto-fill, minmax(175px, 1fr)); gap: 14px; } }
+        @media (min-width: 1024px) { .video-grid { grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 16px; } }
 
-        @keyframes slideLeftIn { 0% { opacity: 0; transform: translateX(-40px); } 100% { opacity: 1; transform: translateX(0); } }
-        @keyframes slideRightIn { 0% { opacity: 0; transform: translateX(40px); } 100% { opacity: 1; transform: translateX(0); } }
-        .animate-slide-left { animation: slideLeftIn 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards; opacity: 0; }
-        .animate-slide-right { animation: slideRightIn 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards; opacity: 0; }
+        .vcard { position: relative; border-radius: 16px; overflow: hidden; background: #111; border: 1px solid #1e1e1e; aspect-ratio: 9/16; cursor: pointer; transition: transform 0.25s, border-color 0.2s, box-shadow 0.2s; }
+        .vcard:hover { transform: translateY(-5px) scale(1.02); border-color: #3b82f6; box-shadow: 0 16px 40px -10px rgba(59,130,246,0.25); }
+        .vcard img.thumb { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; transition: transform 0.4s; }
+        .vcard:hover img.thumb { transform: scale(1.06); }
+        .vcard .vcard-overlay { position: absolute; inset: 0; background: linear-gradient(to top, rgba(0,0,0,0.92) 0%, rgba(0,0,0,0.3) 45%, transparent 100%); pointer-events: none; }
+        .vcard .vcard-top { position: absolute; top: 8px; left: 8px; right: 8px; z-index: 10; display: flex; justify-content: space-between; align-items: flex-start; }
+        .vcard .vcard-bot { position: absolute; bottom: 0; left: 0; right: 0; z-index: 10; padding: 10px 10px 10px; }
+        .badge { display: inline-flex; align-items: center; gap: 3px; font-size: 9.5px; font-weight: 700; padding: 3px 7px; border-radius: 8px; }
+        .badge-dark { background: rgba(0,0,0,0.75); backdrop-filter: blur(6px); border: 1px solid rgba(255,255,255,0.08); color: #fff; }
+        .badge-img  { background: rgba(255,255,255,0.15); backdrop-filter: blur(6px); color: #fff; }
 
-        /* GÕ CHỮ BIO HIỆU ỨNG CHUYÊN NGHIỆP */
-        .typewriter-cursor::after { content: '|'; animation: blink 1s step-end infinite; color: #3b82f6; }
+        /* ── ANIMATIONS ── */
+        @keyframes fadeUp   { from { opacity:0; transform: translateY(16px); } to { opacity:1; transform: translateY(0); } }
+        @keyframes fadeIn   { from { opacity:0; } to { opacity:1; } }
+        @keyframes popIn    { from { opacity:0; transform: scale(0.94); } to { opacity:1; transform: scale(1); } }
+        .anim-fadeup  { animation: fadeUp  0.38s cubic-bezier(.16,1,.3,1) both; }
+        .anim-fadein  { animation: fadeIn  0.3s ease both; }
+        .anim-popin   { animation: popIn   0.3s cubic-bezier(.16,1,.3,1) both; }
+        .anim-delay-1 { animation-delay: 0.06s; }
+        .anim-delay-2 { animation-delay: 0.12s; }
+
+        /* ── MODAL ── */
+        .modal-bg { position: fixed; inset: 0; z-index: 999; background: rgba(0,0,0,0.92); backdrop-filter: blur(14px); opacity: 0; visibility: hidden; transition: opacity 0.28s, visibility 0.28s; display: flex; align-items: center; justify-content: center; padding: 12px; }
+        .modal-bg.open { opacity: 1; visibility: visible; }
+        .modal-box { width: 100%; max-width: 900px; max-height: 90vh; background: #0e0e0e; border: 1px solid #242424; border-radius: 24px; overflow: hidden; display: flex; flex-direction: column; transform: scale(0.96); transition: transform 0.28s cubic-bezier(.16,1,.3,1); }
+        .modal-bg.open .modal-box { transform: scale(1); }
+        @media (min-width: 768px) { .modal-box { flex-direction: row; } }
+
+        /* ── COLLAPSIBLE ── */
+        .collapse-body { overflow: hidden; transition: max-height 0.45s ease; }
+        .collapse-body.collapsed { max-height: 180px; }
+        .collapse-body.expanded  { max-height: 9999px; }
+
+        /* ── TYPEWRITER ── */
+        .tw-cursor::after { content: '|'; animation: blink 1s step-end infinite; color: #3b82f6; margin-left: 2px; }
         @keyframes blink { 50% { opacity: 0; } }
 
-        /* MODAL WINDOWS */
-        .modal-overlay { opacity: 0; visibility: hidden; transition: all 0.3s ease; background: rgba(0,0,0,0.9); backdrop-filter: blur(10px); z-index: 999; pointer-events: none; }
-        .modal-overlay.active { opacity: 1; visibility: visible; pointer-events: auto; }
-        .modal-content { transform: scale(0.95); transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1); border: 1px solid #262626; background: #0a0a0a; }
-        .modal-overlay.active .modal-content { transform: scale(1); }
+        /* ── LOADER ── */
+        .loader-bar { width: 32px; height: 4px; border-radius: 99px; background: #3b82f6; animation: loaderPulse 1s ease-in-out infinite; }
+        .loader-bar:nth-child(2) { animation-delay: 0.15s; width: 22px; }
+        .loader-bar:nth-child(3) { animation-delay: 0.3s;  width: 14px; }
+        @keyframes loaderPulse { 0%,100% { opacity:0.3; transform: scaleX(1); } 50% { opacity:1; transform: scaleX(1.15); } }
 
-        .collapsible-box { max-height: 250px; overflow: hidden; position: relative; transition: max-height 0.6s ease; }
-        .collapsible-box.expanded { max-height: 5000px; }
-        .collapsible-box::after { content: ''; position: absolute; bottom: 0; left: 0; width: 100%; height: 80px; background: linear-gradient(to top, #111111, transparent); transition: opacity 0.3s; pointer-events: none; }
-        .collapsible-box.expanded::after { opacity: 0; }
-        .expand-btn { position: absolute; bottom: -15px; left: 50%; transform: translateX(-50%); z-index: 20; transition: transform 0.3s; }
-        .expanded + .expand-btn { transform: translateX(-50%) rotate(180deg); bottom: 10px; }
-        
-        .guide-btn { position: fixed; bottom: 30px; right: 30px; z-index: 50; animation: pulseGlow 2s infinite; }
-        @keyframes pulseGlow { 0% { box-shadow: 0 0 0 0 rgba(59,130,246,0.5); } 70% { box-shadow: 0 0 0 15px rgba(59,130,246,0); } 100% { box-shadow: 0 0 0 0 rgba(59,130,246,0); } }
+        /* ── STAT BOX ── */
+        .stat-box { background: #0c0c0c; border: 1px solid #1e1e1e; border-radius: 16px; padding: 16px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; }
+
+        /* ── GUIDE FLOAT BTN ── */
+        .guide-fab { position: fixed; bottom: 28px; right: 28px; z-index: 80; width: 46px; height: 46px; border-radius: 99px; background: #191919; border: 1px solid #2a2a2a; color: #aaa; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s; box-shadow: 0 4px 20px rgba(0,0,0,0.6); }
+        .guide-fab:hover { background: #fff; color: #000; border-color: #fff; }
+
+        /* ── INFINITE SCROLL SENTINEL ── */
+        #scroll-sentinel { height: 1px; width: 100%; }
+
+        /* ── SORT TOGGLE ── */
+        .sort-pill { font-size: 11px; font-weight: 700; padding: 6px 14px; border-radius: 99px; cursor: pointer; transition: all 0.18s; }
+        .sort-on  { background: #fff; color: #000; }
+        .sort-off { color: #666; }
+        .sort-off:hover { color: #ccc; background: rgba(255,255,255,0.06); }
+
+        /* ── GUIDE MODAL ── */
+        #guide-window { position: fixed; inset: 0; z-index: 1000; background: rgba(0,0,0,0.92); backdrop-filter: blur(14px); opacity: 0; visibility: hidden; transition: all 0.28s; display: flex; align-items: center; justify-content: center; padding: 16px; }
+        #guide-window.active { opacity: 1; visibility: visible; }
     </style>
 </head>
-<body class="min-h-screen pb-20">
+<body class="min-h-screen pb-24">
 
-    <nav class="fixed top-4 left-1/2 -translate-x-1/2 z-50 nav-dock rounded-full p-1.5 flex gap-1 shadow-2xl overflow-x-auto max-w-[95%] custom-scroll-x">
-        <button onclick="switchTab('video')" id="tab-video" class="tab-btn tab-active"><i class="fa-solid fa-download"></i> Dữ Liệu</button>
-        <button onclick="switchTab('search')" id="tab-search" class="tab-btn tab-inactive"><i class="fa-solid fa-magnifying-glass"></i> Tìm Kiếm</button>
-        <button onclick="switchTab('info')" id="tab-info" class="tab-btn tab-inactive"><i class="fa-solid fa-user"></i> Hồ Sơ</button>
-        <button onclick="switchTab('analytics')" id="tab-analytics" class="tab-btn tab-inactive"><i class="fa-solid fa-chart-pie text-cyan-400"></i> Phân Tích Kênh</button>
-    </nav>
+<!-- ═══ NAV ═══ -->
+<nav class="fixed top-4 left-1/2 -translate-x-1/2 z-50 glass-nav rounded-full px-2 py-1.5 flex gap-1 shadow-2xl max-w-[96vw] overflow-x-auto">
+    <button onclick="switchTab('video')"     id="tab-video"     class="tab-pill tab-on" ><i class="fa-solid fa-download text-xs"></i> Dữ Liệu</button>
+    <button onclick="switchTab('search')"    id="tab-search"    class="tab-pill tab-off"><i class="fa-solid fa-magnifying-glass text-xs"></i> Tìm Kiếm</button>
+    <button onclick="switchTab('info')"      id="tab-info"      class="tab-pill tab-off"><i class="fa-solid fa-user text-xs"></i> Hồ Sơ</button>
+    <button onclick="switchTab('analytics')" id="tab-analytics" class="tab-pill tab-off"><i class="fa-solid fa-chart-pie text-xs text-cyan-400"></i> Phân Tích</button>
+</nav>
 
-    <button onclick="openGuide()" class="guide-btn w-12 h-12 bg-[#1a1a1a] border border-[#333] hover:bg-white rounded-full flex items-center justify-center text-zinc-300 hover:text-black transition-all shadow-xl">
-        <i class="fa-solid fa-circle-question text-base"></i>
-    </button>
+<!-- ═══ GUIDE FAB ═══ -->
+<button onclick="openGuide()" class="guide-fab"><i class="fa-solid fa-circle-question"></i></button>
 
-    <main class="w-full max-w-4xl mx-auto pt-28 px-4 flex flex-col items-center">
-        
-        <div class="text-center mb-10 w-full animate-slide-up pointer-events-none">
-            <div class="inline-block px-3 py-1 bg-zinc-900 border border-zinc-800 rounded-lg text-[10px] font-bold tracking-widest text-zinc-400 mb-4 uppercase">
-                Bento Box Edition Pro
+<!-- ═══ MAIN ═══ -->
+<main class="w-full max-w-5xl mx-auto pt-28 px-4 flex flex-col items-center gap-5">
+
+    <!-- HERO -->
+    <div class="text-center anim-fadeup pointer-events-none select-none">
+        <span class="inline-block px-3 py-1 text-[10px] font-bold tracking-[0.2em] uppercase text-zinc-500 bg-zinc-900/60 border border-zinc-800 rounded-full mb-4">Studio Pro</span>
+        <h1 class="text-4xl md:text-5xl font-black tracking-tight text-white leading-none mb-2">TikTok Studio</h1>
+        <p class="text-zinc-500 text-sm font-medium">Phân tích · Tải xuống · Truy xuất dữ liệu</p>
+    </div>
+
+    <!-- INPUT CARD -->
+    <div class="card w-full p-5 md:p-7 anim-fadeup anim-delay-1 shadow-2xl">
+
+        <!-- TAB: VIDEO -->
+        <div id="mode-video">
+            <div class="flex items-center justify-between mb-4">
+                <h2 class="font-bold text-white flex items-center gap-2"><i class="fa-solid fa-download text-blue-500"></i> Truy Xuất Tệp</h2>
+                <div class="flex gap-1 bg-[#151515] p-1 rounded-xl border border-[#222]">
+                    <button id="subtab-single" onclick="setLinkMode('single')" class="px-3.5 py-1.5 rounded-lg bg-[#2a2a2a] text-white font-semibold text-[11px] transition">Đơn tệp</button>
+                    <button id="subtab-multi"  onclick="setLinkMode('multi')"  class="px-3.5 py-1.5 rounded-lg text-zinc-500 font-semibold text-[11px] hover:text-white transition">Hàng loạt</button>
+                </div>
             </div>
-            <h1 class="text-4xl md:text-5xl font-extrabold tracking-tight mb-2 text-white">
-                TikTok Studio
-            </h1>
-            <p class="text-zinc-500 font-medium text-sm">Hệ thống phân tích & truy xuất tệp chuyên nghiệp</p>
+            <div class="relative mb-4">
+                <textarea id="tiktok-links" rows="1" placeholder="Dán link Video hoặc Nhật ký (Story)..." class="w-full px-4 py-3.5 inp text-sm resize-none pr-10"></textarea>
+                <i class="fa-solid fa-link absolute right-4 top-4 text-zinc-600 pointer-events-none text-xs"></i>
+            </div>
+            <button id="fetch-video-btn" onclick="processVideos()" class="btn-primary w-full py-3.5 text-sm">Khởi Chạy Tiến Trình</button>
         </div>
 
-        <div class="bento-card w-full p-6 md:p-8 animate-slide-up relative z-10 shadow-2xl">
-            
-            <div id="mode-video" class="transition-opacity duration-300">
-                <div class="flex items-center justify-between mb-4">
-                    <h2 class="text-lg font-bold text-white"><i class="fa-solid fa-download text-blue-500 mr-2"></i>Truy Xuất Tệp</h2>
-                    <div class="flex gap-1 bg-[#1a1a1a] p-1 rounded-xl border border-[#333]">
-                        <button id="subtab-single" onclick="setLinkMode('single')" class="px-4 py-1.5 rounded-lg bg-zinc-700 text-white font-semibold text-[11px] transition shadow-sm">Đơn tệp</button>
-                        <button id="subtab-multi" onclick="setLinkMode('multi')" class="px-4 py-1.5 rounded-lg text-zinc-400 font-semibold text-[11px] hover:text-white transition">Hàng loạt</button>
-                    </div>
+        <!-- TAB: SEARCH -->
+        <div id="mode-search" class="hidden">
+            <h2 class="font-bold text-white flex items-center gap-2 mb-4"><i class="fa-solid fa-magnifying-glass text-blue-500"></i> Tìm Kiếm Nội Dung</h2>
+            <div class="flex flex-col sm:flex-row gap-3">
+                <div class="relative flex-1">
+                    <i class="fa-solid fa-magnifying-glass absolute left-4 top-1/2 -translate-y-1/2 text-zinc-600 text-xs pointer-events-none"></i>
+                    <input type="text" id="tiktok-keyword" placeholder="Nhập từ khóa..." class="w-full pl-10 pr-4 py-3.5 inp text-sm">
                 </div>
-                <div class="mb-5 relative">
-                    <textarea id="tiktok-links" rows="1" placeholder="Dán link bài đăng Video hoặc link Nhật ký (Story) vào đây..." class="w-full px-5 py-4 bento-input text-sm resize-none custom-scroll-x"></textarea>
-                    <div class="absolute top-4 right-4 text-zinc-600 pointer-events-none"><i class="fa-solid fa-link"></i></div>
-                </div>
-                <button id="fetch-video-btn" onclick="processVideos()" class="w-full bento-btn py-4 flex items-center justify-center gap-2 text-sm">
-                    Khởi Chạy Tiến Trình
-                </button>
+                <button id="fetch-search-btn" onclick="searchTikTok()" class="btn-primary px-7 py-3.5 text-sm whitespace-nowrap">Quét Từ Khóa</button>
             </div>
-
-            <div id="mode-search" class="hidden transition-opacity duration-300">
-                <h2 class="text-lg font-bold text-white mb-4"><i class="fa-solid fa-magnifying-glass text-blue-500 mr-2"></i>Tìm Kiếm Nội Dung</h2>
-                <div class="flex flex-col sm:flex-row gap-3">
-                    <div class="relative flex-1">
-                        <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-zinc-600"><i class="fa-solid fa-magnifying-glass"></i></div>
-                        <input type="text" id="tiktok-keyword" placeholder="Nhập từ khóa nội dung cần quét..." class="w-full pl-10 pr-4 py-4 bento-input text-sm">
-                    </div>
-                    <button id="fetch-search-btn" onclick="searchTikTok()" class="bento-btn py-4 px-8 flex items-center justify-center gap-2 text-sm sm:w-auto w-full">
-                        Quét Từ Khóa
-                    </button>
-                </div>
-            </div>
-
-            <div id="mode-info" class="hidden transition-opacity duration-300">
-                <h2 class="text-lg font-bold text-white mb-4"><i class="fa-solid fa-user text-blue-500 mr-2"></i>Trích Xuất Hồ Sơ Kênh</h2>
-                <div class="flex flex-col sm:flex-row gap-3">
-                    <div class="relative flex-1">
-                        <div class="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none text-zinc-600 font-bold">@</div>
-                        <input type="text" id="tiktok-username" placeholder="Nhập ID kênh không chứa dấu @" class="w-full pl-10 pr-5 py-4 bento-input text-sm">
-                    </div>
-                    <button id="fetch-info-btn" onclick="fetchUserInfo()" class="bento-btn py-4 px-8 flex items-center justify-center gap-2 text-sm sm:w-auto w-full">
-                        Đọc Dữ Liệu
-                    </button>
-                </div>
-            </div>
-
-            <div id="mode-analytics" class="hidden transition-opacity duration-300">
-                <h2 class="text-lg font-bold text-white mb-2"><i class="fa-solid fa-chart-pie text-cyan-500 mr-2"></i>Phân Tích Kênh Chuyên Sâu</h2>
-                <p class="text-xs text-zinc-500 mb-4 border-l-2 border-[#333] pl-2">Hệ thống quét sâu với xung nhịp 1 giây thu gom đúng mốc 200 bài đăng.</p>
-                <div class="flex flex-col sm:flex-row gap-3">
-                    <div class="relative flex-1">
-                        <div class="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none text-zinc-600 font-bold">@</div>
-                        <input type="text" id="tiktok-analytics-id" placeholder="Nhập ID kênh mục tiêu..." class="w-full pl-10 pr-5 py-4 bento-input text-sm">
-                    </div>
-                    <button id="fetch-analytics-btn" onclick="fetchAnalytics()" class="bento-btn !bg-cyan-500 !text-white hover:!bg-cyan-600 py-4 px-8 flex items-center justify-center gap-2 text-sm sm:w-auto w-full">
-                        Báo Cáo Sâu
-                    </button>
-                </div>
-            </div>
-
         </div>
 
-        <div id="loading" class="hidden w-full text-center mt-6 animate-slide-up pointer-events-none">
-            <div class="inline-flex items-center gap-2 bg-[#111] border border-[#222] px-5 py-2.5 rounded-full shadow-lg">
-                <i class="fa-solid fa-circle-notch fa-spin text-blue-500"></i>
-                <span id="loading-text" class="text-xs font-bold text-zinc-300 uppercase tracking-widest">Vận hành ngầm...</span>
+        <!-- TAB: INFO -->
+        <div id="mode-info" class="hidden">
+            <h2 class="font-bold text-white flex items-center gap-2 mb-4"><i class="fa-solid fa-user text-blue-500"></i> Trích Xuất Hồ Sơ</h2>
+            <div class="flex flex-col sm:flex-row gap-3">
+                <div class="relative flex-1">
+                    <span class="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-600 font-bold text-sm pointer-events-none">@</span>
+                    <input type="text" id="tiktok-username" placeholder="ID kênh (không cần @)" class="w-full pl-9 pr-4 py-3.5 inp text-sm">
+                </div>
+                <button id="fetch-info-btn" onclick="fetchUserInfo()" class="btn-primary px-7 py-3.5 text-sm whitespace-nowrap">Đọc Dữ Liệu</button>
             </div>
         </div>
-        <div id="error-msg" class="hidden mt-4 w-full bento-card bg-red-950/20 border-red-900/50 p-4 text-center text-sm font-medium text-red-400 animate-slide-up"></div>
 
-        <div id="user-info-area" class="w-full mt-6 hidden animate-fade-up"></div>
-        
-        <div id="special-action-container" class="w-full max-w-[98%] xl:max-w-6xl mx-auto mt-6 hidden justify-end items-center animate-slide-up gap-2"></div>
-
-        <div id="result-area" class="w-full max-w-[98%] xl:max-w-6xl mx-auto mt-4 pb-6"></div>
-
-    </main>
-
-    <div id="video-detail-window" class="modal-overlay fixed inset-0 flex items-center justify-center p-3 md:p-6">
-        <div class="modal-content w-full max-w-5xl rounded-[28px] overflow-hidden flex flex-col md:flex-row max-h-[90vh] md:max-h-[85vh] relative shadow-2xl">
-            <button onclick="closeDetailWindow('video-detail-window')" class="absolute top-4 right-4 z-30 w-8 h-8 bg-[#1a1a1a] hover:bg-red-500 text-zinc-400 hover:text-white rounded-full flex items-center justify-center transition-colors border border-[#333]">
-                <i class="fa-solid fa-xmark text-sm"></i>
-            </button>
-            <div class="w-full md:w-[45%] bg-black relative flex items-center justify-center h-[40vh] md:h-auto border-r border-[#222]" id="detail-video-container"></div>
-            <div class="w-full md:w-[55%] bg-[#0a0a0a] flex flex-col h-[50vh] md:h-auto relative">
-                <div id="detail-video-info" class="flex-1 overflow-y-auto custom-scroll-x p-6 md:p-8"></div>
-                <div id="detail-video-actions" class="p-5 border-t border-[#222] bg-[#0a0a0a] grid grid-cols-2 gap-3"></div>
+        <!-- TAB: ANALYTICS -->
+        <div id="mode-analytics" class="hidden">
+            <h2 class="font-bold text-white flex items-center gap-2 mb-1"><i class="fa-solid fa-chart-pie text-cyan-400"></i> Phân Tích Kênh</h2>
+            <p class="text-xs text-zinc-600 mb-4 pl-1">Phân tích 10 video mới nhất & 10 video phổ biến nhất.</p>
+            <div class="flex flex-col sm:flex-row gap-3">
+                <div class="relative flex-1">
+                    <span class="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-600 font-bold text-sm pointer-events-none">@</span>
+                    <input type="text" id="tiktok-analytics-id" placeholder="ID kênh mục tiêu..." class="w-full pl-9 pr-4 py-3.5 inp text-sm">
+                </div>
+                <button id="fetch-analytics-btn" onclick="fetchAnalytics()" class="btn-cyan px-7 py-3.5 text-sm whitespace-nowrap">Phân Tích Ngay</button>
             </div>
+        </div>
+
+    </div>
+
+    <!-- LOADING -->
+    <div id="loading" class="hidden anim-fadein">
+        <div class="flex items-center gap-3 bg-[#111] border border-[#1e1e1e] px-5 py-3 rounded-full shadow-lg">
+            <div class="flex gap-1.5 items-center">
+                <div class="loader-bar"></div>
+                <div class="loader-bar"></div>
+                <div class="loader-bar"></div>
+            </div>
+            <span id="loading-text" class="text-xs font-semibold text-zinc-400 tracking-wide">Đang xử lý...</span>
         </div>
     </div>
 
-    <script src="/app.js"></script>
+    <!-- ERROR -->
+    <div id="error-msg" class="hidden w-full card bg-red-950/20 border-red-900/40 px-5 py-4 text-sm text-red-400 flex items-center gap-2">
+        <i class="fa-solid fa-triangle-exclamation shrink-0"></i>
+        <span id="error-text"></span>
+    </div>
+
+    <!-- USER INFO AREA -->
+    <div id="user-info-area" class="w-full hidden"></div>
+
+    <!-- TOOLBAR (sort + actions) -->
+    <div id="toolbar" class="w-full hidden flex items-center justify-between gap-3 flex-wrap">
+        <div id="sort-btns" class="flex gap-1 bg-[#111] border border-[#1e1e1e] p-1 rounded-full hidden">
+            <button onclick="sortVideos('latest')"  id="sort-latest"  class="sort-pill sort-on"><i class="fa-solid fa-clock-rotate-left text-[10px]"></i> Mới Nhất</button>
+            <button onclick="sortVideos('popular')" id="sort-popular" class="sort-pill sort-off"><i class="fa-solid fa-fire text-[10px]"></i> Phổ Biến</button>
+        </div>
+        <div id="toolbar-actions" class="flex gap-2 ml-auto"></div>
+    </div>
+
+    <!-- VIDEO GRID -->
+    <div id="result-area" class="w-full"></div>
+
+    <!-- INFINITE SCROLL SENTINEL -->
+    <div id="scroll-sentinel"></div>
+
+    <!-- LOAD MORE INDICATOR -->
+    <div id="load-more-indicator" class="hidden py-4">
+        <div class="flex items-center gap-3 bg-[#111] border border-[#1e1e1e] px-5 py-3 rounded-full">
+            <div class="flex gap-1.5 items-center">
+                <div class="loader-bar"></div><div class="loader-bar"></div><div class="loader-bar"></div>
+            </div>
+            <span class="text-xs font-semibold text-zinc-500">Tải thêm...</span>
+        </div>
+    </div>
+
+</main>
+
+<!-- ═══ VIDEO DETAIL MODAL ═══ -->
+<div id="video-detail-modal" class="modal-bg">
+    <div class="modal-box shadow-2xl">
+        <button onclick="closeDetailModal()" class="absolute top-3.5 right-3.5 z-30 w-8 h-8 bg-[#1a1a1a] hover:bg-red-600 text-zinc-400 hover:text-white rounded-full flex items-center justify-center transition border border-[#2a2a2a]" style="position:absolute">
+            <i class="fa-solid fa-xmark text-xs"></i>
+        </button>
+        <!-- MEDIA SIDE -->
+        <div id="detail-media" class="w-full md:w-[42%] bg-black relative flex items-center justify-center h-[42vh] md:h-auto border-b md:border-b-0 md:border-r border-[#1e1e1e] shrink-0"></div>
+        <!-- INFO SIDE -->
+        <div class="flex flex-col flex-1 min-h-0">
+            <div id="detail-info" class="flex-1 overflow-y-auto p-5 md:p-7 text-sm"></div>
+            <div id="detail-actions" class="p-4 border-t border-[#1e1e1e] flex flex-col gap-2.5"></div>
+        </div>
+    </div>
+</div>
+
+<!-- ═══ GUIDE MODAL ═══ -->
+<div id="guide-window">
+    <div class="card w-full max-w-md p-7 anim-popin relative">
+        <button onclick="document.getElementById('guide-window').classList.remove('active')" class="absolute top-4 right-4 w-8 h-8 bg-[#1a1a1a] hover:bg-red-600 text-zinc-400 hover:text-white rounded-full flex items-center justify-center border border-[#2a2a2a] transition">
+            <i class="fa-solid fa-xmark text-xs"></i>
+        </button>
+        <h3 class="font-black text-white text-xl mb-5 flex items-center gap-2"><i class="fa-solid fa-circle-question text-blue-500"></i> Hướng Dẫn</h3>
+        <div class="space-y-4 text-sm text-zinc-400">
+            <div class="flex gap-3"><div class="w-7 h-7 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center shrink-0"><i class="fa-solid fa-download text-blue-400 text-xs"></i></div><div><strong class="text-white">Dữ Liệu</strong> — Dán link video/nhật ký để tải về không watermark.</div></div>
+            <div class="flex gap-3"><div class="w-7 h-7 rounded-xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center shrink-0"><i class="fa-solid fa-magnifying-glass text-purple-400 text-xs"></i></div><div><strong class="text-white">Tìm Kiếm</strong> — Tìm video theo từ khóa, tự động load thêm khi cuộn.</div></div>
+            <div class="flex gap-3"><div class="w-7 h-7 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center shrink-0"><i class="fa-solid fa-user text-emerald-400 text-xs"></i></div><div><strong class="text-white">Hồ Sơ</strong> — Xem toàn bộ video của kênh, load 30/lần, cuộn để thêm.</div></div>
+            <div class="flex gap-3"><div class="w-7 h-7 rounded-xl bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center shrink-0"><i class="fa-solid fa-chart-pie text-cyan-400 text-xs"></i></div><div><strong class="text-white">Phân Tích</strong> — Tổng quan ER, view TB, top hashtag từ 10 video mới nhất & phổ biến nhất.</div></div>
+        </div>
+    </div>
+</div>
+
+<script src="/app.js"></script>
 </body>
 </html>
-
