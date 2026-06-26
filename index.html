@@ -5,6 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>TikTok Studio Pro</title>
     <meta name="referrer" content="no-referrer">
+    
+    <meta name="theme-color" content="#080808">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
@@ -15,7 +20,7 @@
     </script>
     <style>
         * { box-sizing: border-box; }
-        body { background: #080808; color: #f0f0f0; -webkit-font-smoothing: antialiased; font-family: 'Inter', sans-serif; }
+        body { background: #080808; color: #f0f0f0; -webkit-font-smoothing: antialiased; font-family: 'Inter', sans-serif; overflow-x: hidden; }
 
         /* ── SCROLLBAR ── */
         ::-webkit-scrollbar { width: 4px; height: 4px; }
@@ -38,8 +43,6 @@
 
         /* ── CARD ── */
         .card { background: #111; border: 1px solid #1e1e1e; border-radius: 22px; }
-        .card-hover { transition: border-color 0.2s, box-shadow 0.2s, transform 0.2s; }
-        .card-hover:hover { border-color: #333; box-shadow: 0 12px 32px -8px rgba(0,0,0,0.7); transform: translateY(-2px); }
 
         /* ── INPUT ── */
         .inp { background: #0d0d0d; border: 1px solid #222; border-radius: 14px; transition: border-color 0.2s, box-shadow 0.2s; color: #f0f0f0; }
@@ -55,18 +58,20 @@
         .btn-cyan { background: #06b6d4; color: #000; font-weight: 700; border-radius: 14px; cursor: pointer; transition: opacity 0.15s; }
         .btn-cyan:hover { opacity: 0.85; }
 
-        /* ── VIDEO GRID ── */
-        .video-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 12px; }
-        @media (min-width: 640px)  { .video-grid { grid-template-columns: repeat(auto-fill, minmax(175px, 1fr)); gap: 14px; } }
-        @media (min-width: 1024px) { .video-grid { grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 16px; } }
+        /* ── VIDEO GRID (Ép 2 cột ngang trên điện thoại dọc) ── */
+        .video-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+        @media (min-width: 640px)  { .video-grid { grid-template-columns: repeat(3, 1fr); gap: 14px; } }
+        @media (min-width: 1024px) { .video-grid { grid-template-columns: repeat(4, 1fr); gap: 16px; } }
+        @media (min-width: 1280px) { .video-grid { grid-template-columns: repeat(5, 1fr); gap: 16px; } }
 
         .vcard { position: relative; border-radius: 16px; overflow: hidden; background: #111; border: 1px solid #1e1e1e; aspect-ratio: 9/16; cursor: pointer; transition: transform 0.25s, border-color 0.2s, box-shadow 0.2s; }
-        .vcard:hover { transform: translateY(-5px) scale(1.02); border-color: #3b82f6; box-shadow: 0 16px 40px -10px rgba(59,130,246,0.25); }
+        .vcard:hover { transform: translateY(-5px); border-color: #3b82f6; box-shadow: 0 16px 40px -10px rgba(59,130,246,0.25); z-index: 10; }
         .vcard img.thumb { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; transition: transform 0.4s; }
         .vcard:hover img.thumb { transform: scale(1.06); }
         .vcard .vcard-overlay { position: absolute; inset: 0; background: linear-gradient(to top, rgba(0,0,0,0.92) 0%, rgba(0,0,0,0.3) 45%, transparent 100%); pointer-events: none; }
         .vcard .vcard-top { position: absolute; top: 8px; left: 8px; right: 8px; z-index: 10; display: flex; justify-content: space-between; align-items: flex-start; }
         .vcard .vcard-bot { position: absolute; bottom: 0; left: 0; right: 0; z-index: 10; padding: 10px 10px 10px; }
+        
         .badge { display: inline-flex; align-items: center; gap: 3px; font-size: 9.5px; font-weight: 700; padding: 3px 7px; border-radius: 8px; }
         .badge-dark { background: rgba(0,0,0,0.75); backdrop-filter: blur(6px); border: 1px solid rgba(255,255,255,0.08); color: #fff; }
         .badge-img  { background: rgba(255,255,255,0.15); backdrop-filter: blur(6px); color: #fff; }
@@ -78,12 +83,10 @@
         .anim-fadeup  { animation: fadeUp  0.38s cubic-bezier(.16,1,.3,1) both; }
         .anim-fadein  { animation: fadeIn  0.3s ease both; }
         .anim-popin   { animation: popIn   0.3s cubic-bezier(.16,1,.3,1) both; }
-        .anim-delay-1 { animation-delay: 0.06s; }
-        .anim-delay-2 { animation-delay: 0.12s; }
 
-        /* ── MODAL ── */
-        .modal-bg { position: fixed; inset: 0; z-index: 999; background: rgba(0,0,0,0.92); backdrop-filter: blur(14px); opacity: 0; visibility: hidden; transition: opacity 0.28s, visibility 0.28s; display: flex; align-items: center; justify-content: center; padding: 12px; }
-        .modal-bg.open { opacity: 1; visibility: visible; }
+        /* ── MODAL CHỐNG LỖI CLICK ── */
+        .modal-bg { position: fixed; inset: 0; z-index: 999; background: rgba(0,0,0,0.92); backdrop-filter: blur(14px); opacity: 0; visibility: hidden; transition: opacity 0.28s, visibility 0.28s; display: flex; align-items: center; justify-content: center; padding: 12px; pointer-events: none; }
+        .modal-bg.open { opacity: 1; visibility: visible; pointer-events: auto; }
         .modal-box { width: 100%; max-width: 900px; max-height: 90vh; background: #0e0e0e; border: 1px solid #242424; border-radius: 24px; overflow: hidden; display: flex; flex-direction: column; transform: scale(0.96); transition: transform 0.28s cubic-bezier(.16,1,.3,1); }
         .modal-bg.open .modal-box { transform: scale(1); }
         @media (min-width: 768px) { .modal-box { flex-direction: row; } }
@@ -114,43 +117,37 @@
         #scroll-sentinel { height: 1px; width: 100%; }
 
         /* ── SORT TOGGLE ── */
-        .sort-pill { font-size: 11px; font-weight: 700; padding: 6px 14px; border-radius: 99px; cursor: pointer; transition: all 0.18s; }
+        .sort-pill { font-size: 11px; font-weight: 700; padding: 6px 14px; border-radius: 99px; cursor: pointer; transition: all 0.18s; display: inline-flex; align-items: center; gap: 6px; }
         .sort-on  { background: #fff; color: #000; }
         .sort-off { color: #666; }
         .sort-off:hover { color: #ccc; background: rgba(255,255,255,0.06); }
-
-        /* ── GUIDE MODAL ── */
-        #guide-window { position: fixed; inset: 0; z-index: 1000; background: rgba(0,0,0,0.92); backdrop-filter: blur(14px); opacity: 0; visibility: hidden; transition: all 0.28s; display: flex; align-items: center; justify-content: center; padding: 16px; }
-        #guide-window.active { opacity: 1; visibility: visible; }
     </style>
 </head>
 <body class="min-h-screen pb-24">
 
-<!-- ═══ NAV ═══ -->
+<button id="install-app-btn" onclick="installWebApp()" class="hidden fixed top-4 right-4 sm:top-5 sm:right-6 z-[60] bg-gradient-to-r from-blue-600 to-indigo-500 hover:from-blue-500 hover:to-indigo-400 text-white text-[10px] sm:text-xs font-bold px-4 py-2 sm:px-5 sm:py-2.5 rounded-full shadow-[0_0_15px_rgba(59,130,246,0.4)] border border-blue-400/50 transition-all flex items-center gap-2">
+    <i class="fa-brands fa-google-play"></i> Tải App (Cài Đặt)
+</button>
+
 <nav class="fixed top-4 left-1/2 -translate-x-1/2 z-50 glass-nav rounded-full px-2 py-1.5 flex gap-1 shadow-2xl max-w-[96vw] overflow-x-auto">
     <button onclick="switchTab('video')"     id="tab-video"     class="tab-pill tab-on" ><i class="fa-solid fa-download text-xs"></i> Dữ Liệu</button>
     <button onclick="switchTab('search')"    id="tab-search"    class="tab-pill tab-off"><i class="fa-solid fa-magnifying-glass text-xs"></i> Tìm Kiếm</button>
     <button onclick="switchTab('info')"      id="tab-info"      class="tab-pill tab-off"><i class="fa-solid fa-user text-xs"></i> Hồ Sơ</button>
-    <button onclick="switchTab('analytics')" id="tab-analytics" class="tab-pill tab-off"><i class="fa-solid fa-chart-pie text-xs text-cyan-400"></i> Phân Tích</button>
+    <button onclick="switchTab('analytics')" id="tab-analytics" class="tab-pill tab-off"><i class="fa-solid fa-chart-pie text-xs text-cyan-400"></i> Phân Tích Kênh</button>
 </nav>
 
-<!-- ═══ GUIDE FAB ═══ -->
 <button onclick="openGuide()" class="guide-fab"><i class="fa-solid fa-circle-question"></i></button>
 
-<!-- ═══ MAIN ═══ -->
 <main class="w-full max-w-5xl mx-auto pt-28 px-4 flex flex-col items-center gap-5">
 
-    <!-- HERO -->
-    <div class="text-center anim-fadeup pointer-events-none select-none">
-        <span class="inline-block px-3 py-1 text-[10px] font-bold tracking-[0.2em] uppercase text-zinc-500 bg-zinc-900/60 border border-zinc-800 rounded-full mb-4">Studio Pro</span>
+    <div class="text-center anim-fadeup pointer-events-none select-none mt-2">
+        <span class="inline-block px-3 py-1 text-[10px] font-bold tracking-[0.2em] uppercase text-zinc-500 bg-zinc-900/60 border border-zinc-800 rounded-full mb-4">Studio Pro Update</span>
         <h1 class="text-4xl md:text-5xl font-black tracking-tight text-white leading-none mb-2">TikTok Studio</h1>
-        <p class="text-zinc-500 text-sm font-medium">Phân tích · Tải xuống · Truy xuất dữ liệu</p>
+        <p class="text-zinc-500 text-sm font-medium">Hệ thống phân tích 100% dữ liệu gốc</p>
     </div>
 
-    <!-- INPUT CARD -->
     <div class="card w-full p-5 md:p-7 anim-fadeup anim-delay-1 shadow-2xl">
 
-        <!-- TAB: VIDEO -->
         <div id="mode-video">
             <div class="flex items-center justify-between mb-4">
                 <h2 class="font-bold text-white flex items-center gap-2"><i class="fa-solid fa-download text-blue-500"></i> Truy Xuất Tệp</h2>
@@ -166,7 +163,6 @@
             <button id="fetch-video-btn" onclick="processVideos()" class="btn-primary w-full py-3.5 text-sm">Khởi Chạy Tiến Trình</button>
         </div>
 
-        <!-- TAB: SEARCH -->
         <div id="mode-search" class="hidden">
             <h2 class="font-bold text-white flex items-center gap-2 mb-4"><i class="fa-solid fa-magnifying-glass text-blue-500"></i> Tìm Kiếm Nội Dung</h2>
             <div class="flex flex-col sm:flex-row gap-3">
@@ -178,7 +174,6 @@
             </div>
         </div>
 
-        <!-- TAB: INFO -->
         <div id="mode-info" class="hidden">
             <h2 class="font-bold text-white flex items-center gap-2 mb-4"><i class="fa-solid fa-user text-blue-500"></i> Trích Xuất Hồ Sơ</h2>
             <div class="flex flex-col sm:flex-row gap-3">
@@ -190,22 +185,20 @@
             </div>
         </div>
 
-        <!-- TAB: ANALYTICS -->
         <div id="mode-analytics" class="hidden">
-            <h2 class="font-bold text-white flex items-center gap-2 mb-1"><i class="fa-solid fa-chart-pie text-cyan-400"></i> Phân Tích Kênh</h2>
-            <p class="text-xs text-zinc-600 mb-4 pl-1">Phân tích 10 video mới nhất & 10 video phổ biến nhất.</p>
+            <h2 class="font-bold text-white flex items-center gap-2 mb-1"><i class="fa-solid fa-chart-pie text-cyan-400"></i> Phân Tích 100% Kênh</h2>
+            <p class="text-xs text-zinc-500 mb-4 pl-1">Công cụ quét toàn bộ video không bỏ sót để đánh giá hiệu suất.</p>
             <div class="flex flex-col sm:flex-row gap-3">
                 <div class="relative flex-1">
                     <span class="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-600 font-bold text-sm pointer-events-none">@</span>
-                    <input type="text" id="tiktok-analytics-id" placeholder="ID kênh mục tiêu..." class="w-full pl-9 pr-4 py-3.5 inp text-sm">
+                    <input type="text" id="tiktok-analytics-id" placeholder="Nhập ID kênh mục tiêu..." class="w-full pl-9 pr-4 py-3.5 inp text-sm">
                 </div>
-                <button id="fetch-analytics-btn" onclick="fetchAnalytics()" class="btn-cyan px-7 py-3.5 text-sm whitespace-nowrap">Phân Tích Ngay</button>
+                <button id="fetch-analytics-btn" onclick="fetchAnalytics()" class="btn-cyan px-7 py-3.5 text-sm whitespace-nowrap">Báo Cáo Sâu</button>
             </div>
         </div>
 
     </div>
 
-    <!-- LOADING -->
     <div id="loading" class="hidden anim-fadein">
         <div class="flex items-center gap-3 bg-[#111] border border-[#1e1e1e] px-5 py-3 rounded-full shadow-lg">
             <div class="flex gap-1.5 items-center">
@@ -217,51 +210,42 @@
         </div>
     </div>
 
-    <!-- ERROR -->
     <div id="error-msg" class="hidden w-full card bg-red-950/20 border-red-900/40 px-5 py-4 text-sm text-red-400 flex items-center gap-2">
         <i class="fa-solid fa-triangle-exclamation shrink-0"></i>
         <span id="error-text"></span>
     </div>
 
-    <!-- USER INFO AREA -->
     <div id="user-info-area" class="w-full hidden"></div>
 
-    <!-- TOOLBAR (sort + actions) -->
-    <div id="toolbar" class="w-full hidden flex items-center justify-between gap-3 flex-wrap">
-        <div id="sort-btns" class="flex gap-1 bg-[#111] border border-[#1e1e1e] p-1 rounded-full hidden">
-            <button onclick="sortVideos('latest')"  id="sort-latest"  class="sort-pill sort-on"><i class="fa-solid fa-clock-rotate-left text-[10px]"></i> Mới Nhất</button>
+    <div id="toolbar" class="w-full hidden flex items-center justify-between gap-3 flex-wrap anim-fadeup mt-2">
+        <div id="sort-btns" class="flex gap-1 bg-[#111] border border-[#1e1e1e] p-1 rounded-full">
+            <button onclick="sortVideos('latest')"  id="sort-latest"  class="sort-pill sort-on"><i class="fa-solid fa-bars text-[10px]"></i> Mới Nhất</button>
             <button onclick="sortVideos('popular')" id="sort-popular" class="sort-pill sort-off"><i class="fa-solid fa-fire text-[10px]"></i> Phổ Biến</button>
         </div>
         <div id="toolbar-actions" class="flex gap-2 ml-auto"></div>
     </div>
 
-    <!-- VIDEO GRID -->
     <div id="result-area" class="w-full"></div>
 
-    <!-- INFINITE SCROLL SENTINEL -->
     <div id="scroll-sentinel"></div>
 
-    <!-- LOAD MORE INDICATOR -->
-    <div id="load-more-indicator" class="hidden py-4">
+    <div id="load-more-indicator" class="hidden py-4 w-full flex justify-center">
         <div class="flex items-center gap-3 bg-[#111] border border-[#1e1e1e] px-5 py-3 rounded-full">
             <div class="flex gap-1.5 items-center">
                 <div class="loader-bar"></div><div class="loader-bar"></div><div class="loader-bar"></div>
             </div>
-            <span class="text-xs font-semibold text-zinc-500">Tải thêm...</span>
+            <span class="text-xs font-semibold text-zinc-500">Đang quét thêm tệp...</span>
         </div>
     </div>
 
 </main>
 
-<!-- ═══ VIDEO DETAIL MODAL ═══ -->
 <div id="video-detail-modal" class="modal-bg">
     <div class="modal-box shadow-2xl">
-        <button onclick="closeDetailModal()" class="absolute top-3.5 right-3.5 z-30 w-8 h-8 bg-[#1a1a1a] hover:bg-red-600 text-zinc-400 hover:text-white rounded-full flex items-center justify-center transition border border-[#2a2a2a]" style="position:absolute">
+        <button onclick="closeDetailModal()" class="absolute top-3.5 right-3.5 z-30 w-8 h-8 bg-[#1a1a1a] hover:bg-red-600 text-zinc-400 hover:text-white rounded-full flex items-center justify-center transition border border-[#2a2a2a]">
             <i class="fa-solid fa-xmark text-xs"></i>
         </button>
-        <!-- MEDIA SIDE -->
         <div id="detail-media" class="w-full md:w-[42%] bg-black relative flex items-center justify-center h-[42vh] md:h-auto border-b md:border-b-0 md:border-r border-[#1e1e1e] shrink-0"></div>
-        <!-- INFO SIDE -->
         <div class="flex flex-col flex-1 min-h-0">
             <div id="detail-info" class="flex-1 overflow-y-auto p-5 md:p-7 text-sm"></div>
             <div id="detail-actions" class="p-4 border-t border-[#1e1e1e] flex flex-col gap-2.5"></div>
@@ -269,18 +253,17 @@
     </div>
 </div>
 
-<!-- ═══ GUIDE MODAL ═══ -->
-<div id="guide-window">
+<div id="guide-window" class="modal-bg">
     <div class="card w-full max-w-md p-7 anim-popin relative">
-        <button onclick="document.getElementById('guide-window').classList.remove('active')" class="absolute top-4 right-4 w-8 h-8 bg-[#1a1a1a] hover:bg-red-600 text-zinc-400 hover:text-white rounded-full flex items-center justify-center border border-[#2a2a2a] transition">
+        <button onclick="document.getElementById('guide-window').classList.remove('open')" class="absolute top-4 right-4 w-8 h-8 bg-[#1a1a1a] hover:bg-red-600 text-zinc-400 hover:text-white rounded-full flex items-center justify-center border border-[#2a2a2a] transition">
             <i class="fa-solid fa-xmark text-xs"></i>
         </button>
         <h3 class="font-black text-white text-xl mb-5 flex items-center gap-2"><i class="fa-solid fa-circle-question text-blue-500"></i> Hướng Dẫn</h3>
         <div class="space-y-4 text-sm text-zinc-400">
-            <div class="flex gap-3"><div class="w-7 h-7 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center shrink-0"><i class="fa-solid fa-download text-blue-400 text-xs"></i></div><div><strong class="text-white">Dữ Liệu</strong> — Dán link video/nhật ký để tải về không watermark.</div></div>
-            <div class="flex gap-3"><div class="w-7 h-7 rounded-xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center shrink-0"><i class="fa-solid fa-magnifying-glass text-purple-400 text-xs"></i></div><div><strong class="text-white">Tìm Kiếm</strong> — Tìm video theo từ khóa, tự động load thêm khi cuộn.</div></div>
-            <div class="flex gap-3"><div class="w-7 h-7 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center shrink-0"><i class="fa-solid fa-user text-emerald-400 text-xs"></i></div><div><strong class="text-white">Hồ Sơ</strong> — Xem toàn bộ video của kênh, load 30/lần, cuộn để thêm.</div></div>
-            <div class="flex gap-3"><div class="w-7 h-7 rounded-xl bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center shrink-0"><i class="fa-solid fa-chart-pie text-cyan-400 text-xs"></i></div><div><strong class="text-white">Phân Tích</strong> — Tổng quan ER, view TB, top hashtag từ 10 video mới nhất & phổ biến nhất.</div></div>
+            <div class="flex gap-3"><div class="w-7 h-7 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center shrink-0"><i class="fa-solid fa-download text-blue-400 text-xs"></i></div><div><strong class="text-white">Dữ Liệu</strong> — Tải Video không logo hoặc bóc mảng Nhật ký ảnh rời.</div></div>
+            <div class="flex gap-3"><div class="w-7 h-7 rounded-xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center shrink-0"><i class="fa-solid fa-bars text-purple-400 text-xs"></i></div><div><strong class="text-white">Tìm Kiếm</strong> — Tìm và sắp xếp video linh hoạt, lấy ngẫu nhiên 1 chạm.</div></div>
+            <div class="flex gap-3"><div class="w-7 h-7 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center shrink-0"><i class="fa-solid fa-user text-emerald-400 text-xs"></i></div><div><strong class="text-white">Hồ Sơ</strong> — Trích xuất Bio link và quét sạch danh sách video của kênh.</div></div>
+            <div class="flex gap-3"><div class="w-7 h-7 rounded-xl bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center shrink-0"><i class="fa-solid fa-chart-pie text-cyan-400 text-xs"></i></div><div><strong class="text-white">Phân Tích Sâu</strong> — Thuật toán vét sạch 100% tệp kênh để tính toán độ Viral, điểm ER. Mảng thẻ được giữ nguyên cấu trúc chuẩn.</div></div>
         </div>
     </div>
 </div>
