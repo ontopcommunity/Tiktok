@@ -38,7 +38,7 @@ window.installWebApp = function() {
     }
 }
 
-// ================= UTILS BÓC TÁCH SỐ LIỆU CHỐNG LỖI =================
+// ================= UTILS BÓC TÁCH SỐ LIỆU CHỐNG LỖI 100% =================
 window.parseRawStats = function(str) {
     if (str == null) return 0;
     if (typeof str === 'number') return str;
@@ -59,7 +59,7 @@ window.formatStatsClient = function(num) {
     return (Math.floor(rawNum / 100000) / 10).toString().replace('.', ',') + "M";
 }
 
-// ================= UNIVERSAL MAPPER =================
+// ================= UNIVERSAL MAPPER (Lấy HDPlay mạnh nhất) =================
 window.universalVideoMapper = function(videosArray, fallbackAuthor = null) {
     return videosArray.map(v => {
         const a = v.author || fallbackAuthor || {};
@@ -89,7 +89,10 @@ window.universalVideoMapper = function(videosArray, fallbackAuthor = null) {
                     share: window.parseRawStats(v.share_count || v.stats?.share || v.stats?.shareCount), 
                     download: window.parseRawStats(v.download_count || v.stats?.download || 0) 
                 },
-                urls: { cover: v.cover || v.video?.cover, no_watermark: v.play || v.urls?.no_watermark || v.video?.playAddr }, 
+                urls: { 
+                    cover: v.cover || v.video?.cover, 
+                    no_watermark: v.hdplay || v.play || v.urls?.no_watermark || v.video?.playAddr 
+                }, 
                 music: { playUrl: v.music?.playUrl || v.music, title: v.music_info?.title || v.music?.title || "Âm thanh gốc" },
                 images: v.images || null 
             }
@@ -205,6 +208,7 @@ window.typeWriter = function(element, text, speed=25) {
     type();
 }
 
+// ================= LOGIC SẮP XẾP LƯỚI =================
 window.sortVideos = function(type) {
     if(!window.fetchedVideos || window.fetchedVideos.length === 0) return;
     window.currentSortType = type;
@@ -221,6 +225,7 @@ window.sortVideos = function(type) {
     
     window.renderVideoCards(window.fetchedVideos, false, 0);
     
+    // Đồng bộ lại Scroller nếu đang xem trong lúc bấm Sắp xếp
     const playerModal = document.getElementById('tk-player-modal');
     if(playerModal && playerModal.classList.contains('active')) {
         const scroller = document.getElementById('tk-feed-scroller');
@@ -232,7 +237,7 @@ window.sortVideos = function(type) {
     }
 }
 
-// ================= API GOM DATA =================
+// ================= API FETCHING (AUTO CHỐNG DROP) =================
 window.processVideos = async function() {
     const input = document.getElementById('tiktok-links').value;
     const links = input.split('\n').map(l => l.trim()).filter(l => l !== '');
@@ -254,6 +259,7 @@ window.processVideos = async function() {
     } catch (error) { window.setSkeletonState(false); window.showError(error.message); } 
 }
 
+// TÌM KIẾM (CÓ TÍCH HỢP LƯỚT XUỐNG TẢI THÊM NGẦM)
 window.searchTikTok = async function(isLoadMore = false) {
     let kw = document.getElementById('tiktok-keyword').value.trim();
     if(!kw && !isLoadMore) return window.showError("Nhập từ khóa vô!");
@@ -300,6 +306,7 @@ window.searchTikTok = async function(isLoadMore = false) {
     }
 }
 
+// SOI KÊNH (CÓ TÍCH HỢP LƯỚT XUỐNG TẢI THÊM NGẦM)
 window.fetchUserInfo = async function(isLoadMore = false) {
     let user = isLoadMore ? window.currentUserProfile : document.getElementById('tiktok-username').value.trim();
     if (user.startsWith('@')) user = user.substring(1);
@@ -378,6 +385,7 @@ window.fetchUserInfo = async function(isLoadMore = false) {
     finally { window.isLoadingMore = false; document.getElementById('load-more-indicator')?.classList.add('hidden'); }
 }
 
+// PHÂN TÍCH 100% KÊNH (VÉT SẠCH DATA TRONG API, DELAY 1S MỖI 200 BÀI ĐỂ CHỐNG BLOCK)
 window.fetchAnalytics = async function() {
     let user = document.getElementById('tiktok-analytics-id').value.trim();
     if (user.startsWith('@')) user = user.substring(1);
@@ -385,7 +393,7 @@ window.fetchAnalytics = async function() {
 
     window.clearResults();
     window.currentMode = 'analytics';
-    window.setSkeletonState(true, true, "Đang cỗ máy quét 100% video...");
+    window.setSkeletonState(true, true, "Đang khởi chạy luồng quét 100%...");
 
     try {
         let allVideos = [];
@@ -408,8 +416,9 @@ window.fetchAnalytics = async function() {
             cur = data.cursor;
             hasMore = data.hasMore;
             
-            document.getElementById('loading-text').innerText = `ĐANG THU GOM ĐƯỢC ${allVideos.length} BÀI ĐĂNG TỪ MÁY CHỦ...`;
+            document.getElementById('loading-text').innerText = `XUNG NHỊP QUÉT: ĐÃ THU GOM ĐƯỢC ${allVideos.length} BÀI ĐĂNG TỪ MÁY CHỦ...`;
             
+            // Xả nhịp chống dính Rate Limit
             if (videosInCurrentSecond >= 200) {
                 await new Promise(r => setTimeout(r, 1000));
                 videosInCurrentSecond = 0;
@@ -511,7 +520,32 @@ window.fetchAnalytics = async function() {
     } catch (error) { window.setSkeletonState(false); window.showError(error.message); } 
 }
 
-// ================= RENDER LƯỚI & NÚT SẮP XẾP CUỘN NGANG =================
+window.searchRandom = async function() {
+    if(window.fetchedVideos.length === 0) return;
+    
+    window.setSkeletonState(true, false, "Đang bốc thăm ngẫu nhiên...");
+    try {
+        const randomCursor = Math.floor(Math.random() * 20);
+        let response = await fetch(`/api/search?keywords=${encodeURIComponent(window.currentSearchKeyword)}&cursor=${randomCursor}&count=20`);
+        let resData = await response.json();
+        
+        if (resData.code !== 0 || !resData.data?.videos?.length) {
+            response = await fetch(`/api/search?keywords=${encodeURIComponent(window.currentSearchKeyword)}&cursor=0&count=20`);
+            resData = await response.json();
+        }
+
+        let videos = resData.data?.videos;
+        if(videos && videos.length > 0) {
+            window.clearResults();
+            const luckyVideo = videos[Math.floor(Math.random() * videos.length)];
+            window.fetchedVideos = window.universalVideoMapper([luckyVideo]);
+            window.renderVideoCards(window.fetchedVideos);
+        }
+        window.setSkeletonState(false);
+    } catch (error) { window.setSkeletonState(false); window.showError(error.message); } 
+}
+
+// ================= RENDER LƯỚI & SẮP XẾP CUỘN NGANG =================
 window.renderVideoCards = function(results, append = false, startIndex = 0) {
     const container = document.getElementById('result-area');
     const specialAction = document.getElementById('special-action-container');
@@ -580,6 +614,7 @@ window.renderVideoCards = function(results, append = false, startIndex = 0) {
 window.appendVideoCards = function(newItems, startIndex) {
     window.renderVideoCards(newItems, true, startIndex);
     
+    // Nối thêm vào feed của Player nếu đang lướt
     const scroller = document.getElementById('tk-feed-scroller');
     if(scroller && document.getElementById('tk-player-modal').classList.contains('active')) {
         const slidesHtml = newItems.map((v, i) => window.createFeedSlideHTML(v, startIndex + i)).join('');
@@ -588,7 +623,7 @@ window.appendVideoCards = function(newItems, startIndex) {
     }
 }
 
-// ================= INFINITE SCROLL OBSERVER (TỰ ĐỘNG LOAD THÊM DỮ LIỆU) =================
+// ================= INFINITE SCROLL OBSERVER (TỰ ĐỘNG LOAD THÊM NGẦM) =================
 window.startScrollObserver = function() {
     if(window.scrollObserver) window.scrollObserver.disconnect();
     const sentinel = document.getElementById('scroll-sentinel');
@@ -608,7 +643,7 @@ window.stopScrollObserver = function() {
     if (window.scrollObserver) { window.scrollObserver.disconnect(); window.scrollObserver = null; }
 }
 
-// ================= TIKTOK PLAYER VERTICAL FEED (CÓ NÚT SHARE) =================
+// ================= TIKTOK PLAYER VERTICAL FEED (LƯỚT TRẢI NGHIỆM) =================
 window.createFeedSlideHTML = function(item, index) {
     const d = item.data;
     const isImg = d.images && d.images.length > 0;
@@ -623,7 +658,7 @@ window.createFeedSlideHTML = function(item, index) {
             <div class="tk-icon-wrap"><i class="fa-solid fa-comment-dots tk-icon"></i><span class="text-[11px] font-bold mt-1 text-shadow">${window.formatStatsClient(d.stats.comment)}</span></div>
             <div class="tk-icon-wrap"><i class="fa-solid fa-bookmark tk-icon"></i><span class="text-[11px] font-bold mt-1 text-shadow">${window.formatStatsClient(d.stats.download||0)}</span></div>
             
-            <!-- NÚT SHARE GỌI SHARE SHEET -->
+            <!-- SHARE: Mở Sheet Liên Kết -->
             <div class="tk-icon-wrap" onclick="window.openShareSheet(${index}, event)">
                 <i class="fa-solid fa-share tk-icon"></i>
                 <span class="text-[11px] font-bold mt-1 text-shadow">${window.formatStatsClient(d.stats.share)}</span>
@@ -789,7 +824,7 @@ window.togglePlayPause = function(index) {
     }
 }
 
-// BẢNG PHÂN TÍCH
+// BẢNG PHÂN TÍCH (NÚT 3 CHẤM BÊN TRONG TRÌNH PHÁT)
 window.openAnalyticsSheet = function(index, event) {
     if(event) event.stopPropagation();
     const d = window.fetchedVideos[index].data;
@@ -823,7 +858,7 @@ window.closeAnalyticsSheet = function(event) {
     document.getElementById('tk-analytics-sheet').classList.remove('show');
 }
 
-// BẢNG CHIA SẺ & MỞ TIKTOK NATIVE
+// BẢNG CHIA SẺ (SHARE) VÀ MỞ NATIVE TIKTOK
 window.openShareSheet = function(index, event) {
     if(event) event.stopPropagation();
     const item = window.fetchedVideos[index];
