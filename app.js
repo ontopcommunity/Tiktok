@@ -41,9 +41,10 @@ function parseRawStats(str) {
 function formatStatsClient(num) {
     let rawNum = parseRawStats(num);
     if (rawNum === 0) return "0";
-    if (rawNum < 1000) return rawNum.toString();
-    if (rawNum < 1000000) return (Math.floor(rawNum / 100) / 10).toString().replace('.', ',') + "K";
-    return (Math.floor(rawNum / 100000) / 10).toString().replace('.', ',') + "M";
+    if (rawNum >= 1000000000) return (rawNum / 1000000000).toFixed(1).replace('.0', '') + "B";
+    if (rawNum >= 1000000) return (rawNum / 1000000).toFixed(1).replace('.0', '') + "M";
+    if (rawNum >= 1000) return (rawNum / 1000).toFixed(1).replace('.0', '') + "K";
+    return rawNum.toString();
 }
 
 // ================= HÀM ĐIỀU HƯỚNG GIAO DIỆN =================
@@ -314,9 +315,10 @@ async function fetchAnalytics() {
         let pAuthor = null;
         let hasMore = true;
         let videosInCurrentSecond = 0;
+        let loops = 0;
+        const MAX_LOOPS = 50; // Giới hạn số lần quét để chống crash trình duyệt
 
-        // Bỏ limitPages, quét bằng hết thì thôi
-        while(hasMore) {
+        while(hasMore && loops < MAX_LOOPS) {
             const response = await fetch(`/api/index?username=${user}&cursor=${cur}`);
             const data = await response.json();
             if (data.status !== "Live") break;
@@ -329,6 +331,7 @@ async function fetchAnalytics() {
             
             cur = data.cursor;
             hasMore = data.hasMore;
+            loops++;
             
             document.getElementById('loading-text').innerText = `XUNG NHỊP QUÉT: ĐÃ THU GOM ${allVideos.length} BÀI ĐĂNG`;
             
@@ -375,7 +378,7 @@ async function fetchAnalytics() {
                     <img src="${pAuthor?.avatar}" class="w-16 h-16 rounded-full object-cover border border-[#333] bg-black" referrerpolicy="no-referrer">
                     <div>
                         <h2 class="text-2xl font-extrabold text-white flex items-center gap-2">${pAuthor?.nickname || user}</h2>
-                        <p class="text-cyan-400 font-medium text-sm">Báo cáo Phân tích từ 100% (${allVideos.length}) bài đăng</p>
+                        <p class="text-cyan-400 font-medium text-sm">Báo cáo Phân tích từ ${allVideos.length} bài đăng</p>
                     </div>
                 </div>
 
@@ -518,6 +521,10 @@ function openVideoDetail(index) {
     document.getElementById('tk-username').innerText = `@${d.author.uniqueId}`;
     document.getElementById('tk-caption').innerText = d.video_data.description || '';
     document.getElementById('tk-music').innerText = d.music?.title || 'Âm thanh gốc';
+    
+    // Gắn hình Avatar vào Cover Đĩa Nhạc
+    const discCover = document.getElementById('tk-music-cover');
+    if(discCover) discCover.src = d.author.avatar;
     
     document.getElementById('tk-like').innerText = formatStatsClient(d.stats.like);
     document.getElementById('tk-cmt').innerText = formatStatsClient(d.stats.comment);
