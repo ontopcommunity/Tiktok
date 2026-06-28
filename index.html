@@ -6,7 +6,6 @@
     <title>TikTok Studio Pro | Ultimate</title>
     <meta name="referrer" content="no-referrer">
     
-    <!-- PWA Cài Đặt App -->
     <meta name="theme-color" content="#000000">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -81,15 +80,21 @@
         .tk-pause-icon.show { opacity: 0.85; animation: pingPause 0.3s ease-out forwards; }
         @keyframes pingPause { 0% { transform: translate(-50%, -50%) scale(1.5); opacity: 0; } 100% { transform: translate(-50%, -50%) scale(1); opacity: 0.85; } }
 
-        /* Sidebar Phải */
-        .tk-sidebar { position: absolute; right: 10px; bottom: 85px; z-index: 30; display: flex; flex-direction: column; gap: 18px; align-items: center; text-shadow: 0 1px 4px rgba(0,0,0,0.8); }
+        /* Sidebar Phải - CẬP NHẬT CĂN CHỈNH */
+        .tk-sidebar { position: absolute; right: 10px; bottom: 85px; z-index: 30; display: flex; flex-direction: column; gap: 20px; align-items: center; text-shadow: 0 1px 4px rgba(0,0,0,0.8); padding-bottom: 20px; }
         .tk-icon-wrap { display: flex; flex-direction: column; align-items: center; gap: 4px; color: #fff; cursor: pointer; transition: transform 0.1s; }
         .tk-icon-wrap:active { transform: scale(0.9); }
         .tk-icon { font-size: 32px; filter: drop-shadow(0 2px 5px rgba(0,0,0,0.5)); }
         
         .tk-avatar-wrap { position: relative; margin-bottom: 8px; }
         .tk-avatar { width: 46px; height: 46px; border-radius: 50%; border: 2px solid #fff; object-fit: cover; }
-        .tk-plus-btn { position: absolute; -bottom: 6px; left: 50%; transform: translateX(-50%); background: #ea4359; color: #fff; width: 18px; height: 18px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: bold; border: 2px solid #000; }
+        .tk-plus-btn { position: absolute; bottom: -8px; left: 50%; transform: translateX(-50%); background: #ea4359; color: #fff; width: 20px; height: 20px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: bold; border: 2px solid #000; transition: transform 0.2s; cursor: pointer; }
+        .tk-plus-btn:active { transform: translateX(-50%) scale(0.8); }
+
+        /* HIỆU ỨNG ĐĨA NHẠC XOAY - THÊM MỚI */
+        .tk-music-disc { position: absolute; right: 10px; bottom: 25px; width: 44px; height: 44px; background: #222; border-radius: 50%; display: flex; align-items: center; justify-content: center; animation: spinDisc 4s linear infinite; box-shadow: 0 0 10px rgba(0,0,0,0.5); border: 8px solid #333; z-index: 30; }
+        .tk-music-disc img { width: 100%; height: 100%; border-radius: 50%; object-fit: cover; }
+        @keyframes spinDisc { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 
         /* Info Dưới */
         .tk-bottom-info { position: absolute; bottom: 85px; left: 14px; right: 75px; z-index: 30; color: #fff; text-shadow: 0 1px 3px rgba(0,0,0,0.8); pointer-events: none; }
@@ -123,12 +128,10 @@
 </head>
 <body class="min-h-screen pb-20">
 
-    <!-- CÀI ĐẶT APP WEB (PWA) -->
     <button id="install-app-btn" onclick="installWebApp()" class="hidden fixed top-5 right-5 z-[60] bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold px-4 py-2.5 rounded-full shadow-lg transition-all flex items-center gap-2 border border-blue-400">
         <i class="fa-brands fa-google-play"></i> Cài App
     </button>
 
-    <!-- DOCK TABS -->
     <nav class="fixed top-4 left-1/2 -translate-x-1/2 z-50 nav-dock rounded-full p-1.5 flex gap-1 shadow-2xl max-w-[95%] overflow-x-auto">
         <button onclick="switchTab('video')" id="tab-video" class="tab-btn tab-active"><i class="fa-solid fa-download"></i> Tải Tệp</button>
         <button onclick="switchTab('search')" id="tab-search" class="tab-btn tab-inactive"><i class="fa-solid fa-magnifying-glass"></i> Tìm Kiếm</button>
@@ -145,7 +148,6 @@
 
         <div class="bento-card w-full p-5 md:p-8 animate-slide-up relative z-10 shadow-xl">
             
-            <!-- TẢI TỆP -->
             <div id="mode-video" class="transition-opacity duration-300">
                 <div class="flex items-center justify-between mb-4">
                     <h2 class="text-base font-bold text-white"><i class="fa-solid fa-download text-blue-500 mr-2"></i>Truy Xuất Media</h2>
@@ -160,7 +162,6 @@
                 <button onclick="processVideos()" class="w-full bento-btn py-3.5 flex items-center justify-center gap-2 text-sm">Khởi Chạy Dữ Liệu</button>
             </div>
 
-            <!-- TÌM KIẾM -->
             <div id="mode-search" class="hidden transition-opacity duration-300">
                 <h2 class="text-base font-bold text-white mb-4"><i class="fa-solid fa-magnifying-glass text-blue-500 mr-2"></i>Tìm Kiếm Mạng Lưới</h2>
                 <div class="flex flex-col sm:flex-row gap-3">
@@ -169,7 +170,6 @@
                 </div>
             </div>
 
-            <!-- SOI KÊNH -->
             <div id="mode-info" class="hidden transition-opacity duration-300">
                 <h2 class="text-base font-bold text-white mb-4"><i class="fa-solid fa-user text-blue-500 mr-2"></i>Quét Hồ Sơ Kênh</h2>
                 <div class="flex flex-col sm:flex-row gap-3">
@@ -181,7 +181,6 @@
                 </div>
             </div>
 
-            <!-- PHÂN TÍCH 100% -->
             <div id="mode-analytics" class="hidden transition-opacity duration-300">
                 <h2 class="text-base font-bold text-white mb-2"><i class="fa-solid fa-chart-pie text-cyan-400 mr-2"></i>Phân Tích Sâu Toàn Kênh</h2>
                 <p class="text-xs text-zinc-500 mb-4">Vét 100% video của kênh. Tự động xả delay 1s/200 bài.</p>
@@ -197,9 +196,7 @@
 
         <div id="error-msg" class="hidden mt-4 w-full bento-card bg-red-950/20 border-red-900/50 p-4 text-center text-sm text-red-400"></div>
 
-        <!-- KHUNG XƯƠNG SKELETON LOADING -->
         <div id="skeleton-area" class="w-full mt-6 hidden">
-            <!-- Header Kênh Skeleton -->
             <div id="skel-profile" class="w-full bento-card p-6 flex flex-col items-center gap-4 mb-4 hidden">
                 <div class="skeleton-shimmer w-20 h-20 rounded-full"></div>
                 <div class="skeleton-shimmer w-32 h-4 rounded"></div>
@@ -207,7 +204,6 @@
             </div>
             <p id="loading-text" class="text-blue-400 font-bold text-xs mt-2 mb-4 text-center w-full animate-pulse">Đang kết nối...</p>
             
-            <!-- Lưới Video Skeleton (2 Cột Mobile) -->
             <div class="w-full video-grid max-w-[98%] xl:max-w-6xl mx-auto">
                 <div class="skeleton-shimmer aspect-[3/4] rounded-xl w-full"></div>
                 <div class="skeleton-shimmer aspect-[3/4] rounded-xl w-full"></div>
@@ -216,51 +212,45 @@
             </div>
         </div>
 
-        <!-- HIỂN THỊ THÔNG TIN KÊNH / BÁO CÁO KÊNH -->
         <div id="user-info-area" class="w-full mt-6 hidden animate-slide-up"></div>
         
-        <!-- THANH CÔNG CỤ SẮP XẾP -->
         <div id="special-action-container" class="w-full max-w-[98%] xl:max-w-6xl mx-auto mt-6 hidden justify-end items-center gap-2"></div>
 
-        <!-- LƯỚI VIDEO HIỂN THỊ THỰC TẾ -->
         <div id="result-area" class="w-full video-grid max-w-[98%] xl:max-w-6xl mx-auto mt-4 pb-6"></div>
 
     </main>
 
-    <!-- ─── TIKTOK MOBILE PLAYER MODAL ─── -->
     <div id="tk-player-modal" class="tk-overlay">
         <div class="tk-container shadow-2xl">
-            <!-- Nút Tắt -->
             <button onclick="closeTkPlayer()" class="tk-close-btn"><i class="fa-solid fa-chevron-left text-lg"></i></button>
 
-            <!-- Khu Vực Render Media (Bấm để Pause) -->
             <div id="tk-media-zone" class="tk-media-area" onclick="toggleTkPlayPause()"></div>
 
-            <!-- Icon Pause Hiện Hình Khi Bấm Dừng -->
             <div id="tk-center-pause" class="tk-pause-icon">
                 <i class="fa-solid fa-play text-white opacity-80" style="font-size: 65px; filter: drop-shadow(0 0 10px rgba(0,0,0,0.5));"></i>
             </div>
 
-            <!-- Sidebar Phải -->
             <div class="tk-sidebar">
                 <div class="tk-avatar-wrap">
                     <img id="tk-avatar" src="" class="tk-avatar" referrerpolicy="no-referrer">
-                    <div class="tk-plus-btn"><i class="fa-solid fa-plus text-[10px]"></i></div>
+                    <div class="tk-plus-btn"><i class="fa-solid fa-plus text-[12px]"></i></div>
                 </div>
-                <div class="tk-icon-wrap"><i class="fa-solid fa-heart tk-icon"></i><span id="tk-like" class="text-[11px] font-bold mt-1">0</span></div>
-                <div class="tk-icon-wrap"><i class="fa-solid fa-comment-dots tk-icon"></i><span id="tk-cmt" class="text-[11px] font-bold mt-1">0</span></div>
-                <div class="tk-icon-wrap"><i class="fa-solid fa-bookmark tk-icon"></i><span id="tk-save" class="text-[11px] font-bold mt-1">0</span></div>
-                <div class="tk-icon-wrap"><i class="fa-solid fa-share tk-icon"></i><span id="tk-share" class="text-[11px] font-bold mt-1">0</span></div>
+                <div class="tk-icon-wrap"><i class="fa-solid fa-heart tk-icon"></i><span id="tk-like" class="text-[12px] font-semibold mt-1">0</span></div>
+                <div class="tk-icon-wrap"><i class="fa-solid fa-comment-dots tk-icon"></i><span id="tk-cmt" class="text-[12px] font-semibold mt-1">0</span></div>
+                <div class="tk-icon-wrap"><i class="fa-solid fa-bookmark tk-icon"></i><span id="tk-save" class="text-[12px] font-semibold mt-1">0</span></div>
+                <div class="tk-icon-wrap"><i class="fa-solid fa-share tk-icon"></i><span id="tk-share" class="text-[12px] font-semibold mt-1">0</span></div>
                 
-                <!-- NÚT 3 CHẤM BẬT PHÂN TÍCH -->
                 <div class="tk-icon-wrap mt-2" onclick="toggleAnalyticsCard(event)">
-                    <div class="w-9 h-9 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center border border-white/30 shadow-lg">
+                    <div class="w-9 h-9 rounded-full bg-black/40 backdrop-blur-md flex items-center justify-center border border-white/20 shadow-lg">
                         <i class="fa-solid fa-ellipsis text-white text-xl"></i>
                     </div>
                 </div>
             </div>
 
-            <!-- Info Dưới Cùng Trái -->
+            <div class="tk-music-disc">
+                <img id="tk-music-cover" src="https://ui-avatars.com/api/?name=Music&background=random" referrerpolicy="no-referrer">
+            </div>
+
             <div class="tk-bottom-info">
                 <h3 id="tk-username" class="tk-username">@username</h3>
                 <p id="tk-caption" class="tk-caption">Caption</p>
@@ -272,7 +262,6 @@
                 </div>
             </div>
 
-            <!-- Thanh Nút Tải Cạnh Dưới Đáy Video -->
             <div class="tk-action-bar">
                 <div id="tk-btn-dl-media" class="tk-dl-btn">
                     <i class="fa-solid fa-download"></i> <span id="tk-lbl-media">Lưu Video</span>
@@ -282,7 +271,6 @@
                 </div>
             </div>
 
-            <!-- BẢNG PHÂN TÍCH (BOTTOM SHEET) -->
             <div id="tk-analytics-sheet" class="tk-analytics-sheet p-5 flex flex-col">
                 <div class="flex justify-between items-center mb-4 border-b border-[#222] pb-3 shrink-0">
                     <h3 class="text-base font-bold text-white flex items-center gap-2"><i class="fa-solid fa-chart-simple text-blue-500"></i> Phân Tích Dữ Liệu</h3>
@@ -291,13 +279,11 @@
                     </div>
                 </div>
                 <div id="tk-analytics-content" class="flex-1 overflow-y-auto space-y-2 pb-6">
-                    <!-- Bơm Data Phân Tích bằng JS -->
-                </div>
+                    </div>
             </div>
         </div>
     </div>
 
-    <!-- Nạp JS -->
     <script src="app.js"></script>
 </body>
 </html>
