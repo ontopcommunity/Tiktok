@@ -59,12 +59,20 @@ window.formatStatsClient = function(num) {
     return (Math.floor(rawNum / 100000) / 10).toString().replace('.', ',') + "M";
 }
 
-// ================= UNIVERSAL MAPPER (Lấy HDPlay mạnh nhất) =================
+// ================= UNIVERSAL MAPPER (BẢO VỆ UNDEFINED AVATAR VÀ ẢNH LỖI) =================
 window.universalVideoMapper = function(videosArray, fallbackAuthor = null) {
     return videosArray.map(v => {
+        // Bọc thép đối tượng Author: Nếu v.author null, lấy fallback, nếu fallback null thì tạo object rỗng
         const a = v.author || fallbackAuthor || {};
-        const uId = a.unique_id || a.uniqueId || '';
+        const uId = a.unique_id || a.uniqueId || 'user';
         const vId = v.video_id || v.id || '';
+        
+        // Bọc thép Avatar: Thử 3 nguồn, nếu vẫn chết thì xài ảnh random tạo từ tên uniqueId
+        const avatar = a.avatar || a.avatarLarger || v.cover || `https://ui-avatars.com/api/?name=${uId}&background=random`;
+        
+        // Bọc thép Ảnh Cover
+        const cover = v.cover || v.origin_cover || v.video?.cover || v.video?.origin_cover || '';
+
         return {
             link: v.link || `https://www.tiktok.com/@${uId}/video/${vId}`,
             data: {
@@ -72,7 +80,7 @@ window.universalVideoMapper = function(videosArray, fallbackAuthor = null) {
                 author: { 
                     uniqueId: uId, 
                     nickname: a.nickname || uId, 
-                    avatar: a.avatar || a.avatarLarger || v.cover || '', 
+                    avatar: avatar, 
                     verified: a.is_verify || a.verified || false 
                 },
                 video_data: { 
@@ -90,7 +98,7 @@ window.universalVideoMapper = function(videosArray, fallbackAuthor = null) {
                     download: window.parseRawStats(v.download_count || v.stats?.download || 0) 
                 },
                 urls: { 
-                    cover: v.cover || v.video?.cover, 
+                    cover: cover, 
                     no_watermark: v.hdplay || v.play || v.urls?.no_watermark || v.video?.playAddr 
                 }, 
                 music: { playUrl: v.music?.playUrl || v.music, title: v.music_info?.title || v.music?.title || "Âm thanh gốc" },
@@ -208,7 +216,7 @@ window.typeWriter = function(element, text, speed=25) {
     type();
 }
 
-// ================= LOGIC SẮP XẾP LƯỚI =================
+// LOGIC SẮP XẾP LƯỚI
 window.sortVideos = function(type) {
     if(!window.fetchedVideos || window.fetchedVideos.length === 0) return;
     window.currentSortType = type;
@@ -225,7 +233,6 @@ window.sortVideos = function(type) {
     
     window.renderVideoCards(window.fetchedVideos, false, 0);
     
-    // Đồng bộ lại Scroller nếu đang xem trong lúc bấm Sắp xếp
     const playerModal = document.getElementById('tk-player-modal');
     if(playerModal && playerModal.classList.contains('active')) {
         const scroller = document.getElementById('tk-feed-scroller');
@@ -237,7 +244,7 @@ window.sortVideos = function(type) {
     }
 }
 
-// ================= API FETCHING (AUTO CHỐNG DROP) =================
+// ================= API FETCHING =================
 window.processVideos = async function() {
     const input = document.getElementById('tiktok-links').value;
     const links = input.split('\n').map(l => l.trim()).filter(l => l !== '');
@@ -259,7 +266,7 @@ window.processVideos = async function() {
     } catch (error) { window.setSkeletonState(false); window.showError(error.message); } 
 }
 
-// TÌM KIẾM (CÓ TÍCH HỢP LƯỚT XUỐNG TẢI THÊM NGẦM)
+// TÌM KIẾM
 window.searchTikTok = async function(isLoadMore = false) {
     let kw = document.getElementById('tiktok-keyword').value.trim();
     if(!kw && !isLoadMore) return window.showError("Nhập từ khóa vô!");
@@ -306,7 +313,7 @@ window.searchTikTok = async function(isLoadMore = false) {
     }
 }
 
-// SOI KÊNH (CÓ TÍCH HỢP LƯỚT XUỐNG TẢI THÊM NGẦM)
+// SOI KÊNH
 window.fetchUserInfo = async function(isLoadMore = false) {
     let user = isLoadMore ? window.currentUserProfile : document.getElementById('tiktok-username').value.trim();
     if (user.startsWith('@')) user = user.substring(1);
@@ -328,20 +335,25 @@ window.fetchUserInfo = async function(isLoadMore = false) {
         if (data.status !== "Live") throw new Error(data.error || "Kênh không tồn tại.");
 
         if (!isLoadMore) {
-            const u = data.author;
-            const s = data.stats_formatted || {};
-            window.fullUserData = data;
+            // Bọc thép lỗi không có author
+            const u = data.author || {};
+            window.fullUserData = { author: u, stats_formatted: data.stats_formatted || {} };
+            const s = window.fullUserData.stats_formatted;
+            
+            const safeAvatar = u.avatar || u.avatarLarger || `https://ui-avatars.com/api/?name=${u.uniqueId||user}&background=random`;
+            const safeNickname = u.nickname || u.uniqueId || user;
+            const safeUniqueId = u.uniqueId || user;
             
             const container = document.getElementById('user-info-area');
             container.innerHTML = `
                 <div class="w-full bento-card p-6 md:p-8 animate-slide-up">
                     <div class="text-center">
-                        <img src="${u.avatar}" class="w-24 h-24 rounded-full mx-auto object-cover border-4 border-[#222] bg-[#0a0a0a]" referrerpolicy="no-referrer">
+                        <img src="${safeAvatar}" class="w-24 h-24 rounded-full mx-auto object-cover border-4 border-[#222] bg-[#0a0a0a]" referrerpolicy="no-referrer" onerror="this.src='https://ui-avatars.com/api/?name=${safeUniqueId}&background=random'">
                         <h2 class="text-xl font-bold mt-4 text-white flex items-center justify-center gap-1">
-                            ${u.nickname || u.uniqueId} 
+                            ${safeNickname} 
                             ${u.verified ? '<i class="fa-solid fa-circle-check text-blue-500 text-sm"></i>' : ''}
                         </h2>
-                        <p class="text-zinc-500 font-medium text-xs mt-1">@${u.uniqueId}</p>
+                        <p class="text-zinc-500 font-medium text-xs mt-1">@${safeUniqueId}</p>
                         <p id="channel-bio-text" class="mt-4 text-zinc-400 text-sm max-w-xl mx-auto min-h-[40px]"></p>
                         ${u.bioLink ? `
                             <div class="inline-flex w-full mb-4">
@@ -385,7 +397,7 @@ window.fetchUserInfo = async function(isLoadMore = false) {
     finally { window.isLoadingMore = false; document.getElementById('load-more-indicator')?.classList.add('hidden'); }
 }
 
-// PHÂN TÍCH 100% KÊNH (VÉT SẠCH DATA TRONG API, DELAY 1S MỖI 200 BÀI ĐỂ CHỐNG BLOCK)
+// PHÂN TÍCH KÊNH 100%
 window.fetchAnalytics = async function() {
     let user = document.getElementById('tiktok-analytics-id').value.trim();
     if (user.startsWith('@')) user = user.substring(1);
@@ -393,7 +405,7 @@ window.fetchAnalytics = async function() {
 
     window.clearResults();
     window.currentMode = 'analytics';
-    window.setSkeletonState(true, true, "Đang khởi chạy luồng quét 100%...");
+    window.setSkeletonState(true, true, "Đang khởi chạy cỗ máy vét 100% video...");
 
     try {
         let allVideos = [];
@@ -418,7 +430,6 @@ window.fetchAnalytics = async function() {
             
             document.getElementById('loading-text').innerText = `XUNG NHỊP QUÉT: ĐÃ THU GOM ĐƯỢC ${allVideos.length} BÀI ĐĂNG TỪ MÁY CHỦ...`;
             
-            // Xả nhịp chống dính Rate Limit
             if (videosInCurrentSecond >= 200) {
                 await new Promise(r => setTimeout(r, 1000));
                 videosInCurrentSecond = 0;
@@ -456,13 +467,17 @@ window.fetchAnalytics = async function() {
             ? sortedTags.map(t => `<span class="bg-[#0d0d0d] border border-[#222] text-cyan-400 px-3 py-1.5 rounded-xl text-xs font-bold">${t[0]} <span class="text-zinc-600 ml-1">x${t[1]}</span></span>`).join('')
             : '<span class="text-zinc-600 text-sm italic">Không dùng Hashtag</span>';
 
+        // Bảo vệ hiển thị profile
+        const safeAvatar = pAuthor?.avatar || pAuthor?.avatarLarger || `https://ui-avatars.com/api/?name=${user}&background=random`;
+        const safeNickname = pAuthor?.nickname || user;
+
         const container = document.getElementById('user-info-area');
         container.innerHTML = `
             <div class="w-full bento-card p-6 md:p-8 animate-slide-up relative">
                 <div class="flex items-center gap-4 mb-8 pb-6 border-b border-[#222]">
-                    <img src="${pAuthor?.avatar}" class="w-16 h-16 rounded-full object-cover border border-[#333] bg-black" referrerpolicy="no-referrer">
+                    <img src="${safeAvatar}" class="w-16 h-16 rounded-full object-cover border border-[#333] bg-black" referrerpolicy="no-referrer" onerror="this.src='https://ui-avatars.com/api/?name=${user}&background=random'">
                     <div>
-                        <h2 class="text-2xl font-extrabold text-white flex items-center gap-2">${pAuthor?.nickname || user}</h2>
+                        <h2 class="text-2xl font-extrabold text-white flex items-center gap-2">${safeNickname}</h2>
                         <p class="text-cyan-400 font-medium text-sm">Báo cáo Phân tích từ 100% (${parsedVideos.length}) bài đăng</p>
                     </div>
                 </div>
@@ -520,31 +535,6 @@ window.fetchAnalytics = async function() {
     } catch (error) { window.setSkeletonState(false); window.showError(error.message); } 
 }
 
-window.searchRandom = async function() {
-    if(window.fetchedVideos.length === 0) return;
-    
-    window.setSkeletonState(true, false, "Đang bốc thăm ngẫu nhiên...");
-    try {
-        const randomCursor = Math.floor(Math.random() * 20);
-        let response = await fetch(`/api/search?keywords=${encodeURIComponent(window.currentSearchKeyword)}&cursor=${randomCursor}&count=20`);
-        let resData = await response.json();
-        
-        if (resData.code !== 0 || !resData.data?.videos?.length) {
-            response = await fetch(`/api/search?keywords=${encodeURIComponent(window.currentSearchKeyword)}&cursor=0&count=20`);
-            resData = await response.json();
-        }
-
-        let videos = resData.data?.videos;
-        if(videos && videos.length > 0) {
-            window.clearResults();
-            const luckyVideo = videos[Math.floor(Math.random() * videos.length)];
-            window.fetchedVideos = window.universalVideoMapper([luckyVideo]);
-            window.renderVideoCards(window.fetchedVideos);
-        }
-        window.setSkeletonState(false);
-    } catch (error) { window.setSkeletonState(false); window.showError(error.message); } 
-}
-
 // ================= RENDER LƯỚI & SẮP XẾP CUỘN NGANG =================
 window.renderVideoCards = function(results, append = false, startIndex = 0) {
     const container = document.getElementById('result-area');
@@ -587,16 +577,17 @@ window.renderVideoCards = function(results, append = false, startIndex = 0) {
             ? `<div class="absolute top-2 left-2 bg-white/90 text-black text-[9px] font-bold px-1.5 py-0.5 rounded shadow-md z-20"><i class="fa-regular fa-images"></i> ${d.images.length}</div>` 
             : '';
 
+        // Thêm bắt lỗi ảnh Thumbnail bằng placeholder xám
         html += `
             <div class="grid-item w-full ${animClass}" onclick="window.openVideoDetail(${currentIndex})" style="animation-delay: ${(index % 10) * 0.04}s">
-                <img src="${d.urls.cover}" class="thumb absolute inset-0 w-full h-full object-cover" loading="lazy" referrerpolicy="no-referrer">
+                <img src="${d.urls.cover}" class="thumb absolute inset-0 w-full h-full object-cover" loading="lazy" referrerpolicy="no-referrer" onerror="this.src='https://placehold.co/400x600/111/444?text=Không+thể+tải+ảnh'">
                 ${mediaTypeBadge}
                 <div class="absolute top-2 right-2 bg-black/80 backdrop-blur border border-zinc-700 text-white text-[9px] font-bold px-1.5 py-0.5 rounded z-20 flex items-center gap-1">
                     <i class="fa-solid fa-play text-blue-400"></i> ${window.formatStatsClient(d.stats.play)}
                 </div>
                 <div class="absolute inset-0 overlay-gradient z-10 flex flex-col justify-end p-3 pointer-events-none">
                     <div class="flex items-center gap-2 mb-1.5">
-                        <img src="${d.author.avatar}" class="w-6 h-6 rounded-full object-cover border border-zinc-600 bg-black shrink-0" loading="lazy" referrerpolicy="no-referrer">
+                        <img src="${d.author.avatar}" class="w-6 h-6 rounded-full object-cover border border-zinc-600 bg-black shrink-0" loading="lazy" referrerpolicy="no-referrer" onerror="this.src='https://ui-avatars.com/api/?name=${d.author.uniqueId}&background=random'">
                         <span class="text-white font-semibold text-[11px] truncate shadow-sm">${d.author.nickname}</span>
                     </div>
                     <div class="flex gap-2 text-[9.5px] font-bold text-zinc-300">
@@ -614,7 +605,6 @@ window.renderVideoCards = function(results, append = false, startIndex = 0) {
 window.appendVideoCards = function(newItems, startIndex) {
     window.renderVideoCards(newItems, true, startIndex);
     
-    // Nối thêm vào feed của Player nếu đang lướt
     const scroller = document.getElementById('tk-feed-scroller');
     if(scroller && document.getElementById('tk-player-modal').classList.contains('active')) {
         const slidesHtml = newItems.map((v, i) => window.createFeedSlideHTML(v, startIndex + i)).join('');
@@ -643,7 +633,7 @@ window.stopScrollObserver = function() {
     if (window.scrollObserver) { window.scrollObserver.disconnect(); window.scrollObserver = null; }
 }
 
-// ================= TIKTOK PLAYER VERTICAL FEED (LƯỚT TRẢI NGHIỆM) =================
+// ================= TIKTOK PLAYER VERTICAL FEED =================
 window.createFeedSlideHTML = function(item, index) {
     const d = item.data;
     const isImg = d.images && d.images.length > 0;
@@ -651,7 +641,7 @@ window.createFeedSlideHTML = function(item, index) {
     const sidebar = `
         <div class="tk-sidebar" onclick="event.stopPropagation()">
             <div class="tk-avatar-wrap" onclick="window.searchUserFromDetail('${d.author.uniqueId}')">
-                <img src="${d.author.avatar}" class="tk-avatar" referrerpolicy="no-referrer">
+                <img src="${d.author.avatar}" class="tk-avatar" referrerpolicy="no-referrer" onerror="this.src='https://ui-avatars.com/api/?name=${d.author.uniqueId}&background=random'">
                 <div class="tk-plus-btn"><i class="fa-solid fa-plus text-[10px]"></i></div>
             </div>
             <div class="tk-icon-wrap"><i class="fa-solid fa-heart tk-icon"></i><span class="text-[11px] font-bold mt-1 text-shadow">${window.formatStatsClient(d.stats.like)}</span></div>
@@ -824,7 +814,7 @@ window.togglePlayPause = function(index) {
     }
 }
 
-// BẢNG PHÂN TÍCH (NÚT 3 CHẤM BÊN TRONG TRÌNH PHÁT)
+// BẢNG PHÂN TÍCH
 window.openAnalyticsSheet = function(index, event) {
     if(event) event.stopPropagation();
     const d = window.fetchedVideos[index].data;
