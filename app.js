@@ -14,7 +14,7 @@ window.userVideoCursor = 0;
 window.userHasMore = false;
 window.fullUserData = null;
 
-// Thêm trạng thái cho phần Bình Luận
+// Trạng thái cho phần Bình Luận
 window.currentCommentVideoId = null;
 window.currentCommentLink = null;
 window.commentCursor = 0;
@@ -45,7 +45,7 @@ window.installWebApp = function() {
     }
 }
 
-// ================= UTILS BÓC TÁCH SỐ LIỆU CHỐNG LỖI 100% =================
+// ================= UTILS BÓC TÁCH SỐ LIỆU CHỐNG LỖI =================
 window.parseRawStats = function(str) {
     if (str == null) return 0;
     if (typeof str === 'number') return str;
@@ -66,17 +66,28 @@ window.formatStatsClient = function(num) {
     return (Math.floor(rawNum / 100000) / 10).toString().replace('.', ',') + "M";
 }
 
-// ================= UNIVERSAL MAPPER (BẢO VỆ UNDEFINED AVATAR VÀ ẢNH LỖI) =================
+// ================= UNIVERSAL MAPPER (BẢO VỆ 100% ẢNH BÌA VÀ AVATAR) =================
 window.universalVideoMapper = function(videosArray, fallbackAuthor = null) {
     return videosArray.map(v => {
         const a = v.author || fallbackAuthor || {};
         const uId = a.unique_id || a.uniqueId || 'user';
         const vId = v.video_id || v.id || '';
         
-        const avatar = a.avatar || a.avatarLarger || v.cover || `https://ui-avatars.com/api/?name=${uId}&background=random`;
+        const avatar = a.avatar || a.avatarLarger || `https://ui-avatars.com/api/?name=${uId}&background=random`;
         
-        // FIX LỖI ẢNH: Ưu tiên lấy ảnh đầu tiên của album nếu có, sau đó mới tới cover
-        const cover = (v.images && v.images.length > 0) ? v.images[0] : (v.cover || v.origin_cover || v.video?.cover || v.video?.origin_cover || '');
+        // FIX LỖI 1: Vét cạn toàn bộ các biến có thể chứa ảnh bìa từ api/index.js
+        let cover = '';
+        if (v.images && v.images.length > 0) {
+            cover = typeof v.images[0] === 'string' ? v.images[0] : (v.images[0].imageURL?.urlList?.[0] || '');
+        }
+        if (!cover) {
+            cover = v.cover || 
+                    v.origin_cover || 
+                    v.dynamic_cover || 
+                    v.cover_url || 
+                    (v.video && (v.video.cover || v.video.origin_cover || v.video.dynamic_cover)) || 
+                    '';
+        }
 
         return {
             link: v.link || `https://www.tiktok.com/@${uId}/video/${vId}`,
@@ -85,7 +96,7 @@ window.universalVideoMapper = function(videosArray, fallbackAuthor = null) {
                 author: { 
                     uniqueId: uId, 
                     nickname: a.nickname || uId, 
-                    avatar: avatar, 
+                    avatar: avatar || cover, 
                     verified: a.is_verify || a.verified || false 
                 },
                 video_data: { 
@@ -199,7 +210,6 @@ window.clearResults = function() {
     window.fetchedVideos = [];
     window.currentSortType = 'latest'; 
     
-    // FIX LỖI SOI KÊNH LẦN 2: Đưa các cursor về 0
     window.userVideoCursor = 0;
     window.userHasMore = false;
     window.searchCursor = 0;
@@ -551,7 +561,6 @@ window.renderVideoCards = function(results, append = false, startIndex = 0) {
     const container = document.getElementById('result-area');
     const specialAction = document.getElementById('special-action-container');
     
-    // Đã bỏ bộ lọc Mới nhất, Phổ biến
     if(specialAction && !append) {
         if (window.currentMode === 'video' && window.linkMode === 'multi' && window.fetchedVideos.length > 1) {
             specialAction.innerHTML = `
@@ -581,7 +590,7 @@ window.renderVideoCards = function(results, append = false, startIndex = 0) {
 
         html += `
             <div class="grid-item w-full ${animClass}" onclick="window.openVideoDetail(${currentIndex})" style="animation-delay: ${(index % 10) * 0.04}s">
-                <img src="${d.urls.cover}" class="thumb absolute inset-0 w-full h-full object-cover" loading="lazy" referrerpolicy="no-referrer" onerror="this.src='https://placehold.co/400x600/111/444?text=Không+thể+tải+ảnh'">
+                <img src="${d.urls.cover}" class="thumb absolute inset-0 w-full h-full object-cover" loading="lazy" referrerpolicy="no-referrer" onerror="this.src='https://placehold.co/400x600/111/444?text=Lỗi+Ảnh'">
                 ${mediaTypeBadge}
                 <div class="absolute top-2 right-2 bg-black/80 backdrop-blur border border-zinc-700 text-white text-[9px] font-bold px-1.5 py-0.5 rounded z-20 flex items-center gap-1">
                     <i class="fa-solid fa-play text-blue-400"></i> ${window.formatStatsClient(d.stats.play)}
@@ -819,7 +828,7 @@ window.togglePlayPause = function(index) {
     }
 }
 
-// BẢNG BÌNH LUẬN 100%
+// BẢNG BÌNH LUẬN 100% VÀ BẢO VỆ CHỐNG LỖI JSON
 window.openCommentSheet = function(index, event) {
     if(event) event.stopPropagation();
     const item = window.fetchedVideos[index];
@@ -863,9 +872,16 @@ window.fetchComments = async function(isLoadMore = false) {
             count: 30
         });
         
-        // Gọi API backend cho chức năng bình luận
         const response = await fetch(`/api/comment?${urlParams.toString()}`);
-        const resData = await response.json();
+        
+        // FIX LỖI 2: Đọc dưới dạng Text trước để tránh crash JSON khi server trả về trang 404
+        const textData = await response.text();
+        let resData;
+        try {
+            resData = JSON.parse(textData);
+        } catch (e) {
+            throw new Error(`Bạn cần tạo file route API cho bình luận (ví dụ: /api/comment.js) trên máy chủ. Máy chủ trả về HTML thay vì JSON: "${textData.substring(0, 40)}..."`);
+        }
         
         if (document.getElementById('comment-loading-more')) {
             document.getElementById('comment-loading-more').remove();
@@ -913,7 +929,11 @@ window.fetchComments = async function(isLoadMore = false) {
             document.getElementById('comment-loading-more').remove();
         }
         if (!isLoadMore) {
-            contentDiv.innerHTML = `<div class="text-center text-red-500 text-xs py-4">Lỗi tải dữ liệu: ${error.message}</div>`;
+            contentDiv.innerHTML = `
+                <div class="text-center text-red-400 text-xs py-4 px-2">
+                    <i class="fa-solid fa-triangle-exclamation block text-xl mb-2"></i>
+                    ${error.message}
+                </div>`;
         }
     } finally {
         window.isLoadingComments = false;
