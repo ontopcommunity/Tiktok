@@ -116,7 +116,7 @@
         .tk-dl-btn { flex: 1; height: 44px; background: #1a1a1a; border-radius: 12px; display: flex; align-items: center; justify-content: center; gap: 8px; color: #fff; font-size: 14px; font-weight: 600; transition: background 0.2s, transform 0.1s; cursor: pointer; }
         .tk-dl-btn:active { background: #333; transform: scale(0.97); }
 
-        /* Bảng Bottom Sheet chung (Phân tích & Share) */
+        /* Bảng Bottom Sheet chung (Phân tích & Share & Comments) */
         .tk-bottom-sheet { position: absolute; bottom: -100%; left: 0; width: 100%; background: #111; border-top-left-radius: 20px; border-top-right-radius: 20px; z-index: 60; transition: bottom 0.3s cubic-bezier(0.16, 1, 0.3, 1); border-top: 1px solid #222; display: flex; flex-direction: column; max-height: 80%; pointer-events: auto; }
         .tk-bottom-sheet.show { bottom: 0; }
 
@@ -141,12 +141,10 @@
 </head>
 <body class="min-h-screen pb-20">
 
-    <!-- CÀI ĐẶT WEB APP (PWA) -->
     <button id="install-app-btn" onclick="window.installWebApp()" class="hidden fixed top-5 right-5 z-[60] bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold px-4 py-2.5 rounded-full shadow-lg transition-all flex items-center gap-2 border border-blue-400">
         <i class="fa-solid fa-download"></i> Cài App
     </button>
 
-    <!-- THANH ĐIỀU HƯỚNG DOCK (FIX LỖI NÚT XẤU) -->
     <nav class="fixed top-4 left-1/2 -translate-x-1/2 z-50 nav-dock rounded-full p-1.5 flex gap-1 shadow-2xl max-w-[95%] overflow-x-auto scrollbar-hide">
         <button onclick="window.switchTab('video')" id="tab-video" class="tab-btn tab-active"><i class="fa-solid fa-download"></i> Tải Tệp</button>
         <button onclick="window.switchTab('search')" id="tab-search" class="tab-btn tab-inactive"><i class="fa-solid fa-magnifying-glass"></i> Tìm Kiếm</button>
@@ -163,7 +161,6 @@
 
         <div class="bento-card w-full p-5 md:p-8 animate-slide-up relative z-10 shadow-xl">
             
-            <!-- TẢI TỆP -->
             <div id="mode-video" class="transition-opacity duration-300">
                 <div class="flex items-center justify-between mb-4">
                     <h2 class="text-base font-bold text-white"><i class="fa-solid fa-download text-blue-500 mr-2"></i>Truy Xuất Media</h2>
@@ -178,7 +175,6 @@
                 <button onclick="window.processVideos()" class="w-full bento-btn py-3.5 flex items-center justify-center gap-2 text-sm">Thực Thi Dữ Liệu</button>
             </div>
 
-            <!-- TÌM KIẾM -->
             <div id="mode-search" class="hidden transition-opacity duration-300">
                 <h2 class="text-base font-bold text-white mb-4"><i class="fa-solid fa-magnifying-glass text-blue-500 mr-2"></i>Tìm Kiếm Mạng Lưới</h2>
                 <div class="flex flex-col sm:flex-row gap-3">
@@ -187,7 +183,6 @@
                 </div>
             </div>
 
-            <!-- SOI KÊNH -->
             <div id="mode-info" class="hidden transition-opacity duration-300">
                 <h2 class="text-base font-bold text-white mb-4"><i class="fa-solid fa-user text-blue-500 mr-2"></i>Quét Hồ Sơ Kênh</h2>
                 <div class="flex flex-col sm:flex-row gap-3">
@@ -199,7 +194,6 @@
                 </div>
             </div>
 
-            <!-- PHÂN TÍCH 100% -->
             <div id="mode-analytics" class="hidden transition-opacity duration-300">
                 <h2 class="text-base font-bold text-white mb-2"><i class="fa-solid fa-chart-pie text-cyan-400 mr-2"></i>Phân Tích Sâu Toàn Kênh</h2>
                 <p class="text-xs text-zinc-500 mb-4">Vét 100% video không giới hạn. Có tính năng delay chống lag.</p>
@@ -215,7 +209,6 @@
 
         <div id="error-msg" class="hidden mt-4 w-full bento-card bg-red-950/20 border-red-900/50 p-4 text-center text-sm text-red-400"></div>
 
-        <!-- SKELETON LOADING THỰC CHIẾN -->
         <div id="skeleton-area" class="w-full mt-6 hidden">
             <div id="skel-profile" class="w-full bento-card p-6 flex flex-col items-center gap-4 mb-4 hidden">
                 <div class="skeleton-shimmer w-20 h-20 rounded-full"></div>
@@ -236,24 +229,19 @@
 
         <div id="result-area" class="w-full video-grid max-w-[98%] xl:max-w-6xl mx-auto mt-4 pb-6"></div>
 
-        <!-- Sentinel Lắng Nghe Cuộn Cho Infinite Scroll -->
         <div id="scroll-sentinel" class="w-full h-2 mt-4"></div>
         <div id="load-more-indicator" class="hidden w-full text-center py-4 text-xs font-bold text-zinc-500 animate-pulse">Đang tải thêm video...</div>
 
     </main>
 
-    <!-- ─── TIKTOK MOBILE PLAYER: FEED DỌC VÔ TẬN ─── -->
     <div id="tk-player-modal" class="tk-overlay">
         <div class="tk-container shadow-2xl">
             
             <button onclick="window.closeTkPlayer()" class="tk-close-btn"><i class="fa-solid fa-chevron-left text-lg"></i></button>
 
-            <!-- TRÌNH CUỘN DỌC TẤT CẢ CÁC VIDEO -->
             <div id="tk-feed-scroller" class="tk-feed-scroller">
-                <!-- Nội dung các Slide được bơm qua JS -->
-            </div>
+                </div>
 
-            <!-- THANH TẢI XUỐNG CỐ ĐỊNH CHÂN -->
             <div class="tk-action-bar">
                 <div id="tk-btn-dl-media" class="tk-dl-btn">
                     <i class="fa-solid fa-download"></i> <span id="tk-lbl-media">Lưu Video</span>
@@ -263,7 +251,6 @@
                 </div>
             </div>
 
-            <!-- SHEET BÁO CÁO PHÂN TÍCH (MỞ BẰNG NÚT 3 CHẤM) -->
             <div id="tk-analytics-sheet" class="tk-bottom-sheet p-5 flex flex-col" onclick="event.stopPropagation()">
                 <div class="flex justify-between items-center mb-4 border-b border-[#222] pb-3 shrink-0">
                     <h3 class="text-base font-bold text-white flex items-center gap-2"><i class="fa-solid fa-chart-simple text-blue-500"></i> Báo Cáo Chuyên Sâu</h3>
@@ -272,11 +259,9 @@
                     </div>
                 </div>
                 <div id="tk-analytics-content" class="flex-1 overflow-y-auto space-y-2 pb-6 scrollbar-hide">
-                    <!-- JS Fill -->
-                </div>
+                    </div>
             </div>
 
-            <!-- SHEET TÙY CHỌN CHIA SẺ (MỞ BẰNG NÚT SHARE) -->
             <div id="tk-share-sheet" class="tk-bottom-sheet p-5 flex flex-col" onclick="event.stopPropagation()">
                 <div class="flex justify-between items-center mb-4 border-b border-[#222] pb-3 shrink-0">
                     <h3 class="text-base font-bold text-white flex items-center gap-2"><i class="fa-solid fa-share"></i> Chia Sẻ Đến</h3>
@@ -285,13 +270,23 @@
                     </div>
                 </div>
                 <div id="tk-share-content" class="flex items-start gap-4 pb-6 overflow-x-auto scrollbar-hide">
-                    <!-- JS Fill (Nút Copy, Nút Mở TikTok) -->
-                </div>
+                    </div>
             </div>
+            
+            <div id="tk-comment-sheet" class="tk-bottom-sheet p-5 flex flex-col h-[75vh]" onclick="event.stopPropagation()">
+                <div class="flex justify-between items-center mb-4 border-b border-[#222] pb-3 shrink-0">
+                    <h3 class="text-base font-bold text-white flex items-center gap-2"><i class="fa-solid fa-comments text-blue-500"></i> Bình luận (<span id="tk-comment-count">0</span>)</h3>
+                    <div class="w-8 h-8 rounded-full bg-[#222] flex items-center justify-center cursor-pointer" onclick="window.closeCommentSheet(event)">
+                        <i class="fa-solid fa-xmark text-zinc-400"></i>
+                    </div>
+                </div>
+                <div id="tk-comment-content" class="flex-1 overflow-y-auto space-y-4 pb-6 scrollbar-hide relative" onscroll="if(this.scrollTop + this.clientHeight >= this.scrollHeight - 50) window.fetchComments(true)">
+                    </div>
+            </div>
+
         </div>
     </div>
 
-    <!-- KHÔNG GỘP CHUNG JS VÀO ĐÂY, ĐỌC TỪ APP.JS -->
     <script src="app.js"></script>
 </body>
 </html>
