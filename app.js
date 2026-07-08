@@ -14,6 +14,13 @@ window.userVideoCursor = 0;
 window.userHasMore = false;
 window.fullUserData = null;
 
+// Thêm trạng thái cho phần Bình Luận
+window.currentCommentVideoId = null;
+window.currentCommentLink = null;
+window.commentCursor = 0;
+window.commentHasMore = false;
+window.isLoadingComments = false;
+
 window.currentVideoPlayer = null; 
 window.feedObserver = null;
 window.scrollObserver = null;
@@ -62,16 +69,14 @@ window.formatStatsClient = function(num) {
 // ================= UNIVERSAL MAPPER (BẢO VỆ UNDEFINED AVATAR VÀ ẢNH LỖI) =================
 window.universalVideoMapper = function(videosArray, fallbackAuthor = null) {
     return videosArray.map(v => {
-        // Bọc thép đối tượng Author: Nếu v.author null, lấy fallback, nếu fallback null thì tạo object rỗng
         const a = v.author || fallbackAuthor || {};
         const uId = a.unique_id || a.uniqueId || 'user';
         const vId = v.video_id || v.id || '';
         
-        // Bọc thép Avatar: Thử 3 nguồn, nếu vẫn chết thì xài ảnh random tạo từ tên uniqueId
         const avatar = a.avatar || a.avatarLarger || v.cover || `https://ui-avatars.com/api/?name=${uId}&background=random`;
         
-        // Bọc thép Ảnh Cover
-        const cover = v.cover || v.origin_cover || v.video?.cover || v.video?.origin_cover || '';
+        // FIX LỖI ẢNH: Ưu tiên lấy ảnh đầu tiên của album nếu có, sau đó mới tới cover
+        const cover = (v.images && v.images.length > 0) ? v.images[0] : (v.cover || v.origin_cover || v.video?.cover || v.video?.origin_cover || '');
 
         return {
             link: v.link || `https://www.tiktok.com/@${uId}/video/${vId}`,
@@ -193,6 +198,15 @@ window.clearResults = function() {
     window.showError('');
     window.fetchedVideos = [];
     window.currentSortType = 'latest'; 
+    
+    // FIX LỖI SOI KÊNH LẦN 2: Đưa các cursor về 0
+    window.userVideoCursor = 0;
+    window.userHasMore = false;
+    window.searchCursor = 0;
+    window.searchHasMore = false;
+    window.commentCursor = 0;
+    window.commentHasMore = false;
+
     window.stopScrollObserver();
 }
 
@@ -216,7 +230,6 @@ window.typeWriter = function(element, text, speed=25) {
     type();
 }
 
-// LOGIC SẮP XẾP LƯỚI
 window.sortVideos = function(type) {
     if(!window.fetchedVideos || window.fetchedVideos.length === 0) return;
     window.currentSortType = type;
@@ -332,10 +345,9 @@ window.fetchUserInfo = async function(isLoadMore = false) {
     try {
         const response = await fetch(`/api/index?username=${user}&cursor=${window.userVideoCursor}`);
         const data = await response.json();
-        if (data.status !== "Live") throw new Error(data.error || "Kênh không tồn tại.");
+        if (data.status !== "Live") throw new Error(data.error || "Kênh không tồn tại hoặc thiết lập ẩn.");
 
         if (!isLoadMore) {
-            // Bọc thép lỗi không có author
             const u = data.author || {};
             window.fullUserData = { author: u, stats_formatted: data.stats_formatted || {} };
             const s = window.fullUserData.stats_formatted;
@@ -467,7 +479,6 @@ window.fetchAnalytics = async function() {
             ? sortedTags.map(t => `<span class="bg-[#0d0d0d] border border-[#222] text-cyan-400 px-3 py-1.5 rounded-xl text-xs font-bold">${t[0]} <span class="text-zinc-600 ml-1">x${t[1]}</span></span>`).join('')
             : '<span class="text-zinc-600 text-sm italic">Không dùng Hashtag</span>';
 
-        // Bảo vệ hiển thị profile
         const safeAvatar = pAuthor?.avatar || pAuthor?.avatarLarger || `https://ui-avatars.com/api/?name=${user}&background=random`;
         const safeNickname = pAuthor?.nickname || user;
 
@@ -540,18 +551,9 @@ window.renderVideoCards = function(results, append = false, startIndex = 0) {
     const container = document.getElementById('result-area');
     const specialAction = document.getElementById('special-action-container');
     
+    // Đã bỏ bộ lọc Mới nhất, Phổ biến
     if(specialAction && !append) {
-        if (window.fetchedVideos.length > 1 && window.currentMode !== 'video') {
-            specialAction.innerHTML = `
-                <div class="flex items-center gap-1.5 bg-[#111] border border-[#222] p-1.5 rounded-2xl overflow-x-auto scrollbar-hide max-w-full">
-                    <button onclick="window.sortVideos('latest')" class="px-4 py-2.5 rounded-xl ${window.currentSortType === 'latest' ? 'bg-zinc-700 text-white shadow' : 'text-zinc-400 hover:text-white'} font-bold text-xs flex items-center gap-2 transition shrink-0"><i class="fa-solid fa-bars"></i> Mới Nhất</button>
-                    <button onclick="window.sortVideos('popular')" class="px-4 py-2.5 rounded-xl ${window.currentSortType === 'popular' ? 'bg-zinc-700 text-white shadow' : 'text-zinc-400 hover:text-white'} font-bold text-xs flex items-center gap-2 transition shrink-0"><i class="fa-solid fa-fire"></i> Phổ Biến</button>
-                    ${window.currentMode === 'search' ? `<button onclick="window.searchRandom()" class="px-4 py-2.5 rounded-xl bg-[#1a1a1a] text-zinc-300 border border-[#333] font-bold text-xs hover:bg-white hover:text-black transition flex items-center gap-2 shrink-0 ml-1"><i class="fa-solid fa-dice"></i> Ngẫu Nhiên</button>` : ''}
-                </div>
-            `;
-            specialAction.classList.remove('hidden');
-            specialAction.classList.add('flex');
-        } else if (window.currentMode === 'video' && window.linkMode === 'multi' && window.fetchedVideos.length > 1) {
+        if (window.currentMode === 'video' && window.linkMode === 'multi' && window.fetchedVideos.length > 1) {
             specialAction.innerHTML = `
                 <button onclick="window.downloadAllVideos(this)" class="px-5 py-3 rounded-xl bg-[#111] text-white font-bold text-xs hover:bg-blue-600 border border-[#222] transition shadow-md flex items-center gap-2"><i class="fa-solid fa-download"></i> Tải Tất Cả Tệp Media</button>
             `;
@@ -577,7 +579,6 @@ window.renderVideoCards = function(results, append = false, startIndex = 0) {
             ? `<div class="absolute top-2 left-2 bg-white/90 text-black text-[9px] font-bold px-1.5 py-0.5 rounded shadow-md z-20"><i class="fa-regular fa-images"></i> ${d.images.length}</div>` 
             : '';
 
-        // Thêm bắt lỗi ảnh Thumbnail bằng placeholder xám
         html += `
             <div class="grid-item w-full ${animClass}" onclick="window.openVideoDetail(${currentIndex})" style="animation-delay: ${(index % 10) * 0.04}s">
                 <img src="${d.urls.cover}" class="thumb absolute inset-0 w-full h-full object-cover" loading="lazy" referrerpolicy="no-referrer" onerror="this.src='https://placehold.co/400x600/111/444?text=Không+thể+tải+ảnh'">
@@ -645,10 +646,14 @@ window.createFeedSlideHTML = function(item, index) {
                 <div class="tk-plus-btn"><i class="fa-solid fa-plus text-[10px]"></i></div>
             </div>
             <div class="tk-icon-wrap"><i class="fa-solid fa-heart tk-icon"></i><span class="text-[11px] font-bold mt-1 text-shadow">${window.formatStatsClient(d.stats.like)}</span></div>
-            <div class="tk-icon-wrap"><i class="fa-solid fa-comment-dots tk-icon"></i><span class="text-[11px] font-bold mt-1 text-shadow">${window.formatStatsClient(d.stats.comment)}</span></div>
+            
+            <div class="tk-icon-wrap" onclick="window.openCommentSheet(${index}, event)">
+                <i class="fa-solid fa-comment-dots tk-icon"></i>
+                <span class="text-[11px] font-bold mt-1 text-shadow">${window.formatStatsClient(d.stats.comment)}</span>
+            </div>
+            
             <div class="tk-icon-wrap"><i class="fa-solid fa-bookmark tk-icon"></i><span class="text-[11px] font-bold mt-1 text-shadow">${window.formatStatsClient(d.stats.download||0)}</span></div>
             
-            <!-- SHARE: Mở Sheet Liên Kết -->
             <div class="tk-icon-wrap" onclick="window.openShareSheet(${index}, event)">
                 <i class="fa-solid fa-share tk-icon"></i>
                 <span class="text-[11px] font-bold mt-1 text-shadow">${window.formatStatsClient(d.stats.share)}</span>
@@ -814,6 +819,107 @@ window.togglePlayPause = function(index) {
     }
 }
 
+// BẢNG BÌNH LUẬN 100%
+window.openCommentSheet = function(index, event) {
+    if(event) event.stopPropagation();
+    const item = window.fetchedVideos[index];
+    const d = item.data;
+    const vId = d.video_data.id;
+    
+    document.getElementById('tk-comment-count').innerText = window.formatStatsClient(d.stats.comment);
+    document.getElementById('tk-share-sheet').classList.remove('show');
+    document.getElementById('tk-analytics-sheet').classList.remove('show');
+    document.getElementById('tk-comment-sheet').classList.add('show');
+    
+    if (window.currentCommentVideoId !== vId) {
+        window.currentCommentVideoId = vId;
+        window.currentCommentLink = item.link;
+        window.commentCursor = 0;
+        window.commentHasMore = true;
+        document.getElementById('tk-comment-content').innerHTML = '<div class="text-center text-zinc-500 text-xs py-6"><i class="fa-solid fa-spinner fa-spin text-lg mb-2 block"></i> Đang tải dữ liệu bình luận...</div>';
+        window.fetchComments(false);
+    }
+}
+
+window.closeCommentSheet = function(event) {
+    if(event) event.stopPropagation();
+    document.getElementById('tk-comment-sheet').classList.remove('show');
+}
+
+window.fetchComments = async function(isLoadMore = false) {
+    if (window.isLoadingComments || (!window.commentHasMore && isLoadMore)) return;
+    window.isLoadingComments = true;
+    
+    const contentDiv = document.getElementById('tk-comment-content');
+    if (isLoadMore) {
+        contentDiv.insertAdjacentHTML('beforeend', '<div id="comment-loading-more" class="text-center text-zinc-500 text-xs py-3"><i class="fa-solid fa-spinner fa-spin"></i> Đang tải thêm 30 bình luận...</div>');
+    }
+
+    try {
+        const urlParams = new URLSearchParams({
+            url: window.currentCommentLink,
+            id: window.currentCommentVideoId,
+            cursor: window.commentCursor,
+            count: 30
+        });
+        
+        // Gọi API backend cho chức năng bình luận
+        const response = await fetch(`/api/comment?${urlParams.toString()}`);
+        const resData = await response.json();
+        
+        if (document.getElementById('comment-loading-more')) {
+            document.getElementById('comment-loading-more').remove();
+        }
+        
+        if (!isLoadMore) contentDiv.innerHTML = '';
+
+        const comments = resData.comments || resData.data?.comments || [];
+        window.commentCursor = resData.cursor ?? resData.data?.cursor ?? (window.commentCursor + 30);
+        window.commentHasMore = resData.hasMore ?? resData.has_more ?? resData.data?.hasMore ?? resData.data?.has_more ?? false;
+
+        if (comments.length === 0 && !isLoadMore) {
+            contentDiv.innerHTML = '<div class="text-center text-zinc-500 text-xs py-4">Chưa có bình luận nào hoặc video đã khóa bình luận.</div>';
+        } else {
+            let html = comments.map(c => {
+                const user = c.user || c.author || {};
+                const uniqueId = user.unique_id || user.uniqueId || 'user';
+                const nickname = user.nickname || uniqueId;
+                const avatar = user.avatar || user.avatar_thumb || user.avatarLarger || `https://ui-avatars.com/api/?name=${uniqueId}&background=random`;
+                const text = c.text || c.comment || '';
+                const verified = user.is_verify || user.verified || user.custom_verify || false;
+                const diggCount = window.formatStatsClient(c.digg_count || c.like_count || c.diggCount || 0);
+
+                return `
+                    <div class="flex gap-3 items-start animate-slide-up mb-4">
+                        <img src="${avatar}" class="w-9 h-9 rounded-full object-cover shrink-0 cursor-pointer border border-[#333] bg-black transition hover:scale-105" onclick="window.searchUserFromDetail('${uniqueId}')" referrerpolicy="no-referrer" onerror="this.src='https://ui-avatars.com/api/?name=${uniqueId}&background=random'">
+                        <div class="flex-1 min-w-0">
+                            <div class="flex items-center gap-1 cursor-pointer w-fit" onclick="window.searchUserFromDetail('${uniqueId}')">
+                                <span class="text-zinc-400 font-bold text-xs truncate max-w-[200px] hover:text-white transition">${nickname}</span>
+                                ${verified ? '<i class="fa-solid fa-circle-check text-blue-500 text-[11px]" title="Đã xác minh"></i>' : ''}
+                            </div>
+                            <p class="text-white text-[13px] mt-1 break-words">${text}</p>
+                        </div>
+                        <div class="flex flex-col items-center gap-1 shrink-0 text-zinc-500 ml-2 mt-1">
+                            <i class="fa-regular fa-heart text-[13px]"></i>
+                            <span class="text-[10px] font-bold">${diggCount}</span>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+            contentDiv.insertAdjacentHTML('beforeend', html);
+        }
+    } catch (error) {
+        if (document.getElementById('comment-loading-more')) {
+            document.getElementById('comment-loading-more').remove();
+        }
+        if (!isLoadMore) {
+            contentDiv.innerHTML = `<div class="text-center text-red-500 text-xs py-4">Lỗi tải dữ liệu: ${error.message}</div>`;
+        }
+    } finally {
+        window.isLoadingComments = false;
+    }
+}
+
 // BẢNG PHÂN TÍCH
 window.openAnalyticsSheet = function(index, event) {
     if(event) event.stopPropagation();
@@ -840,6 +946,7 @@ window.openAnalyticsSheet = function(index, event) {
         </div>
     `;
     document.getElementById('tk-share-sheet').classList.remove('show');
+    document.getElementById('tk-comment-sheet').classList.remove('show');
     document.getElementById('tk-analytics-sheet').classList.add('show');
 }
 
@@ -870,6 +977,7 @@ window.openShareSheet = function(index, event) {
         </a>
     `;
     document.getElementById('tk-analytics-sheet').classList.remove('show');
+    document.getElementById('tk-comment-sheet').classList.remove('show');
     document.getElementById('tk-share-sheet').classList.add('show');
 }
 
@@ -895,6 +1003,7 @@ window.closeTkPlayer = function() {
     document.getElementById('tk-player-modal').classList.remove('active');
     document.getElementById('tk-analytics-sheet').classList.remove('show');
     document.getElementById('tk-share-sheet').classList.remove('show');
+    document.getElementById('tk-comment-sheet').classList.remove('show');
     document.body.style.overflow = '';
     
     if(window.feedObserver) { window.feedObserver.disconnect(); window.feedObserver = null; }
