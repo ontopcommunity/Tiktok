@@ -368,7 +368,8 @@ window.fetchUserInfo = async function(isLoadMore = false) {
     finally { window.isLoadingMore = false; document.getElementById('load-more-indicator')?.classList.add('hidden'); }
 }
 
-// PHÂN TÍCH KÊNH 100%
+
+// PHÂN TÍCH KÊNH 100% - RADAR LƯỢNG TỬ
 window.fetchAnalytics = async function() {
     let user = document.getElementById('tiktok-analytics-id').value.trim();
     if (user.startsWith('@')) user = user.substring(1);
@@ -382,17 +383,18 @@ window.fetchAnalytics = async function() {
     const skelArea = document.getElementById('skeleton-area');
     let pBarContainer = document.getElementById('scan-progress-container');
     
+    // Giao diện Radar
     if (!pBarContainer) {
         skelArea.insertAdjacentHTML('afterbegin', `
             <div id="scan-progress-container" class="w-full mx-auto mb-6 bg-[#0a0a0a] border-2 border-[#333] p-5 hidden">
                 <div class="flex justify-between items-center mb-3">
-                    <span class="text-sm text-cyan-400 flex items-center gap-2"><i class="fa-solid fa-satellite-dish animate-pulse"></i> TIẾN TRÌNH QUÉT</span>
-                    <span id="scan-progress-text" class="text-sm text-white">0 / 0</span>
+                    <span class="text-sm text-cyan-400 flex items-center gap-2 font-bold"><i class="fa-solid fa-satellite-dish animate-pulse"></i> RADAR LƯỢNG TỬ</span>
+                    <span id="scan-progress-text" class="text-sm text-white font-bold">0 / 0</span>
                 </div>
-                <div class="w-full h-4 bg-[#111] border-2 border-[#333] relative">
-                    <div id="scan-progress-bar" class="h-full bg-cyan-500 transition-all duration-300" style="width: 0%"></div>
+                <div class="w-full h-4 bg-[#111] border-2 border-[#333] relative overflow-hidden">
+                    <div id="scan-progress-bar" class="h-full bg-cyan-400 transition-none shadow-[0_0_10px_#00ffff]" style="width: 0%"></div>
                 </div>
-                <p id="scan-status-text" class="text-center text-xs text-[#888] mt-3">Khởi động kết nối...</p>
+                <p id="scan-status-text" class="text-center text-[11px] text-[#888] mt-3 font-mono">Khởi động hệ thống kết nối...</p>
             </div>
         `);
         pBarContainer = document.getElementById('scan-progress-container');
@@ -401,42 +403,72 @@ window.fetchAnalytics = async function() {
     pBarContainer.classList.remove('hidden');
     document.getElementById('scan-progress-bar').style.width = '0%';
     document.getElementById('scan-progress-text').innerText = '0 Video';
-    document.getElementById('scan-status-text').innerText = 'Đang lấy dữ liệu...';
+    let statusEl = document.getElementById('scan-status-text');
+    statusEl.innerText = 'Chuẩn bị lõi Radar...';
+
+    let allVideos = [];
+    let cur = 0;
+    let pAuthor = null;
+    let hasMore = true;
+    let expectedTotal = 0;
+
+    // ENGINE ANIMATION ĐỘC LẬP GIÚP CHẠY SỐ MƯỢT MÀ KHÔNG BỊ GIẬT
+    let displayedCount = 0;
+    let targetCount = 0;
+    let isFetching = true;
+    let hexChars = '0123456789ABCDEF';
+
+    let visualInterval = setInterval(() => {
+        let randomHex = '';
+        for(let i=0; i<6; i++) randomHex += hexChars[Math.floor(Math.random() * 16)];
+
+        if (displayedCount < targetCount) {
+            // Hiệu ứng chạy số gia tốc (Easing)
+            let diff = targetCount - displayedCount;
+            let step = Math.max(1, Math.ceil(diff / 8)); 
+            displayedCount += step;
+            if (displayedCount > targetCount) displayedCount = targetCount;
+
+            let percentage = expectedTotal > 0 ? Math.min((displayedCount / expectedTotal) * 100, 100) : 100;
+            document.getElementById('scan-progress-bar').style.width = `${percentage}%`;
+            document.getElementById('scan-progress-text').innerText = expectedTotal > 0 ? `${displayedCount} / ${expectedTotal}` : `${displayedCount}`;
+            statusEl.innerText = `[0x${randomHex}] TRÍCH XUẤT: ĐÃ TẢI ${displayedCount} KHỐI DỮ LIỆU...`;
+        } else if (!isFetching) {
+            statusEl.innerText = `[SYSTEM OK] HOÀN TẤT LẤY ${displayedCount} VIDEO.`;
+        } else {
+            statusEl.innerText = `[0x${randomHex}] ĐANG YÊU CẦU LÔ DATA MAX (1000 VIDEO/LƯỢT)...`;
+        }
+    }, 40);
 
     try {
-        let allVideos = [];
-        let cur = 0;
-        let pAuthor = null;
-        let hasMore = true;
-        let videosInCurrentSecond = 0;
-        let expectedTotal = 0;
-
         while(hasMore) {
-            const response = await fetch(`/api/index?username=${user}&cursor=${cur}`);
+            // Ép API đẩy tối đa 1000 video/lượt quét
+            const response = await fetch(`/api/index?username=${user}&cursor=${cur}&count=1000`);
             const data = await response.json();
             if (data.status !== "Live") break;
             
             if(!pAuthor && data.author) pAuthor = data.author;
-            
             if (expectedTotal === 0) expectedTotal = pAuthor?.videoCount || pAuthor?.video || data.stats_formatted?.videoCount || data.stats_formatted?.video || 0;
 
-            if(data.videos) {
+            if(data.videos && data.videos.length > 0) {
                 allVideos.push(...data.videos);
-                videosInCurrentSecond += data.videos.length;
+                targetCount = allVideos.length; // Truyền lượng thực tế vào để Frame Engine chạy theo
             }
             
             cur = data.cursor;
             hasMore = data.hasMore;
+            if (expectedTotal < targetCount) expectedTotal = targetCount;
             
-            if (expectedTotal < allVideos.length) expectedTotal = allVideos.length;
-            let percentage = expectedTotal > 0 ? Math.min((allVideos.length / expectedTotal) * 100, 100) : 100;
-            
-            document.getElementById('scan-progress-bar').style.width = `${percentage}%`;
-            document.getElementById('scan-progress-text').innerText = expectedTotal > 0 ? `${allVideos.length} / ${expectedTotal}` : `${allVideos.length}`;
-            document.getElementById('scan-status-text').innerText = `Đã thu thập: ${allVideos.length} bài đăng...`;
-            
-            if (videosInCurrentSecond >= 200) { await new Promise(r => setTimeout(r, 1000)); videosInCurrentSecond = 0; }
+            // Chống văng máy chủ (Delay nhẹ giữa các request)
+            await new Promise(r => setTimeout(r, 200)); 
         }
+
+        isFetching = false;
+        // Chờ thanh process bar chạy đủ 100% số lượng mới đóng
+        while(displayedCount < targetCount) {
+            await new Promise(r => setTimeout(r, 50));
+        }
+        clearInterval(visualInterval);
 
         if (allVideos.length === 0) throw new Error("Kênh trống hoặc bị lỗi.");
 
@@ -528,7 +560,7 @@ window.fetchAnalytics = async function() {
             
             <div class="w-full flex justify-center gap-4 mt-8 mb-4">
                 <button onclick="window.sortVideos('latest')" class="pixel-btn px-6 py-2.5 bg-[#e0e0e0] text-black">MỚI NHẤT</button>
-                <button onclick="window.sortVideos('oldest')" class="pixel-btn px-6 py-2.5 bg-[#222] text-white">CŨ NHẤT</button>
+                <button onclick="window.sortVideos('oldest')" class="pixel-btn px-6 py-2.5 bg-[#222] text-white hover:bg-white hover:text-black">CŨ NHẤT</button>
             </div>
         `;
         container.classList.remove('hidden');
@@ -536,7 +568,11 @@ window.fetchAnalytics = async function() {
         window.fetchedVideos = parsedVideos;
         window.setSkeletonState(false);
         window.sortVideos('latest');
-    } catch (error) { window.setSkeletonState(false); window.showError(error.message); } 
+    } catch (error) { 
+        clearInterval(visualInterval); 
+        window.setSkeletonState(false); 
+        window.showError(error.message); 
+    } 
 }
 
 // RENDER LƯỚI THUMBNAIL CHỐNG CẮT HÌNH
@@ -670,7 +706,6 @@ window.createFeedSlideHTML = function(item, index) {
             <button onclick="event.stopPropagation(); let c=document.getElementById('tk-img-scroller-${index}'); c.scrollBy({left: c.clientWidth, behavior: 'smooth'})" class="absolute right-2 top-1/2 -translate-y-1/2 w-10 h-10 bg-black/60 border border-white text-white flex items-center justify-center z-20 hover:bg-white hover:text-black"><i class="fa-solid fa-chevron-right text-lg"></i></button>
         `;
     } else {
-        // Đổi thành object-contain và nền đen để hiện viền trống bù tỉ lệ không bị crop
         media = `<video data-src="${d.urls.no_watermark}" poster="${d.urls.cover}" loop playsinline class="w-full h-full object-contain bg-black"></video>`;
     }
 
@@ -767,7 +802,7 @@ window.togglePlayPause = function(index) {
     if (vid.paused) { vid.play(); if(icon) icon.classList.remove('show'); } else { vid.pause(); if(icon) icon.classList.add('show'); }
 }
 
-// ================= BẢNG BÌNH LUẬN & TRẢ LỜI (REPLIES) & ẢNH STICKER =================
+// ================= BẢNG BÌNH LUẬN & TRẢ LỜI =================
 window.openCommentSheet = function(index, event) {
     if(event) event.stopPropagation();
     const item = window.fetchedVideos[index];
@@ -967,7 +1002,7 @@ window.copyToClipboard = function(text, btn) {
     navigator.clipboard.writeText(text).then(() => {
         const icon = btn.querySelector('i');
         const span = btn.querySelector('span');
-        icon.className = "fa-solid fa-check text-[#00ff00]";
+        icon.className = "fa-solid fa-check text-cyan-400";
         span.innerText = "Đã copy!";
         setTimeout(() => { icon.className = "fa-solid fa-link"; span.innerText = "Copy Link"; }, 2000);
     });
