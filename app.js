@@ -66,33 +66,24 @@ window.formatStatsClient = function(num) {
     return (Math.floor(rawNum / 100000) / 10).toString().replace('.', ',') + "M";
 }
 
-// ================= UNIVERSAL MAPPER (BẢO VỆ 100% ẢNH BÌA VÀ AVATAR) =================
+// ================= UNIVERSAL MAPPER (ĐÃ FIX: ĐỌC CHUẨN BIẾN COVER TỪ INDEX.JS) =================
 window.universalVideoMapper = function(videosArray, fallbackAuthor = null) {
     return videosArray.map(v => {
         const a = v.author || fallbackAuthor || {};
         const uId = a.unique_id || a.uniqueId || 'user';
-        const vId = v.video_id || v.id || '';
+        
+        // Đọc đúng ID từ index.js hoặc raw data
+        const vId = v.id || v.video_id || '';
         
         const avatar = a.avatar || a.avatarLarger || `https://ui-avatars.com/api/?name=${uId}&background=random`;
         
-        // FIX LỖI 1: Vét cạn toàn bộ các biến có thể chứa ảnh bìa từ api/index.js
-        let cover = '';
-        if (v.images && v.images.length > 0) {
-            cover = typeof v.images[0] === 'string' ? v.images[0] : (v.images[0].imageURL?.urlList?.[0] || '');
-        }
-        if (!cover) {
-            cover = v.cover || 
-                    v.origin_cover || 
-                    v.dynamic_cover || 
-                    v.cover_url || 
-                    (v.video && (v.video.cover || v.video.origin_cover || v.video.dynamic_cover)) || 
-                    '';
-        }
+        // FIX LỖI: Nhắm thẳng vào biến "cover" bên trong "urls" mà index.js trả về
+        const cover = (v.urls && v.urls.cover) ? v.urls.cover : (v.cover || '');
 
         return {
             link: v.link || `https://www.tiktok.com/@${uId}/video/${vId}`,
             data: {
-                status: "Live",
+                status: v.status || "Live",
                 author: { 
                     uniqueId: uId, 
                     nickname: a.nickname || uId, 
@@ -101,23 +92,26 @@ window.universalVideoMapper = function(videosArray, fallbackAuthor = null) {
                 },
                 video_data: { 
                     id: vId, 
-                    description: v.title || v.caption || v.desc || '', 
-                    create_time: v.create_time || v.createTime || 0, 
+                    description: v.caption || v.title || v.desc || '', 
+                    create_time: v.createTime || v.create_time || 0, 
                     duration: v.duration || 0, 
                     region: v.region || 'VN' 
                 }, 
                 stats: { 
-                    play: window.parseRawStats(v.play_count || v.stats?.play || v.stats?.playCount), 
-                    like: window.parseRawStats(v.digg_count || v.stats?.like || v.stats?.diggCount), 
-                    comment: window.parseRawStats(v.comment_count || v.stats?.comment || v.stats?.commentCount), 
-                    share: window.parseRawStats(v.share_count || v.stats?.share || v.stats?.shareCount), 
-                    download: window.parseRawStats(v.download_count || v.stats?.download || 0) 
+                    play: window.parseRawStats(v.stats?.play || v.play_count || v.stats?.playCount), 
+                    like: window.parseRawStats(v.stats?.like || v.digg_count || v.stats?.diggCount), 
+                    comment: window.parseRawStats(v.stats?.comment || v.comment_count || v.stats?.commentCount), 
+                    share: window.parseRawStats(v.stats?.share || v.share_count || v.stats?.shareCount), 
+                    download: window.parseRawStats(v.stats?.download || v.download_count || 0) 
                 },
                 urls: { 
-                    cover: cover, 
-                    no_watermark: v.hdplay || v.play || v.urls?.no_watermark || v.video?.playAddr 
+                    cover: cover, // Truyền đúng biến cover vừa móc ra
+                    no_watermark: (v.urls && v.urls.no_watermark) ? v.urls.no_watermark : (v.hdplay || v.play || v.video?.playAddr) 
                 }, 
-                music: { playUrl: v.music?.playUrl || v.music, title: v.music_info?.title || v.music?.title || "Âm thanh gốc" },
+                music: { 
+                    playUrl: (v.music && v.music.playUrl) ? v.music.playUrl : (v.music || ''), 
+                    title: (v.music && v.music.title) ? v.music.title : (v.music_info?.title || "Âm thanh gốc") 
+                },
                 images: v.images || null 
             }
         };
@@ -828,7 +822,7 @@ window.togglePlayPause = function(index) {
     }
 }
 
-// BẢNG BÌNH LUẬN 100% VÀ BẢO VỆ CHỐNG LỖI JSON
+// BẢNG BÌNH LUẬN
 window.openCommentSheet = function(index, event) {
     if(event) event.stopPropagation();
     const item = window.fetchedVideos[index];
@@ -874,7 +868,6 @@ window.fetchComments = async function(isLoadMore = false) {
         
         const response = await fetch(`/api/comment?${urlParams.toString()}`);
         
-        // FIX LỖI 2: Đọc dưới dạng Text trước để tránh crash JSON khi server trả về trang 404
         const textData = await response.text();
         let resData;
         try {
