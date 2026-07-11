@@ -3,306 +3,280 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>TikTok Studio Pro | Ultimate TikTok UI</title>
+    <title>TikTok Studio Pixel | Ultimate Retro UI</title>
     <meta name="referrer" content="no-referrer">
-    
     <meta name="theme-color" content="#000000">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    
-    <script>
-        tailwind.config = { theme: { extend: { fontFamily: { sans: ['Outfit', 'sans-serif'] } } } }
-    </script>
 
     <style>
-        body { background-color: #050505; color: #f4f4f5; -webkit-font-smoothing: antialiased; overflow-x: hidden; }
+        /* CORE PIXEL ENGINE - HỖ TRỢ 100% TIẾNG VIỆT */
+        body { 
+            background-color: #000; 
+            color: #fff; 
+            font-family: 'Courier New', Courier, monospace; 
+            /* Đây là CSS Magic giúp mọi Font trở nên sắc lẹm Pixelated */
+            -webkit-font-smoothing: none; 
+            font-smooth: never;
+            text-rendering: pixelated;
+            font-weight: 700;
+            overflow-x: hidden; 
+        }
+        
+        .pixel-ui { text-transform: uppercase; font-weight: 900; letter-spacing: -0.5px; }
+
         ::-webkit-scrollbar { display: none; } 
         .scrollbar-hide::-webkit-scrollbar { display: none; }
 
-        /* ─── BENTO COMPONENTS ─── */
-        .bento-card { background: #111; border: 1px solid #222; border-radius: 24px; transition: all 0.3s; }
-        .bento-input { background: #0a0a0a; border: 1px solid #262626; border-radius: 14px; transition: all 0.2s; color: #fff; }
-        .bento-input:focus { border-color: #3b82f6; outline: none; background: #000; box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1); }
-        .bento-btn { background: #fff; color: #000; font-weight: 700; border-radius: 14px; transition: all 0.2s; cursor: pointer; }
-        .bento-btn:active { transform: scale(0.96); }
-        
-        /* THANH ĐIỀU HƯỚNG TABS */
-        .nav-dock { background: rgba(17, 17, 17, 0.85); backdrop-filter: blur(20px); border: 1px solid #262626; justify-content: flex-start; }
-        .tab-btn { padding: 8px 16px; border-radius: 100px; font-weight: 600; font-size: 13px; transition: all 0.2s; display: flex; align-items: center; gap: 6px; cursor: pointer; white-space: nowrap; flex-shrink: 0; }
-        .tab-active { background: #fff; color: #000; }
-        .tab-inactive { color: #a3a3a3; }
-
-        /* ─── LƯỚI VIDEO TỈ LỆ 9:16 ─── */
-        .video-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
-        @media (min-width: 640px) { .video-grid { grid-template-columns: repeat(3, 1fr); gap: 14px; } }
-        @media (min-width: 1024px) { .video-grid { grid-template-columns: repeat(4, 1fr); gap: 16px; } }
-        @media (min-width: 1280px) { .video-grid { grid-template-columns: repeat(5, 1fr); gap: 16px; } }
-
-        .grid-item { background: #111; border: 1px solid #222; border-radius: 12px; overflow: hidden; position: relative; cursor: pointer; transition: all 0.3s; aspect-ratio: 9/16; }
-        .grid-item:hover { border-color: #3b82f6; z-index: 10; transform: translateY(-3px); box-shadow: 0 10px 20px rgba(0,0,0,0.5); }
-        .grid-item img.thumb { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; transition: transform 0.5s ease; }
-        .grid-item:hover img.thumb { transform: scale(1.05); }
-        .overlay-gradient { background: linear-gradient(to top, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0) 50%); pointer-events: none; }
-
-        /* ─── SKELETON & ANIMATIONS CAO CẤP ─── */
-        .skeleton-shimmer {
-            background: #1a1a1a;
-            background-image: linear-gradient(90deg, #1a1a1a 0px, #2a2a2a 40px, #1a1a1a 80px);
-            background-size: 200% 100%;
-            animation: shimmer 1.5s infinite linear;
+        /* PIXEL COMPONENTS */
+        .pixel-card { 
+            background: #000; 
+            border: 4px solid #fff; 
+            box-shadow: 6px 6px 0px #ff00ff;
         }
+        
+        .pixel-input { 
+            background: #000; 
+            border: 4px solid #fff; 
+            color: #00ffff; 
+            box-shadow: inset 4px 4px 0px rgba(255,255,255,0.2); 
+            transition: none;
+        }
+        .pixel-input:focus { border-color: #00ffff; outline: none; box-shadow: inset 4px 4px 0px rgba(0, 255, 255, 0.2); }
+        
+        .pixel-btn { 
+            background: #fff; 
+            color: #000; 
+            border: 4px solid #fff; 
+            box-shadow: 4px 4px 0px #00ffff; 
+            font-weight: 900; 
+            text-transform: uppercase;
+            cursor: pointer; 
+            transition: transform 0.1s, box-shadow 0.1s;
+        }
+        .pixel-btn:active { transform: translate(4px, 4px); box-shadow: 0px 0px 0px transparent !important; }
+        
+        /* TABS */
+        .nav-dock { background: #000; border: 4px solid #444; justify-content: flex-start; box-shadow: 6px 6px 0px #222; }
+        .tab-btn { padding: 8px 16px; font-weight: 900; font-size: 13px; display: flex; align-items: center; gap: 6px; cursor: pointer; white-space: nowrap; flex-shrink: 0; background: #000; border: 4px solid #444; color: #888; box-shadow: 4px 4px 0px #222; text-transform: uppercase; }
+        .tab-btn.pixel-tab-active { border-color: #ffff00; color: #ffff00; box-shadow: 4px 4px 0px #ff00ff; background: #111; }
+        .tab-btn:active { transform: translate(4px, 4px); box-shadow: 0px 0px 0px transparent !important; }
+
+        /* LƯỚI VIDEO */
+        .video-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
+        @media (min-width: 640px) { .video-grid { grid-template-columns: repeat(3, 1fr); gap: 20px; } }
+        @media (min-width: 1024px) { .video-grid { grid-template-columns: repeat(4, 1fr); gap: 24px; } }
+        @media (min-width: 1280px) { .video-grid { grid-template-columns: repeat(5, 1fr); gap: 24px; } }
+
+        .grid-item { background: #000; border: 4px solid #fff; box-shadow: 6px 6px 0px #00ffff; overflow: hidden; position: relative; cursor: pointer; transition: none; aspect-ratio: 9/16; }
+        .grid-item:hover { border-color: #ffff00; box-shadow: 6px 6px 0px #ff00ff; transform: translate(-2px, -2px); z-index: 10; }
+        .grid-item img.thumb { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+        .overlay-gradient { background: linear-gradient(to top, rgba(0,0,0,1) 0%, rgba(0,0,0,0) 50%); pointer-events: none; }
+
+        /* ANIMATION KHỐI VUÔNG */
+        .pixel-shimmer { background: #111; border: 4px solid #444; background-image: linear-gradient(90deg, #111 0px, #333 40px, #111 80px); background-size: 200% 100%; animation: shimmer 1.5s infinite linear; }
         @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
 
-        .progress-shimmer {
-            background-image: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent);
-            background-size: 200% 100%;
-            animation: shimmer 1.5s infinite linear;
-        }
-
-        /* ─── FEED DỌC & TIKTOK PLAYER UI ─── */
-        .tk-overlay { position: fixed; inset: 0; z-index: 999; background: #000; opacity: 0; visibility: hidden; transition: opacity 0.25s ease; display: flex; align-items: center; justify-content: center; }
+        /* TIKTOK UI PLAYER NHƯNG GÓC CẠNH */
+        .tk-overlay { position: fixed; inset: 0; z-index: 999; background: #000; opacity: 0; visibility: hidden; transition: opacity 0.2s ease; display: flex; align-items: center; justify-content: center; }
         .tk-overlay.active { opacity: 1; visibility: visible; }
-        
         .tk-container { width: 100%; height: 100dvh; max-width: 480px; background: #000; position: relative; display: flex; flex-direction: column; margin: 0 auto; overflow: hidden; }
-        @media (min-width: 481px) { .tk-container { height: 92dvh; border-radius: 20px; border: 1px solid #333; } }
+        @media (min-width: 481px) { .tk-container { height: 92dvh; border: 4px solid #fff; box-shadow: 8px 8px 0px #ff00ff; } }
 
-        /* Scroller Dọc */
         .tk-feed-scroller { flex: 1; width: 100%; overflow-y: scroll; scroll-snap-type: y mandatory; scroll-behavior: smooth; background: #000; position: relative; }
         .tk-feed-item { width: 100%; height: 100%; scroll-snap-align: start; scroll-snap-stop: always; position: relative; background: #000; }
-        
-        .tk-media-area { width: 100%; height: 100%; position: absolute; inset: 0; cursor: pointer; }
         .tk-media-area video { width: 100%; height: 100%; object-fit: cover; }
         
-        /* Album ngang lướt từng ảnh */
         .tk-image-scroller { display: flex; overflow-x: auto; scroll-snap-type: x mandatory; width: 100%; height: 100%; scroll-behavior: smooth; pointer-events: auto; }
         .tk-slide { flex: 0 0 100%; scroll-snap-align: center; scroll-snap-stop: always; display: flex; align-items: center; justify-content: center; position: relative; }
         .tk-slide img { width: 100%; height: 100%; object-fit: cover; }
         
-        .tk-close-btn { position: absolute; top: 16px; left: 16px; z-index: 50; width: 34px; height: 34px; background: rgba(0,0,0,0.3); backdrop-filter: blur(8px); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; cursor: pointer; border: 1px solid rgba(255,255,255,0.1); }
+        .tk-close-btn { position: absolute; top: 16px; left: 16px; z-index: 50; width: 40px; height: 40px; background: #000; border: 4px solid #fff; box-shadow: 4px 4px 0px #00ffff; display: flex; align-items: center; justify-content: center; color: white; cursor: pointer; }
+        .tk-close-btn:active { transform: translate(4px,4px); box-shadow: 0px 0px 0px transparent; }
         
-        /* Icon Pause giữa màn hình */
         .tk-pause-icon { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 40; opacity: 0; pointer-events: none; transition: opacity 0.15s ease-out; }
         .tk-pause-icon.show { opacity: 0.8; animation: pingPause 0.25s ease-out forwards; }
         @keyframes pingPause { 0% { transform: translate(-50%, -50%) scale(1.4); opacity: 0; } 100% { transform: translate(-50%, -50%) scale(1); opacity: 0.8; } }
 
-        /* Sidebar Phải Có Hiệu Ứng Thu Phóng */
-        .tk-sidebar { position: absolute; right: 12px; bottom: 20px; z-index: 30; display: flex; flex-direction: column; gap: 16px; align-items: center; text-shadow: 0 1px 4px rgba(0,0,0,0.8); pointer-events: auto; }
-        .tk-icon-wrap { display: flex; flex-direction: column; align-items: center; gap: 4px; color: #fff; cursor: pointer; transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
-        .tk-icon-wrap:hover { transform: scale(1.15); }
-        .tk-icon-wrap:active { transform: scale(0.9); }
-        .tk-icon { font-size: 32px; filter: drop-shadow(0 2px 5px rgba(0,0,0,0.5)); }
+        .tk-sidebar { position: absolute; right: 12px; bottom: 20px; z-index: 30; display: flex; flex-direction: column; gap: 20px; align-items: center; pointer-events: auto; }
+        .tk-icon-wrap { display: flex; flex-direction: column; align-items: center; gap: 4px; color: #fff; cursor: pointer; transition: none; }
+        .tk-icon-wrap:active { transform: translate(2px, 2px); }
+        .tk-icon { font-size: 32px; filter: drop-shadow(4px 4px 0px #ff00ff); }
         
-        .tk-avatar-wrap { position: relative; margin-bottom: 8px; cursor: pointer; transition: transform 0.2s; }
-        .tk-avatar-wrap:hover { transform: scale(1.1); }
-        .tk-avatar { width: 46px; height: 46px; border-radius: 50%; border: 2px solid #fff; object-fit: cover; }
-        .tk-plus-btn { position: absolute; -bottom: 6px; left: 50%; transform: translateX(-50%); background: #ea4359; color: #fff; width: 18px; height: 18px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: bold; border: 2px solid #000; }
+        .tk-avatar-wrap { position: relative; margin-bottom: 8px; cursor: pointer; }
+        .tk-avatar { width: 46px; height: 46px; border: 4px solid #fff; object-fit: cover; background: #000; box-shadow: 4px 4px 0px #00ffff; }
+        .tk-plus-btn { position: absolute; -bottom: 8px; left: 50%; transform: translateX(-50%); width: 22px; height: 22px; display: flex; align-items: center; justify-content: center; font-weight: bold; border: 2px solid #000; }
 
-        .tk-bottom-info { position: absolute; bottom: 20px; left: 14px; right: 75px; z-index: 30; color: #fff; text-shadow: 0 1px 3px rgba(0,0,0,0.8); pointer-events: none; }
-        .tk-username { font-weight: 700; font-size: 16px; margin-bottom: 6px; display: flex; align-items: center; gap: 4px; pointer-events: auto; cursor: pointer; transition: opacity 0.2s; }
-        .tk-username:active { opacity: 0.7; }
-        .tk-caption { font-size: 14px; line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; margin-bottom: 12px; pointer-events: auto; }
+        .tk-bottom-info { position: absolute; bottom: 20px; left: 14px; right: 75px; z-index: 30; color: #fff; text-shadow: 2px 2px 0px #000; pointer-events: none; }
         
-        .tk-music-ticker { display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 500; }
-        .tk-marquee-container { width: 150px; overflow: hidden; white-space: nowrap; }
+        .tk-marquee-container { width: 120px; overflow: hidden; white-space: nowrap; }
         .tk-marquee { display: inline-block; animation: marquee 5s linear infinite; }
         @keyframes marquee { 0% { transform: translateX(100%); } 100% { transform: translateX(-100%); } }
 
-        /* Đĩa than xoay */
-        .tk-vinyl-record { width: 40px; height: 40px; border-radius: 50%; border: 7px solid #222; background: #111; display: flex; align-items: center; justify-content: center; animation: spin 4s linear infinite; box-shadow: 0 0 10px rgba(0,0,0,0.8); margin-top: 4px; pointer-events: none; }
-        @keyframes spin { 100% { transform: rotate(360deg); } }
-        
-        /* Thanh Action Bar Tải Về Cố Định Dưới Cùng Modal */
-        .tk-action-bar { height: 60px; width: 100%; background: #000; border-top: 1px solid #1a1a1a; display: flex; align-items: center; padding: 0 12px; gap: 10px; z-index: 40; shrink-0; }
-        .tk-dl-btn { flex: 1; height: 44px; background: #1a1a1a; border-radius: 12px; display: flex; align-items: center; justify-content: center; gap: 8px; color: #fff; font-size: 14px; font-weight: 600; transition: background 0.2s, transform 0.1s; cursor: pointer; }
-        .tk-dl-btn:active { background: #333; transform: scale(0.97); }
+        .tk-action-bar { height: 60px; width: 100%; background: #000; border-top: 4px solid #fff; display: flex; align-items: center; padding: 0 12px; gap: 12px; z-index: 40; shrink-0; }
+        .tk-dl-btn { flex: 1; height: 44px; background: #fff; border: 4px solid #fff; box-shadow: 4px 4px 0px #00ff00; display: flex; align-items: center; justify-content: center; gap: 8px; color: #000; font-size: 14px; font-weight: 900; cursor: pointer; text-transform: uppercase; }
+        .tk-dl-btn:active { transform: translate(4px,4px); box-shadow: 0px 0px 0px transparent; }
 
-        /* Bảng Bottom Sheet chung (Phân tích & Share & Comments) */
-        .tk-bottom-sheet { position: absolute; bottom: -100%; left: 0; width: 100%; background: #111; border-top-left-radius: 20px; border-top-right-radius: 20px; z-index: 60; transition: bottom 0.3s cubic-bezier(0.16, 1, 0.3, 1); border-top: 1px solid #222; display: flex; flex-direction: column; max-height: 80%; pointer-events: auto; }
-        .tk-bottom-sheet.show { bottom: 0; }
+        .tk-bottom-sheet { position: absolute; bottom: -100%; left: 0; width: 100%; background: #000; z-index: 60; transition: bottom 0.2s cubic-bezier(0.16, 1, 0.3, 1); border-top: 4px solid #fff; display: flex; flex-direction: column; max-height: 85%; pointer-events: auto; }
+        .tk-bottom-sheet.show { bottom: 0; box-shadow: 0px -6px 0px #ff00ff; }
 
-        /* Animations */
-        @keyframes slideLeftIn { 0% { opacity: 0; transform: translateX(-40px); } 100% { opacity: 1; transform: translateX(0); } }
-        @keyframes slideRightIn { 0% { opacity: 0; transform: translateX(40px); } 100% { opacity: 1; transform: translateX(0); } }
-        .animate-slide-left { animation: slideLeftIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards; opacity: 0; }
-        .animate-slide-right { animation: slideRightIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards; opacity: 0; }
-        @keyframes slideUp { 0% { opacity: 0; transform: translateY(15px); } 100% { opacity: 1; transform: translateY(0); } }
-        .animate-slide-up { animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
-        
-        .typewriter-cursor::after { content: '|'; animation: blink 1s step-end infinite; color: #3b82f6; }
+        .typewriter-cursor::after { content: '[]'; animation: blink 1s step-end infinite; color: #00ffff; }
         @keyframes blink { 50% { opacity: 0; } }
     </style>
 </head>
 <body class="min-h-screen pb-20">
 
-    <!-- CÀI ĐẶT WEB APP (PWA) -->
-    <button id="install-app-btn" onclick="window.installWebApp()" class="hidden fixed top-5 right-5 z-[60] bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold px-4 py-2.5 rounded-full shadow-lg transition-all flex items-center gap-2 border border-blue-400">
-        <i class="fa-solid fa-download"></i> Cài App
+    <!-- PWA Install -->
+    <button id="install-app-btn" onclick="window.installWebApp()" class="hidden fixed top-5 right-5 z-[60] bg-[#000] text-white border-4 border-white shadow-[4px_4px_0_#ffff00] font-black px-4 py-2.5 pixel-ui flex items-center gap-2 hover:bg-[#fff] hover:text-[#000]">
+        <i class="fa-solid fa-download"></i> CÀI APP
     </button>
 
-    <!-- THANH ĐIỀU HƯỚNG DOCK -->
-    <nav class="fixed top-4 left-1/2 -translate-x-1/2 z-50 nav-dock rounded-full p-1.5 flex gap-1 shadow-2xl max-w-[95%] overflow-x-auto scrollbar-hide">
-        <button onclick="window.switchTab('video')" id="tab-video" class="tab-btn tab-active"><i class="fa-solid fa-download"></i> Tải Tệp</button>
-        <button onclick="window.switchTab('search')" id="tab-search" class="tab-btn tab-inactive"><i class="fa-solid fa-magnifying-glass"></i> Tìm Kiếm</button>
-        <button onclick="window.switchTab('info')" id="tab-info" class="tab-btn tab-inactive"><i class="fa-solid fa-id-card"></i> Tra Cứu</button>
-        <button onclick="window.switchTab('analytics')" id="tab-analytics" class="tab-btn tab-inactive"><i class="fa-solid fa-chart-pie text-cyan-400"></i> Phân Tích</button>
+    <!-- NAV DOCK -->
+    <nav class="fixed top-4 left-1/2 -translate-x-1/2 z-50 nav-dock p-2 flex gap-2 max-w-[95%] overflow-x-auto scrollbar-hide">
+        <button onclick="window.switchTab('video')" id="tab-video" class="tab-btn pixel-tab-active"><i class="fa-solid fa-download"></i> TẢI TỆP</button>
+        <button onclick="window.switchTab('search')" id="tab-search" class="tab-btn"><i class="fa-solid fa-magnifying-glass"></i> TÌM KIẾM</button>
+        <button onclick="window.switchTab('info')" id="tab-info" class="tab-btn"><i class="fa-solid fa-id-card text-magenta-400"></i> TRA CỨU</button>
+        <button onclick="window.switchTab('analytics')" id="tab-analytics" class="tab-btn"><i class="fa-solid fa-chart-pie text-cyan-400"></i> PHÂN TÍCH</button>
     </nav>
 
     <main class="w-full max-w-4xl mx-auto pt-24 px-4 flex flex-col items-center">
         
-        <div class="text-center mb-8 w-full animate-slide-up">
-            <h1 class="text-3xl md:text-5xl font-black tracking-tight mb-2 text-white">TikTok Studio</h1>
-            <p class="text-zinc-500 font-medium text-sm">Trình phát vô tận & Quét tệp Native</p>
+        <div class="text-center mb-10 w-full">
+            <h1 class="text-4xl md:text-6xl font-black mb-2 text-white pixel-ui tracking-tighter" style="text-shadow: 4px 4px 0px #ff00ff, -4px -4px 0px #00ffff;">TIKTOK STUDIO</h1>
+            <p class="text-yellow-400 font-bold text-sm pixel-ui bg-black border-2 border-white inline-block px-3 py-1 shadow-[2px_2px_0_#fff]">PIXEL EDITION V2.0</p>
         </div>
 
-        <div class="bento-card w-full p-5 md:p-8 animate-slide-up relative z-10 shadow-xl">
-            
+        <div class="pixel-card w-full mb-8 z-10">
             <!-- TẢI TỆP -->
-            <div id="mode-video" class="transition-opacity duration-300">
+            <div id="mode-video">
                 <div class="flex items-center justify-between mb-4">
-                    <h2 class="text-base font-bold text-white"><i class="fa-solid fa-download text-blue-500 mr-2"></i>Truy Xuất Media</h2>
-                    <div class="flex gap-1 bg-[#1a1a1a] p-1 rounded-xl border border-[#333]">
-                        <button id="subtab-single" onclick="window.setLinkMode('single')" class="px-4 py-1.5 rounded-lg bg-zinc-700 text-white font-semibold text-[11px] transition shadow-sm">1 Link</button>
-                        <button id="subtab-multi" onclick="window.setLinkMode('multi')" class="px-4 py-1.5 rounded-lg text-zinc-400 font-semibold text-[11px] hover:text-white transition">Nhiều Link</button>
+                    <h2 class="text-lg font-black text-white pixel-ui"><i class="fa-solid fa-download text-[#00ffff] mr-2"></i>TRUY XUẤT MEDIA</h2>
+                    <div class="flex gap-2">
+                        <button id="subtab-single" onclick="window.setLinkMode('single')" class="px-4 py-1.5 bg-[#ffff00] text-[#000] border-2 border-[#fff] pixel-ui shadow-[2px_2px_0_#ff00ff]">1 LINK</button>
+                        <button id="subtab-multi" onclick="window.setLinkMode('multi')" class="px-4 py-1.5 bg-[#000] text-[#fff] border-2 border-[#555] pixel-ui hover:bg-[#222]">NHIỀU LINK</button>
                     </div>
                 </div>
-                <div class="mb-4 relative">
-                    <textarea id="tiktok-links" rows="1" placeholder="Dán link Video hoặc Story vào đây..." class="w-full px-4 py-4 bento-input text-sm resize-none"></textarea>
+                <div class="mb-4">
+                    <textarea id="tiktok-links" rows="1" placeholder="DÁN LINK VIDEO HOẶC STORY VÀO ĐÂY..." class="w-full pixel-input text-sm resize-none font-bold pixel-ui"></textarea>
                 </div>
-                <button onclick="window.processVideos()" class="w-full bento-btn py-3.5 flex items-center justify-center gap-2 text-sm">Thực Thi Dữ Liệu</button>
+                <button onclick="window.processVideos()" class="w-full pixel-btn py-4 flex items-center justify-center gap-2 text-base">THỰC THI DỮ LIỆU</button>
             </div>
 
             <!-- TÌM KIẾM -->
-            <div id="mode-search" class="hidden transition-opacity duration-300">
-                <h2 class="text-base font-bold text-white mb-4"><i class="fa-solid fa-magnifying-glass text-blue-500 mr-2"></i>Tìm Kiếm Mạng Lưới</h2>
-                <div class="flex flex-col sm:flex-row gap-3">
-                    <input type="text" id="tiktok-keyword" placeholder="Nhập từ khóa..." class="w-full pl-4 pr-4 py-3.5 bento-input text-sm flex-1" onkeypress="if(event.key === 'Enter') window.searchTikTok(false)">
-                    <button onclick="window.searchTikTok(false)" class="bento-btn py-3.5 px-8 flex items-center justify-center gap-2 text-sm">Tìm Kiếm</button>
+            <div id="mode-search" class="hidden">
+                <h2 class="text-lg font-black text-white mb-4 pixel-ui"><i class="fa-solid fa-magnifying-glass text-[#ff00ff] mr-2"></i>TÌM KIẾM MẠNG LƯỚI</h2>
+                <div class="flex flex-col sm:flex-row gap-4">
+                    <input type="text" id="tiktok-keyword" placeholder="NHẬP TỪ KHÓA..." class="w-full pixel-input text-sm flex-1 font-bold pixel-ui" onkeypress="if(event.key === 'Enter') window.searchTikTok(false)">
+                    <button onclick="window.searchTikTok(false)" class="pixel-btn py-4 px-8 flex items-center justify-center gap-2 text-base bg-[#ff00ff] text-white border-white shadow-[4px_4px_0_#00ffff]">TÌM KIẾM</button>
                 </div>
             </div>
 
-            <!-- TRA CỨU KÊNH (TÊN MỚI) -->
-            <div id="mode-info" class="hidden transition-opacity duration-300">
-                <h2 class="text-base font-bold text-white mb-4"><i class="fa-solid fa-user-magnifying-glass text-blue-500 mr-2"></i>Tra Cứu Kênh</h2>
-                <div class="flex flex-col sm:flex-row gap-3">
+            <!-- TRA CỨU KÊNH -->
+            <div id="mode-info" class="hidden">
+                <h2 class="text-lg font-black text-white mb-4 pixel-ui"><i class="fa-solid fa-user-astronaut text-[#ffff00] mr-2"></i>TRA CỨU HỒ SƠ</h2>
+                <div class="flex flex-col sm:flex-row gap-4">
                     <div class="relative flex-1">
-                        <span class="absolute inset-y-0 left-0 pl-4 flex items-center text-zinc-600 font-bold">@</span>
-                        <input type="text" id="tiktok-username" placeholder="Nhập ID kênh cần tra cứu..." class="w-full pl-9 pr-4 py-3.5 bento-input text-sm" onkeypress="if(event.key === 'Enter') window.fetchUserInfo(false)">
+                        <span class="absolute inset-y-0 left-0 pl-4 flex items-center text-cyan-400 font-black pixel-ui">@</span>
+                        <input type="text" id="tiktok-username" placeholder="NHẬP ID KÊNH..." class="w-full pl-10 pixel-input text-sm font-bold pixel-ui" onkeypress="if(event.key === 'Enter') window.fetchUserInfo(false)">
                     </div>
-                    <button onclick="window.fetchUserInfo(false)" class="bento-btn py-3.5 px-8 flex items-center justify-center gap-2 text-sm">Tra Cứu</button>
+                    <button onclick="window.fetchUserInfo(false)" class="pixel-btn py-4 px-8 flex items-center justify-center gap-2 text-base bg-[#ffff00] border-white shadow-[4px_4px_0_#ff00ff]">TRA CỨU</button>
                 </div>
             </div>
 
             <!-- PHÂN TÍCH 100% -->
-            <div id="mode-analytics" class="hidden transition-opacity duration-300">
-                <h2 class="text-base font-bold text-white mb-2"><i class="fa-solid fa-chart-pie text-cyan-400 mr-2"></i>Phân Tích Sâu Toàn Kênh</h2>
-                <p class="text-xs text-zinc-500 mb-4">Radar vét 100% video không giới hạn với dữ liệu đồ hoạ siêu mượt.</p>
-                <div class="flex flex-col sm:flex-row gap-3">
+            <div id="mode-analytics" class="hidden">
+                <h2 class="text-lg font-black text-white mb-2 pixel-ui"><i class="fa-solid fa-satellite text-[#00ff00] mr-2"></i>PHÂN TÍCH SÂU TOÀN KÊNH</h2>
+                <p class="text-xs text-[#888] mb-4 pixel-ui block">VÉT 100% DATA BẰNG RADAR ĐỒ HOẠ PIXEL.</p>
+                <div class="flex flex-col sm:flex-row gap-4">
                     <div class="relative flex-1">
-                        <span class="absolute inset-y-0 left-0 pl-4 flex items-center text-zinc-600 font-bold">@</span>
-                        <input type="text" id="tiktok-analytics-id" placeholder="Nhập ID kênh mục tiêu..." class="w-full pl-9 pr-4 py-3.5 bento-input text-sm" onkeypress="if(event.key === 'Enter') window.fetchAnalytics()">
+                        <span class="absolute inset-y-0 left-0 pl-4 flex items-center text-lime-400 font-black pixel-ui">@</span>
+                        <input type="text" id="tiktok-analytics-id" placeholder="NHẬP ID MỤC TIÊU..." class="w-full pl-10 pixel-input text-sm font-bold pixel-ui" onkeypress="if(event.key === 'Enter') window.fetchAnalytics()">
                     </div>
-                    <button onclick="window.fetchAnalytics()" class="bento-btn !bg-cyan-500 !text-white hover:!bg-cyan-600 py-3.5 px-8 text-sm">Khởi Chạy Radar</button>
+                    <button onclick="window.fetchAnalytics()" class="pixel-btn bg-[#00ff00] text-[#000] py-4 px-8 text-base border-white shadow-[4px_4px_0_#fff]">BẬT RADAR</button>
                 </div>
             </div>
         </div>
 
-        <div id="error-msg" class="hidden mt-4 w-full bento-card bg-red-950/20 border-red-900/50 p-4 text-center text-sm text-red-400"></div>
+        <div id="error-msg" class="hidden w-full bg-[#111] border-4 border-[#ff0000] p-4 text-center font-bold text-[#ff0000] shadow-[6px_6px_0_#ff0000] pixel-ui mb-6"></div>
 
         <!-- SKELETON LOADING -->
-        <div id="skeleton-area" class="w-full mt-6 hidden">
-            <!-- Khu vực trống cho việc bơm Thanh Animation của Phân tích -->
+        <div id="skeleton-area" class="w-full hidden">
+            <!-- Nơi JS bơm Thanh Progress Radar -->
+            <div id="skel-profile" class="w-full pixel-shimmer h-40 mb-6 hidden"></div>
+            <p id="loading-text" class="text-cyan-400 font-black text-sm mb-6 text-center w-full animate-pulse pixel-ui">ĐANG KẾT NỐI...</p>
             
-            <div id="skel-profile" class="w-full bento-card p-6 flex flex-col items-center gap-4 mb-4 hidden">
-                <div class="skeleton-shimmer w-20 h-20 rounded-full"></div>
-                <div class="skeleton-shimmer w-32 h-4 rounded"></div>
-                <div class="skeleton-shimmer w-48 h-3 rounded"></div>
-            </div>
-            
-            <!-- Chữ trạng thái thường -->
-            <p id="loading-text" class="text-blue-400 font-bold text-xs mt-2 mb-4 text-center w-full animate-pulse">Đang kết nối...</p>
-            
-            <!-- Skeleton Video -->
             <div class="w-full video-grid max-w-[98%] xl:max-w-6xl mx-auto">
-                <div class="skeleton-shimmer aspect-[9/16] rounded-xl w-full"></div>
-                <div class="skeleton-shimmer aspect-[9/16] rounded-xl w-full"></div>
-                <div class="skeleton-shimmer aspect-[9/16] rounded-xl w-full hidden sm:block"></div>
-                <div class="skeleton-shimmer aspect-[9/16] rounded-xl w-full hidden md:block"></div>
+                <div class="pixel-shimmer aspect-[9/16] w-full"></div>
+                <div class="pixel-shimmer aspect-[9/16] w-full"></div>
+                <div class="pixel-shimmer aspect-[9/16] w-full hidden sm:block"></div>
+                <div class="pixel-shimmer aspect-[9/16] w-full hidden md:block"></div>
             </div>
         </div>
 
-        <div id="user-info-area" class="w-full mt-6 hidden animate-slide-up"></div>
-        <div id="special-action-container" class="w-full max-w-[98%] xl:max-w-6xl mx-auto mt-6 hidden flex-wrap justify-center sm:justify-end items-center gap-3"></div>
+        <div id="user-info-area" class="w-full mb-6 hidden"></div>
+        <div id="special-action-container" class="w-full max-w-[98%] xl:max-w-6xl mx-auto mb-6 hidden flex-wrap justify-center sm:justify-end items-center gap-4"></div>
 
         <div id="result-area" class="w-full video-grid max-w-[98%] xl:max-w-6xl mx-auto mt-4 pb-6"></div>
 
-        <!-- Sentinel Lắng Nghe Cuộn Cho Infinite Scroll -->
+        <!-- Sentinel Lắng Nghe Cuộn -->
         <div id="scroll-sentinel" class="w-full h-2 mt-4"></div>
-        <div id="load-more-indicator" class="hidden w-full text-center py-4 text-xs font-bold text-zinc-500 animate-pulse">Đang tải thêm video...</div>
+        <div id="load-more-indicator" class="hidden w-full text-center py-6 text-sm font-black text-yellow-400 animate-pulse pixel-ui">ĐANG TẢI THÊM BLOCK DATA...</div>
 
     </main>
 
-    <!-- ─── TIKTOK MOBILE PLAYER: FEED DỌC VÔ TẬN ─── -->
+    <!-- TIKTOK PLAYER PIXEL UI -->
     <div id="tk-player-modal" class="tk-overlay">
-        <div class="tk-container shadow-2xl">
+        <div class="tk-container">
             
-            <button onclick="window.closeTkPlayer()" class="tk-close-btn"><i class="fa-solid fa-chevron-left text-lg"></i></button>
+            <button onclick="window.closeTkPlayer()" class="tk-close-btn"><i class="fa-solid fa-chevron-left text-xl"></i></button>
 
-            <!-- TRÌNH CUỘN DỌC TẤT CẢ CÁC VIDEO -->
-            <div id="tk-feed-scroller" class="tk-feed-scroller">
-                <!-- Nội dung các Slide được bơm qua JS -->
-            </div>
+            <!-- SCROLLER -->
+            <div id="tk-feed-scroller" class="tk-feed-scroller"></div>
 
-            <!-- THANH TẢI XUỐNG CỐ ĐỊNH CHÂN -->
+            <!-- THANH TẢI XUỐNG -->
             <div class="tk-action-bar">
-                <div id="tk-btn-dl-media" class="tk-dl-btn">
-                    <i class="fa-solid fa-download"></i> <span id="tk-lbl-media">Lưu Video</span>
+                <div id="tk-btn-dl-media" class="tk-dl-btn hover:bg-cyan-400">
+                    <i class="fa-solid fa-download"></i> <span id="tk-lbl-media">LƯU VIDEO</span>
                 </div>
-                <div id="tk-btn-dl-music" class="tk-dl-btn bg-[#222]">
-                    <i class="fa-solid fa-music text-blue-400"></i> Lưu Nhạc
-                </div>
-            </div>
-
-            <!-- SHEET BÁO CÁO PHÂN TÍCH (MỞ BẰNG NÚT 3 CHẤM) -->
-            <div id="tk-analytics-sheet" class="tk-bottom-sheet p-5 flex flex-col" onclick="event.stopPropagation()">
-                <div class="flex justify-between items-center mb-4 border-b border-[#222] pb-3 shrink-0">
-                    <h3 class="text-base font-bold text-white flex items-center gap-2"><i class="fa-solid fa-chart-simple text-blue-500"></i> Báo Cáo Chuyên Sâu</h3>
-                    <div class="w-8 h-8 rounded-full bg-[#222] flex items-center justify-center cursor-pointer" onclick="window.closeAnalyticsSheet(event)">
-                        <i class="fa-solid fa-xmark text-zinc-400"></i>
-                    </div>
-                </div>
-                <div id="tk-analytics-content" class="flex-1 overflow-y-auto space-y-2 pb-6 scrollbar-hide">
-                    <!-- JS Fill -->
+                <div id="tk-btn-dl-music" class="tk-dl-btn bg-[#000] text-white hover:bg-[#222] shadow-[4px_4px_0_#ff00ff]">
+                    <i class="fa-solid fa-music text-cyan-400"></i> LƯU NHẠC
                 </div>
             </div>
 
-            <!-- SHEET TÙY CHỌN CHIA SẺ (MỞ BẰNG NÚT SHARE) -->
-            <div id="tk-share-sheet" class="tk-bottom-sheet p-5 flex flex-col" onclick="event.stopPropagation()">
-                <div class="flex justify-between items-center mb-4 border-b border-[#222] pb-3 shrink-0">
-                    <h3 class="text-base font-bold text-white flex items-center gap-2"><i class="fa-solid fa-share"></i> Chia Sẻ Đến</h3>
-                    <div class="w-8 h-8 rounded-full bg-[#222] flex items-center justify-center cursor-pointer" onclick="window.closeShareSheet(event)">
-                        <i class="fa-solid fa-xmark text-zinc-400"></i>
+            <!-- SHEET BÁO CÁO PHÂN TÍCH -->
+            <div id="tk-analytics-sheet" class="tk-bottom-sheet p-6 flex flex-col" onclick="event.stopPropagation()">
+                <div class="flex justify-between items-center mb-6 pb-4 border-b-4 border-dashed border-[#555] shrink-0">
+                    <h3 class="text-lg font-black text-white flex items-center gap-2 pixel-ui"><i class="fa-solid fa-chart-simple text-lime-400"></i> SYSTEM LOG</h3>
+                    <div class="w-10 h-10 border-4 border-white bg-black shadow-[4px_4px_0_#ff00ff] flex items-center justify-center cursor-pointer hover:bg-white hover:text-black" onclick="window.closeAnalyticsSheet(event)">
+                        <i class="fa-solid fa-xmark"></i>
                     </div>
                 </div>
-                <div id="tk-share-content" class="flex items-start gap-4 pb-6 overflow-x-auto scrollbar-hide">
-                    <!-- JS Fill -->
+                <div id="tk-analytics-content" class="flex-1 overflow-y-auto pb-6 scrollbar-hide"></div>
+            </div>
+
+            <!-- SHEET CHIA SẺ -->
+            <div id="tk-share-sheet" class="tk-bottom-sheet p-6 flex flex-col" onclick="event.stopPropagation()">
+                <div class="flex justify-between items-center mb-6 pb-4 border-b-4 border-dashed border-[#555] shrink-0">
+                    <h3 class="text-lg font-black text-white flex items-center gap-2 pixel-ui"><i class="fa-solid fa-share text-[#00ffff]"></i> CHIA SẺ ĐẾN</h3>
+                    <div class="w-10 h-10 border-4 border-white bg-black shadow-[4px_4px_0_#ff00ff] flex items-center justify-center cursor-pointer hover:bg-white hover:text-black" onclick="window.closeShareSheet(event)">
+                        <i class="fa-solid fa-xmark"></i>
+                    </div>
                 </div>
+                <div id="tk-share-content" class="flex items-start gap-6 pb-6 overflow-x-auto scrollbar-hide"></div>
             </div>
             
-            <!-- BẢNG BÌNH LUẬN (MỞ BẰNG NÚT COMMENT) -->
+            <!-- BẢNG BÌNH LUẬN & TRẢ LỜI -->
             <div id="tk-comment-sheet" class="tk-bottom-sheet p-5 flex flex-col h-[75vh]" onclick="event.stopPropagation()">
-                <div class="flex justify-between items-center mb-4 border-b border-[#222] pb-3 shrink-0">
-                    <h3 class="text-base font-bold text-white flex items-center gap-2"><i class="fa-solid fa-comments text-blue-500"></i> Bình luận (<span id="tk-comment-count">0</span>)</h3>
-                    <div class="w-8 h-8 rounded-full bg-[#222] flex items-center justify-center cursor-pointer" onclick="window.closeCommentSheet(event)">
-                        <i class="fa-solid fa-xmark text-zinc-400"></i>
+                <div class="flex justify-between items-center mb-4 pb-4 border-b-4 border-dashed border-[#555] shrink-0">
+                    <h3 class="text-lg font-black text-white flex items-center gap-2 pixel-ui"><i class="fa-solid fa-comments text-magenta-400"></i> BÌNH LUẬN [<span id="tk-comment-count">0</span>]</h3>
+                    <div class="w-10 h-10 border-4 border-white bg-black shadow-[4px_4px_0_#00ffff] flex items-center justify-center cursor-pointer hover:bg-white hover:text-black transition" onclick="window.closeCommentSheet(event)">
+                        <i class="fa-solid fa-xmark"></i>
                     </div>
                 </div>
-                <div id="tk-comment-content" class="flex-1 overflow-y-auto space-y-4 pb-6 scrollbar-hide relative" onscroll="if(this.scrollTop + this.clientHeight >= this.scrollHeight - 50) window.fetchComments(true)">
+                <div id="tk-comment-content" class="flex-1 overflow-y-auto space-y-2 pb-6 scrollbar-hide relative" onscroll="if(this.scrollTop + this.clientHeight >= this.scrollHeight - 50) window.fetchComments(true)">
                     <!-- JS Fill -->
                 </div>
             </div>
