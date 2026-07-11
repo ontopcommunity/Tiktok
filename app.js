@@ -14,38 +14,18 @@ window.userVideoCursor = 0;
 window.userHasMore = false;
 window.fullUserData = null;
 
-// Trạng thái cho phần Bình Luận
+// Trạng thái Bình Luận & Trả Lời
 window.currentCommentVideoId = null;
 window.currentCommentLink = null;
 window.commentCursor = 0;
 window.commentHasMore = false;
 window.isLoadingComments = false;
+window.activeReplyCursors = {}; // Lưu cursor cho từng bình luận được mở trả lời
 
 window.currentVideoPlayer = null; 
 window.feedObserver = null;
 window.scrollObserver = null;
 
-// PWA Install
-let deferredPrompt;
-window.addEventListener('beforeinstallprompt', (e) => {
-    e.preventDefault();
-    deferredPrompt = e;
-    document.getElementById('install-app-btn')?.classList.remove('hidden');
-});
-
-window.installWebApp = function() {
-    if (deferredPrompt) {
-        deferredPrompt.prompt();
-        deferredPrompt.userChoice.then((choiceResult) => {
-            if (choiceResult.outcome === 'accepted') {
-                document.getElementById('install-app-btn').classList.add('hidden');
-            }
-            deferredPrompt = null;
-        });
-    }
-}
-
-// ================= UTILS BÓC TÁCH SỐ LIỆU CHỐNG LỖI =================
 window.parseRawStats = function(str) {
     if (str == null) return 0;
     if (typeof str === 'number') return str;
@@ -66,7 +46,6 @@ window.formatStatsClient = function(num) {
     return (Math.floor(rawNum / 100000) / 10).toString().replace('.', ',') + "M";
 }
 
-// ================= UNIVERSAL MAPPER =================
 window.universalVideoMapper = function(videosArray, fallbackAuthor = null) {
     return videosArray.map(v => {
         const a = v.author || fallbackAuthor || {};
@@ -79,19 +58,8 @@ window.universalVideoMapper = function(videosArray, fallbackAuthor = null) {
             link: v.link || `https://www.tiktok.com/@${uId}/video/${vId}`,
             data: {
                 status: v.status || "Live",
-                author: { 
-                    uniqueId: uId, 
-                    nickname: a.nickname || uId, 
-                    avatar: avatar || cover, 
-                    verified: a.is_verify || a.verified || false 
-                },
-                video_data: { 
-                    id: vId, 
-                    description: v.caption || v.title || v.desc || '', 
-                    create_time: v.createTime || v.create_time || 0, 
-                    duration: v.duration || 0, 
-                    region: v.region || 'VN' 
-                }, 
+                author: { uniqueId: uId, nickname: a.nickname || uId, avatar: avatar || cover, verified: a.is_verify || a.verified || false },
+                video_data: { id: vId, description: v.caption || v.title || v.desc || '', create_time: v.createTime || v.create_time || 0, duration: v.duration || 0, region: v.region || 'VN' }, 
                 stats: { 
                     play: window.parseRawStats(v.stats?.play || v.play_count || v.stats?.playCount), 
                     like: window.parseRawStats(v.stats?.like || v.digg_count || v.stats?.diggCount), 
@@ -99,21 +67,14 @@ window.universalVideoMapper = function(videosArray, fallbackAuthor = null) {
                     share: window.parseRawStats(v.stats?.share || v.share_count || v.stats?.shareCount), 
                     download: window.parseRawStats(v.stats?.download || v.download_count || 0) 
                 },
-                urls: { 
-                    cover: cover, 
-                    no_watermark: (v.urls && v.urls.no_watermark) ? v.urls.no_watermark : (v.hdplay || v.play || v.video?.playAddr) 
-                }, 
-                music: { 
-                    playUrl: (v.music && v.music.playUrl) ? v.music.playUrl : (v.music || ''), 
-                    title: (v.music && v.music.title) ? v.music.title : (v.music_info?.title || "Âm thanh gốc") 
-                },
+                urls: { cover: cover, no_watermark: (v.urls && v.urls.no_watermark) ? v.urls.no_watermark : (v.hdplay || v.play || v.video?.playAddr) }, 
+                music: { playUrl: (v.music && v.music.playUrl) ? v.music.playUrl : (v.music || ''), title: (v.music && v.music.title) ? v.music.title : (v.music_info?.title || "Âm thanh gốc") },
                 images: v.images || null 
             }
         };
     });
 }
 
-// ================= ĐIỀU HƯỚNG TAB =================
 window.switchTab = function(mode) {
     window.currentMode = mode;
     ['video', 'search', 'info', 'analytics'].forEach(m => {
@@ -121,7 +82,11 @@ window.switchTab = function(mode) {
         const tabBtn = document.getElementById(`tab-${m}`);
         if(btn && tabBtn) {
             btn.classList.toggle('hidden', m !== mode);
-            tabBtn.className = (m === mode) ? 'tab-btn tab-active' : 'tab-btn tab-inactive';
+            if (m === mode) {
+                tabBtn.classList.add('pixel-tab-active');
+            } else {
+                tabBtn.classList.remove('pixel-tab-active');
+            }
         }
     });
     window.clearResults();
@@ -134,19 +99,19 @@ window.setLinkMode = function(mode) {
     const textArea = document.getElementById('tiktok-links');
 
     if(mode === 'single') {
-        btnSingle.className = "px-4 py-1.5 rounded-lg bg-zinc-700 text-white font-semibold text-[11px] transition shadow-sm";
-        btnMulti.className = "px-4 py-1.5 rounded-lg text-zinc-400 font-semibold text-[11px] hover:text-white transition";
+        btnSingle.className = "px-4 py-1.5 bg-[#ffff00] text-[#000] border-2 border-[#fff] pixel-ui shadow-[2px_2px_0_#ff00ff]";
+        btnMulti.className = "px-4 py-1.5 bg-[#000] text-[#fff] border-2 border-[#555] pixel-ui hover:bg-[#222]";
         textArea.rows = 1;
-        textArea.placeholder = "Dán link Video hoặc Nhật ký (Story)...";
+        textArea.placeholder = "DÁN LINK VIDEO HOẶC STORY...";
     } else {
-        btnMulti.className = "px-4 py-1.5 rounded-lg bg-zinc-700 text-white font-semibold text-[11px] transition shadow-sm";
-        btnSingle.className = "px-4 py-1.5 rounded-lg text-zinc-400 font-semibold text-[11px] hover:text-white transition";
+        btnMulti.className = "px-4 py-1.5 bg-[#ffff00] text-[#000] border-2 border-[#fff] pixel-ui shadow-[2px_2px_0_#ff00ff]";
+        btnSingle.className = "px-4 py-1.5 bg-[#000] text-[#fff] border-2 border-[#555] pixel-ui hover:bg-[#222]";
         textArea.rows = 4;
-        textArea.placeholder = "Dán nhiều link (mỗi link 1 dòng)...";
+        textArea.placeholder = "DÁN NHIỀU LINK (MỖI LINK 1 DÒNG)...";
     }
 }
 
-window.setSkeletonState = function(isActive, isChannel = false, loadingText = "Đang quét dữ liệu...") {
+window.setSkeletonState = function(isActive, isChannel = false, loadingText = "ĐANG KẾT NỐI...") {
     const skelArea = document.getElementById('skeleton-area');
     const skelProfile = document.getElementById('skel-profile');
     const txt = document.getElementById('loading-text');
@@ -175,7 +140,7 @@ window.showError = function(msg) {
     const errEl = document.getElementById('error-msg');
     if(errEl) {
         if(msg) {
-            errEl.innerHTML = `<i class="fa-solid fa-triangle-exclamation mr-2"></i> ${msg}`;
+            errEl.innerHTML = `[ LỖI MẠNG LƯỚI ]<br/>${msg}`;
             errEl.classList.remove('hidden');
             const resArea = document.getElementById('result-area');
             if(resArea) resArea.innerHTML = '';
@@ -205,6 +170,7 @@ window.clearResults = function() {
     window.showError('');
     window.fetchedVideos = [];
     window.currentSortType = 'latest'; 
+    window.activeReplyCursors = {}; // Clear reply cursors
     
     window.userVideoCursor = 0;
     window.userHasMore = false;
@@ -220,28 +186,18 @@ window.generateFileName = function(author, videoId, ext) {
     return `${author}_${videoId}.${ext}`; 
 }
 
-window.typeWriter = function(element, text, speed=25) {
-    element.innerHTML = '';
-    element.classList.add('typewriter-cursor');
-    let i = 0;
-    function type() {
-        if (i < text.length) {
-            element.innerHTML += text.charAt(i);
-            i++;
-            setTimeout(type, speed);
-        } else {
-            element.classList.remove('typewriter-cursor');
-        }
-    }
-    type();
-}
-
 window.sortVideos = function(type) {
     if(!window.fetchedVideos || window.fetchedVideos.length === 0) return;
     window.currentSortType = type;
     
     if (type === 'popular') {
         window.fetchedVideos.sort((a, b) => b.data.stats.play - a.data.stats.play);
+    } else if (type === 'oldest') {
+        window.fetchedVideos.sort((a, b) => {
+            let tA = a.data.video_data.create_time || 0;
+            let tB = b.data.video_data.create_time || 0;
+            return tA - tB;
+        });
     } else {
         window.fetchedVideos.sort((a, b) => {
             let tA = a.data.video_data.create_time || 0;
@@ -263,14 +219,14 @@ window.sortVideos = function(type) {
     }
 }
 
-// ================= API FETCHING =================
+// API FETCHING
 window.processVideos = async function() {
     const input = document.getElementById('tiktok-links').value;
     const links = input.split('\n').map(l => l.trim()).filter(l => l !== '');
-    if (links.length === 0) return window.showError("Dán link vô đi nào!");
+    if (links.length === 0) return window.showError("VUI LÒNG NHẬP LINK!");
     
     window.clearResults();
-    window.setSkeletonState(true, false, "Đang cào dữ liệu tĩnh...");
+    window.setSkeletonState(true, false, "ĐANG TRUY XUẤT MEDIA...");
 
     try {
         const promises = links.map(link => fetch(`/api/video?video=${encodeURIComponent(link)}`).then(res => res.json()).then(data => ({ link, data })).catch(err => ({ link, error: err.message })));
@@ -279,7 +235,7 @@ window.processVideos = async function() {
         
         window.fetchedVideos = window.universalVideoMapper(results.map(r => r.data));
 
-        if(window.fetchedVideos.length === 0) throw new Error("Video bị riêng tư hoặc sai link.");
+        if(window.fetchedVideos.length === 0) throw new Error("Video riêng tư hoặc lỗi.");
         window.setSkeletonState(false);
         window.sortVideos(window.currentSortType);
     } catch (error) { window.setSkeletonState(false); window.showError(error.message); } 
@@ -288,13 +244,13 @@ window.processVideos = async function() {
 // TÌM KIẾM
 window.searchTikTok = async function(isLoadMore = false) {
     let kw = document.getElementById('tiktok-keyword').value.trim();
-    if(!kw && !isLoadMore) return window.showError("Nhập từ khóa vô!");
+    if(!kw && !isLoadMore) return window.showError("NHẬP TỪ KHÓA TÌM KIẾM!");
 
     if(!isLoadMore) {
         window.clearResults();
         window.currentSearchKeyword = kw; 
         window.searchCursor = 0;
-        window.setSkeletonState(true, false, "Đang truy xuất mạng lưới...");
+        window.setSkeletonState(true, false, "ĐANG KẾT NỐI MẠNG LƯỚI...");
     }
 
     if(window.isLoadingMore) return;
@@ -306,7 +262,7 @@ window.searchTikTok = async function(isLoadMore = false) {
         const resData = await response.json();
         
         if (resData.code !== 0 || !resData.data?.videos?.length) {
-            if(!isLoadMore) throw new Error("Không tìm thấy kết quả nào.");
+            if(!isLoadMore) throw new Error("KHÔNG TÌM THẤY KẾT QUẢ.");
             window.searchHasMore = false;
         } else {
             const videos = resData.data.videos;
@@ -332,16 +288,16 @@ window.searchTikTok = async function(isLoadMore = false) {
     }
 }
 
-// TRA CỨU KÊNH (TÊN MỚI THAY CHO SOI KÊNH)
+// TRA CỨU KÊNH
 window.fetchUserInfo = async function(isLoadMore = false) {
     let user = isLoadMore ? window.currentUserProfile : document.getElementById('tiktok-username').value.trim();
     if (user.startsWith('@')) user = user.substring(1);
-    if (!user) return window.showError("Nhập ID vô mới tra cứu được!");
+    if (!user) return window.showError("NHẬP ID KÊNH CẦN TRA CỨU!");
 
     if(!isLoadMore) {
         window.clearResults();
         window.currentUserProfile = user;
-        window.setSkeletonState(true, true, "Đang trích xuất hồ sơ kênh...");
+        window.setSkeletonState(true, true, "ĐANG NẠP DỮ LIỆU KÊNH...");
     }
 
     if(window.isLoadingMore) return;
@@ -351,7 +307,7 @@ window.fetchUserInfo = async function(isLoadMore = false) {
     try {
         const response = await fetch(`/api/index?username=${user}&cursor=${window.userVideoCursor}`);
         const data = await response.json();
-        if (data.status !== "Live") throw new Error(data.error || "Kênh không tồn tại hoặc thiết lập ẩn.");
+        if (data.status !== "Live") throw new Error(data.error || "Kênh ẩn hoặc không tồn tại.");
 
         if (!isLoadMore) {
             const u = data.author || {};
@@ -361,46 +317,41 @@ window.fetchUserInfo = async function(isLoadMore = false) {
             const safeAvatar = u.avatar || u.avatarLarger || `https://ui-avatars.com/api/?name=${u.uniqueId||user}&background=random`;
             const safeNickname = u.nickname || u.uniqueId || user;
             const safeUniqueId = u.uniqueId || user;
-            
-            // Lấy chính xác tổng video từ dữ liệu
             const totalVideos = window.formatStatsClient(u.videoCount || u.video || s.videoCount || s.video || 0);
             
             const container = document.getElementById('user-info-area');
             container.innerHTML = `
-                <div class="w-full bento-card p-6 md:p-8 animate-slide-up shadow-xl border-t border-t-zinc-800">
+                <div class="w-full pixel-card p-6 md:p-8 animate-slide-up bg-[#050505]">
                     <div class="text-center">
-                        <img src="${safeAvatar}" class="w-24 h-24 rounded-full mx-auto object-cover border-4 border-[#222] bg-[#0a0a0a] shadow-lg" referrerpolicy="no-referrer" onerror="this.src='https://ui-avatars.com/api/?name=${safeUniqueId}&background=random'">
-                        <h2 class="text-xl font-bold mt-4 text-white flex items-center justify-center gap-1">
-                            ${safeNickname} 
-                            ${u.verified ? '<i class="fa-solid fa-circle-check text-blue-500 text-sm"></i>' : ''}
+                        <img src="${safeAvatar}" class="w-24 h-24 mx-auto object-cover border-4 border-white shadow-[6px_6px_0_#ff00ff]" referrerpolicy="no-referrer" onerror="this.src='https://ui-avatars.com/api/?name=${safeUniqueId}&background=random'">
+                        <h2 class="text-xl font-bold mt-6 text-white flex items-center justify-center gap-1 pixel-ui text-cyan-400">
+                            ${safeNickname} ${u.verified ? '<i class="fa-solid fa-circle-check text-yellow-400"></i>' : ''}
                         </h2>
-                        <p class="text-zinc-500 font-medium text-xs mt-1">@${safeUniqueId}</p>
-                        <p id="channel-bio-text" class="mt-4 text-zinc-400 text-sm max-w-xl mx-auto min-h-[40px] px-2 leading-relaxed"></p>
+                        <p class="text-white font-bold text-sm mt-1 pixel-ui">@${safeUniqueId}</p>
+                        <p id="channel-bio-text" class="mt-4 text-[#ccc] text-sm max-w-xl mx-auto min-h-[40px] px-2 leading-relaxed lowercase font-mono"></p>
                         ${u.bioLink ? `
                             <div class="inline-flex w-full mb-4">
-                                <a href="${u.bioLink}" target="_blank" class="flex w-full max-w-sm mx-auto items-center justify-center gap-2 text-blue-400 text-xs font-bold bg-[#0d0d0d] border border-blue-500/30 px-3.5 py-3 rounded-xl hover:border-blue-500 hover:bg-[#111] transition shadow-md">
-                                    <i class="fa-solid fa-link text-zinc-500 shrink-0"></i>
-                                    <span class="truncate whitespace-nowrap">${u.bioLink}</span>
+                                <a href="${u.bioLink}" target="_blank" class="flex w-full max-w-sm mx-auto items-center justify-center gap-2 text-[#000] text-xs font-bold bg-[#00ff00] border-4 border-[#fff] px-3.5 py-3 hover:bg-[#fff] hover:text-[#000] shadow-[4px_4px_0_#000] transition">
+                                    <i class="fa-solid fa-link shrink-0"></i>
+                                    <span class="truncate whitespace-nowrap pixel-ui">${u.bioLink}</span>
                                 </a>
                             </div>
                         ` : ''}
                         
-                        <!-- Lưới Grid được chia làm 4 để hiển thị thêm số lượng Video -->
-                        <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mt-4 pt-6 border-t border-[#222]">
-                            <div class="bg-[#0a0a0a] p-3 rounded-2xl border border-[#262626] flex flex-col hover:border-zinc-500 transition cursor-default shadow-inner"><span class="text-lg font-black text-white">${s.following || '0'}</span><span class="text-[9px] text-zinc-500 uppercase mt-0.5 font-bold tracking-widest">Đang FL</span></div>
-                            <div class="bg-[#0a0a0a] p-3 rounded-2xl border border-[#262626] flex flex-col hover:border-zinc-500 transition cursor-default shadow-inner"><span class="text-lg font-black text-white">${s.follower || '0'}</span><span class="text-[9px] text-zinc-500 uppercase mt-0.5 font-bold tracking-widest">Follower</span></div>
-                            <div class="bg-[#0a0a0a] p-3 rounded-2xl border border-[#262626] flex flex-col hover:border-zinc-500 transition cursor-default shadow-inner"><span class="text-lg font-black text-white">${s.heart || '0'}</span><span class="text-[9px] text-zinc-500 uppercase mt-0.5 font-bold tracking-widest">Lượt Thích</span></div>
-                            <div class="bg-gradient-to-br from-[#0a0a0a] to-[#111] p-3 rounded-2xl border border-cyan-900/50 flex flex-col hover:border-cyan-500 transition cursor-default shadow-inner relative overflow-hidden">
-                                <div class="absolute -right-4 -bottom-4 opacity-10"><i class="fa-solid fa-film text-5xl text-cyan-500"></i></div>
-                                <span class="text-lg font-black text-cyan-400 relative z-10">${totalVideos}</span>
-                                <span class="text-[9px] text-zinc-500 uppercase mt-0.5 font-bold tracking-widest relative z-10">Số Video</span>
+                        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6 pt-6 border-t-4 border-dashed border-[#333]">
+                            <div class="bg-[#000] p-3 border-4 border-white shadow-[4px_4px_0_#00ffff] flex flex-col"><span class="text-xl font-black text-white">${s.following || '0'}</span><span class="text-[10px] text-cyan-400 mt-0.5 pixel-ui">Đang Follow</span></div>
+                            <div class="bg-[#000] p-3 border-4 border-white shadow-[4px_4px_0_#ff00ff] flex flex-col"><span class="text-xl font-black text-white">${s.follower || '0'}</span><span class="text-[10px] text-magenta-400 mt-0.5 pixel-ui">Follower</span></div>
+                            <div class="bg-[#000] p-3 border-4 border-white shadow-[4px_4px_0_#ffff00] flex flex-col"><span class="text-xl font-black text-white">${s.heart || '0'}</span><span class="text-[10px] text-yellow-400 mt-0.5 pixel-ui">Lượt Thích</span></div>
+                            <div class="bg-[#000] p-3 border-4 border-white shadow-[4px_4px_0_#00ff00] flex flex-col relative overflow-hidden">
+                                <span class="text-xl font-black text-white relative z-10">${totalVideos}</span>
+                                <span class="text-[10px] text-lime-400 mt-0.5 pixel-ui relative z-10">Số Video</span>
                             </div>
                         </div>
                     </div>
                 </div>
             `;
             container.classList.remove('hidden');
-            setTimeout(() => { window.typeWriter(document.getElementById('channel-bio-text'), u.signature || 'Chưa có tiểu sử.', 25); }, 100);
+            setTimeout(() => { document.getElementById('channel-bio-text').innerText = u.signature || 'No bio.'; }, 100);
             
             window.setSkeletonState(false);
             window.startScrollObserver();
@@ -411,11 +362,8 @@ window.fetchUserInfo = async function(isLoadMore = false) {
             const startIndex = window.fetchedVideos.length;
             window.fetchedVideos.push(...formattedResults);
             
-            if (!isLoadMore) {
-                window.sortVideos(window.currentSortType);
-            } else {
-                window.appendVideoCards(formattedResults, startIndex);
-            }
+            if (!isLoadMore) window.sortVideos(window.currentSortType);
+            else window.appendVideoCards(formattedResults, startIndex);
         }
         window.userVideoCursor = data.cursor;
         window.userHasMore = data.hasMore;
@@ -428,34 +376,28 @@ window.fetchUserInfo = async function(isLoadMore = false) {
 window.fetchAnalytics = async function() {
     let user = document.getElementById('tiktok-analytics-id').value.trim();
     if (user.startsWith('@')) user = user.substring(1);
-    if (!user) return window.showError("Nhập ID kênh cần phân tích!");
+    if (!user) return window.showError("NHẬP ID KÊNH PHÂN TÍCH!");
 
     window.clearResults();
     window.currentMode = 'analytics';
-    
-    // Tắt chữ Loading cũ đi để nhường chỗ cho thanh Progress Bar
     window.setSkeletonState(true, true, "");
     document.getElementById('loading-text').classList.add('hidden');
 
     const skelArea = document.getElementById('skeleton-area');
     let pBarContainer = document.getElementById('scan-progress-container');
     
-    // Khởi tạo giao diện thanh Progress Bar nếu chưa có
     if (!pBarContainer) {
         skelArea.insertAdjacentHTML('afterbegin', `
-            <div id="scan-progress-container" class="w-full mx-auto mb-6 bg-[#0d0d0d] border border-[#262626] p-5 rounded-3xl hidden shadow-2xl relative overflow-hidden">
-                <div class="absolute inset-0 bg-gradient-to-r from-cyan-500/5 to-blue-500/5 animate-pulse"></div>
+            <div id="scan-progress-container" class="w-full mx-auto mb-6 bg-[#000] border-4 border-white shadow-[6px_6px_0_#ff00ff] p-5 hidden relative overflow-hidden">
                 <div class="relative z-10">
-                    <div class="flex justify-between items-center mb-3">
-                        <span class="text-[11px] font-bold text-cyan-400 uppercase tracking-widest flex items-center gap-2"><i class="fa-solid fa-satellite-dish text-cyan-500 animate-pulse"></i> Radar Phân Tích</span>
-                        <span id="scan-progress-text" class="text-[12px] font-black text-white bg-black border border-[#333] px-3 py-1 rounded-lg shadow-inner">0 Video</span>
+                    <div class="flex justify-between items-center mb-4">
+                        <span class="text-[12px] font-bold text-cyan-400 pixel-ui flex items-center gap-2"><i class="fa-solid fa-satellite-dish text-yellow-400 animate-pulse"></i> RADAR SCAN</span>
+                        <span id="scan-progress-text" class="text-[12px] font-black text-white bg-black border-2 border-[#fff] px-3 py-1 shadow-[2px_2px_0_#ffff00]">0 / 0</span>
                     </div>
-                    <div class="w-full h-3.5 bg-black rounded-full overflow-hidden border border-[#333] shadow-inner relative">
-                        <div id="scan-progress-bar" class="h-full bg-gradient-to-r from-blue-600 via-cyan-400 to-emerald-400 transition-all duration-300 ease-out relative" style="width: 0%">
-                            <div class="absolute inset-0 w-full h-full progress-shimmer"></div>
-                        </div>
+                    <div class="w-full h-6 bg-[#222] border-2 border-white shadow-inner relative">
+                        <div id="scan-progress-bar" class="h-full bg-[#00ff00] transition-all duration-300 relative border-r-4 border-[#fff]" style="width: 0%"></div>
                     </div>
-                    <p id="scan-status-text" class="text-center text-[10.5px] text-zinc-500 mt-4 font-bold tracking-widest uppercase">Đang khởi động kết nối máy chủ...</p>
+                    <p id="scan-status-text" class="text-center text-[10px] text-[#fff] mt-4 font-bold pixel-ui">KHỞI ĐỘNG MODULE...</p>
                 </div>
             </div>
         `);
@@ -465,7 +407,7 @@ window.fetchAnalytics = async function() {
     pBarContainer.classList.remove('hidden');
     document.getElementById('scan-progress-bar').style.width = '0%';
     document.getElementById('scan-progress-text').innerText = '0 Video';
-    document.getElementById('scan-status-text').innerText = 'Đang thiết lập đường ống nạp dữ liệu...';
+    document.getElementById('scan-status-text').innerText = 'THIẾT LẬP KẾT NỐI MÁY CHỦ...';
 
     try {
         let allVideos = [];
@@ -482,10 +424,7 @@ window.fetchAnalytics = async function() {
             
             if(!pAuthor && data.author) pAuthor = data.author;
             
-            // Tìm tổng video của người dùng để tính % cho thanh Progress
-            if (expectedTotal === 0) {
-                expectedTotal = pAuthor?.videoCount || pAuthor?.video || data.stats_formatted?.videoCount || data.stats_formatted?.video || 0;
-            }
+            if (expectedTotal === 0) expectedTotal = pAuthor?.videoCount || pAuthor?.video || data.stats_formatted?.videoCount || data.stats_formatted?.video || 0;
 
             if(data.videos) {
                 allVideos.push(...data.videos);
@@ -498,18 +437,14 @@ window.fetchAnalytics = async function() {
             if (expectedTotal < allVideos.length) expectedTotal = allVideos.length;
             let percentage = expectedTotal > 0 ? Math.min((allVideos.length / expectedTotal) * 100, 100) : 100;
             
-            // Cập nhật Animation Thanh Progress Bar
             document.getElementById('scan-progress-bar').style.width = `${percentage}%`;
-            document.getElementById('scan-progress-text').innerText = expectedTotal > 0 ? `${allVideos.length} / ${expectedTotal} Video` : `${allVideos.length} Video`;
-            document.getElementById('scan-status-text').innerText = `XUNG NHỊP QUÉT: ĐÃ THU GOM ĐƯỢC ${allVideos.length} BÀI ĐĂNG...`;
+            document.getElementById('scan-progress-text').innerText = expectedTotal > 0 ? `${allVideos.length}/${expectedTotal}` : `${allVideos.length}`;
+            document.getElementById('scan-status-text').innerText = `DATA DOWNLOADED: ${allVideos.length} BLOCKS...`;
             
-            if (videosInCurrentSecond >= 200) {
-                await new Promise(r => setTimeout(r, 1000));
-                videosInCurrentSecond = 0;
-            }
+            if (videosInCurrentSecond >= 200) { await new Promise(r => setTimeout(r, 1000)); videosInCurrentSecond = 0; }
         }
 
-        if (allVideos.length === 0) throw new Error("Kênh trống hoặc bị riêng tư.");
+        if (allVideos.length === 0) throw new Error("KÊNH TRỐNG HOẶC LỖI.");
 
         let totalPlays = 0, totalLikes = 0, totalComments = 0, totalShares = 0;
         let hashtagCounts = {};
@@ -522,7 +457,6 @@ window.fetchAnalytics = async function() {
             totalLikes += v.stats.like;
             totalComments += v.stats.comment;
             totalShares += v.stats.share;
-
             let tags = (v.video_data.description || "").match(/#[\w_À-ỹ]+/g);
             if(tags) tags.forEach(t => { let ct = t.toLowerCase(); hashtagCounts[ct] = (hashtagCounts[ct] || 0) + 1; });
         });
@@ -530,89 +464,95 @@ window.fetchAnalytics = async function() {
         parsedVideos.sort((a,b) => (b.data.video_data.create_time||0) - (a.data.video_data.create_time||0));
         let newestVid = parsedVideos[0];
         let oldestVid = parsedVideos[parsedVideos.length - 1];
-        let createDate = oldestVid && oldestVid.data.video_data.create_time ? new Date(oldestVid.data.video_data.create_time * 1000).toLocaleDateString('vi-VN') : 'Không rõ';
+        let createDate = oldestVid && oldestVid.data.video_data.create_time ? new Date(oldestVid.data.video_data.create_time * 1000).toLocaleDateString('vi-VN') : 'UNKNOWN';
 
         const avgViews = (totalPlays / parsedVideos.length);
         const er = totalPlays > 0 ? (((totalLikes + totalComments + totalShares) / totalPlays) * 100).toFixed(2) : 0;
         
         let sortedTags = Object.entries(hashtagCounts).sort((a,b) => b[1] - a[1]).slice(0, 10);
         let tagsHtml = sortedTags.length > 0 
-            ? sortedTags.map(t => `<span class="bg-[#0d0d0d] border border-[#222] text-cyan-400 px-3 py-1.5 rounded-xl text-xs font-bold">${t[0]} <span class="text-zinc-600 ml-1">x${t[1]}</span></span>`).join('')
-            : '<span class="text-zinc-600 text-sm italic">Không dùng Hashtag</span>';
+            ? sortedTags.map(t => `<span class="bg-[#111] border-2 border-white text-yellow-400 px-3 py-1 text-xs font-bold shadow-[2px_2px_0_#00ffff]">${t[0]} <span class="text-white ml-1">x${t[1]}</span></span>`).join('')
+            : '<span class="text-[#888] text-sm">NO HASHTAGS FOUND</span>';
 
         const safeAvatar = pAuthor?.avatar || pAuthor?.avatarLarger || `https://ui-avatars.com/api/?name=${user}&background=random`;
         const safeNickname = pAuthor?.nickname || user;
 
         const container = document.getElementById('user-info-area');
         container.innerHTML = `
-            <div class="w-full bento-card p-6 md:p-8 animate-slide-up relative">
-                <div class="flex items-center gap-4 mb-8 pb-6 border-b border-[#222]">
-                    <img src="${safeAvatar}" class="w-16 h-16 rounded-full object-cover border border-[#333] bg-black" referrerpolicy="no-referrer" onerror="this.src='https://ui-avatars.com/api/?name=${user}&background=random'">
+            <div class="w-full pixel-card p-6 md:p-8 animate-slide-up relative bg-[#000]">
+                <div class="flex items-center gap-4 mb-8 pb-6 border-b-4 border-dashed border-[#444]">
+                    <img src="${safeAvatar}" class="w-16 h-16 object-cover border-4 border-white shadow-[4px_4px_0_#00ff00]" referrerpolicy="no-referrer" onerror="this.src='https://ui-avatars.com/api/?name=${user}&background=random'">
                     <div>
-                        <h2 class="text-2xl font-extrabold text-white flex items-center gap-2">${safeNickname}</h2>
-                        <p class="text-cyan-400 font-medium text-sm">Báo cáo Phân tích từ 100% (${parsedVideos.length}) bài đăng</p>
+                        <h2 class="text-xl font-bold text-white flex items-center gap-2 pixel-ui text-yellow-400">${safeNickname}</h2>
+                        <p class="text-cyan-400 font-bold text-xs pixel-ui">HỒ SƠ PHÂN TÍCH: ${parsedVideos.length} VIDEO</p>
                     </div>
                 </div>
 
-                <!-- Lưới hiển thị Tổng Video trong báo cáo phân tích -->
-                <div class="grid grid-cols-2 md:grid-cols-4 bg-[#0a0a0a] p-4 rounded-[20px] border border-[#222] mb-6 gap-y-4 gap-x-2">
-                    <div class="text-center flex-1 md:border-r border-[#222]">
-                        <span class="block text-[10px] text-zinc-500 uppercase font-bold mb-1 tracking-widest">Ngày Lập Kênh</span>
+                <div class="grid grid-cols-2 md:grid-cols-4 bg-[#111] p-4 border-4 border-white shadow-[6px_6px_0_#ff00ff] mb-6 gap-y-4 gap-x-2">
+                    <div class="text-center flex-1 md:border-r-2 border-[#555]">
+                        <span class="block text-[10px] text-cyan-400 pixel-ui mb-2">Ngày Lập Kênh</span>
                         <span class="font-black text-white text-sm md:text-base">${createDate}</span>
                     </div>
-                    <div class="text-center flex-1 md:border-r border-[#222]">
-                        <span class="block text-[10px] text-zinc-500 uppercase font-bold mb-1 tracking-widest">Tổng Video</span>
-                        <span class="font-black text-cyan-400 text-sm md:text-base">${window.formatStatsClient(parsedVideos.length)}</span>
+                    <div class="text-center flex-1 md:border-r-2 border-[#555]">
+                        <span class="block text-[10px] text-cyan-400 pixel-ui mb-2">Tổng Video</span>
+                        <span class="font-black text-[#00ff00] text-sm md:text-base">${window.formatStatsClient(parsedVideos.length)}</span>
                     </div>
-                    <div class="text-center flex-1 md:border-r border-[#222]">
-                        <span class="block text-[10px] text-zinc-500 uppercase font-bold mb-1 tracking-widest">Video Gần Nhất</span>
-                        <a href="${newestVid.link}" target="_blank" class="font-bold text-blue-400 text-xs md:text-sm hover:text-white transition"><i class="fa-solid fa-arrow-up-right-from-square"></i> Xem</a>
+                    <div class="text-center flex-1 md:border-r-2 border-[#555]">
+                        <span class="block text-[10px] text-cyan-400 pixel-ui mb-2">Video Gần Nhất</span>
+                        <a href="${newestVid.link}" target="_blank" class="font-bold bg-white text-black px-2 py-1 text-xs hover:bg-[#ffff00] border-2 border-black">XEM NGAY <i class="fa-solid fa-arrow-right"></i></a>
                     </div>
                     <div class="text-center flex-1">
-                        <span class="block text-[10px] text-zinc-500 uppercase font-bold mb-1 tracking-widest">Video Đầu Tiên</span>
-                        <a href="${oldestVid.link}" target="_blank" class="font-bold text-blue-400 text-xs md:text-sm hover:text-white transition"><i class="fa-solid fa-arrow-up-right-from-square"></i> Xem</a>
+                        <span class="block text-[10px] text-cyan-400 pixel-ui mb-2">Video Đầu Tiên</span>
+                        <a href="${oldestVid.link}" target="_blank" class="font-bold bg-white text-black px-2 py-1 text-xs hover:bg-[#ffff00] border-2 border-black">XEM NGAY <i class="fa-solid fa-arrow-right"></i></a>
                     </div>
                 </div>
 
                 <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-                    <div class="bg-[#0a0a0a] border border-[#222] p-5 rounded-[20px] flex flex-col items-center justify-center">
-                        <i class="fa-solid fa-fire text-orange-500 text-xl mb-2"></i>
+                    <div class="bg-[#000] border-4 border-white shadow-[4px_4px_0_#ffff00] p-4 flex flex-col items-center justify-center text-center">
+                        <i class="fa-solid fa-fire text-[#ffaa00] text-2xl mb-2"></i>
                         <span class="text-xl font-black text-white">${window.formatStatsClient(avgViews)}</span>
-                        <span class="text-[10px] text-zinc-500 uppercase mt-1 font-bold tracking-widest text-center">View Trung Bình</span>
+                        <span class="text-[10px] text-[#ffaa00] pixel-ui mt-2">View Trung Bình</span>
                     </div>
-                    <div class="bg-[#0a0a0a] border border-[#222] p-5 rounded-[20px] flex flex-col items-center justify-center">
-                        <i class="fa-solid fa-percent text-cyan-500 text-xl mb-2"></i>
+                    <div class="bg-[#000] border-4 border-white shadow-[4px_4px_0_#00ffff] p-4 flex flex-col items-center justify-center text-center">
+                        <i class="fa-solid fa-percent text-cyan-400 text-2xl mb-2"></i>
                         <span class="text-xl font-black text-white">${er}%</span>
-                        <span class="text-[10px] text-zinc-500 uppercase mt-1 font-bold tracking-widest text-center">Tỷ lệ ER Thực</span>
+                        <span class="text-[10px] text-cyan-400 pixel-ui mt-2">Tỷ lệ ER Thực</span>
                     </div>
-                    <div class="bg-[#0a0a0a] border border-[#222] p-5 rounded-[20px] flex flex-col items-center justify-center">
-                        <i class="fa-solid fa-heart text-violet-500 text-xl mb-2"></i>
+                    <div class="bg-[#000] border-4 border-white shadow-[4px_4px_0_#ff00ff] p-4 flex flex-col items-center justify-center text-center">
+                        <i class="fa-solid fa-heart text-magenta-400 text-2xl mb-2"></i>
                         <span class="text-xl font-black text-white">${window.formatStatsClient(totalLikes / parsedVideos.length)}</span>
-                        <span class="text-[10px] text-zinc-500 uppercase mt-1 font-bold tracking-widest text-center">Tim Trung Bình</span>
+                        <span class="text-[10px] text-magenta-400 pixel-ui mt-2">Tim Trung Bình</span>
                     </div>
-                    <div class="bg-[#0a0a0a] border border-[#222] p-5 rounded-[20px] flex flex-col items-center justify-center">
-                        <i class="fa-solid fa-play text-emerald-500 text-xl mb-2"></i>
+                    <div class="bg-[#000] border-4 border-white shadow-[4px_4px_0_#00ff00] p-4 flex flex-col items-center justify-center text-center">
+                        <i class="fa-solid fa-play text-lime-400 text-2xl mb-2"></i>
                         <span class="text-xl font-black text-white">${window.formatStatsClient(totalPlays)}</span>
-                        <span class="text-[10px] text-zinc-500 uppercase mt-1 font-bold tracking-widest text-center">Tổng View Đã Quét</span>
+                        <span class="text-[10px] text-lime-400 pixel-ui mt-2">Tổng View</span>
                     </div>
                 </div>
                 
                 <div class="mb-2">
-                    <h4 class="text-[10px] text-zinc-500 font-bold uppercase tracking-widest mb-3 flex items-center gap-1.5"><i class="fa-solid fa-hashtag text-cyan-400"></i> Top Hashtag</h4>
+                    <h4 class="text-[11px] text-white pixel-ui mb-3 flex items-center gap-2"><i class="fa-solid fa-hashtag text-magenta-400"></i> TOP HASHTAGS</h4>
                     <div class="flex flex-wrap gap-2">${tagsHtml}</div>
                 </div>
             </div>
-            <h3 class="text-center text-sm font-bold text-zinc-400 mt-10 mb-2 uppercase tracking-[0.2em]">CÁC BÀI ĐĂNG VIRAL NHẤT KÊNH</h3>
+            
+            <!-- Hai Nút Lọc Video Mới Nhất / Cũ Nhất -->
+            <div class="w-full flex justify-center gap-4 mt-8 mb-4">
+                <button onclick="window.sortVideos('latest')" class="pixel-btn px-6 py-3 bg-cyan-400 hover:bg-[#fff] text-black border-4 border-white shadow-[4px_4px_0_#ff00ff]">VIDEO MỚI NHẤT</button>
+                <button onclick="window.sortVideos('oldest')" class="pixel-btn px-6 py-3 bg-magenta-400 hover:bg-[#fff] text-black border-4 border-white shadow-[4px_4px_0_#00ffff]">VIDEO CŨ NHẤT</button>
+            </div>
+            
+            <h3 class="text-center text-sm font-bold text-[#888] mb-2 pixel-ui">=== DANH SÁCH VIDEO KẾT QUẢ ===</h3>
         `;
         container.classList.remove('hidden');
 
         window.fetchedVideos = parsedVideos;
         window.setSkeletonState(false);
-        window.sortVideos('popular'); 
+        window.sortVideos('latest'); // Mặc định hiển thị mới nhất theo yêu cầu
     } catch (error) { window.setSkeletonState(false); window.showError(error.message); } 
 }
 
-// ================= RENDER LƯỚI & SẮP XẾP CUỘN NGANG =================
+// RENDER LƯỚI
 window.renderVideoCards = function(results, append = false, startIndex = 0) {
     const container = document.getElementById('result-area');
     const specialAction = document.getElementById('special-action-container');
@@ -620,7 +560,7 @@ window.renderVideoCards = function(results, append = false, startIndex = 0) {
     if(specialAction && !append) {
         if (window.currentMode === 'video' && window.linkMode === 'multi' && window.fetchedVideos.length > 1) {
             specialAction.innerHTML = `
-                <button onclick="window.downloadAllVideos(this)" class="px-5 py-3 rounded-xl bg-[#111] text-white font-bold text-xs hover:bg-blue-600 border border-[#222] transition shadow-md flex items-center gap-2"><i class="fa-solid fa-download"></i> Tải Tất Cả Tệp Media</button>
+                <button onclick="window.downloadAllVideos(this)" class="pixel-btn px-6 py-3 bg-[#ffff00] hover:bg-white text-black border-4 border-white shadow-[4px_4px_0_#ff00ff]"><i class="fa-solid fa-download"></i> TẢI TẤT CẢ MEDIA</button>
             `;
             specialAction.classList.remove('hidden');
             specialAction.classList.add('flex');
@@ -641,23 +581,23 @@ window.renderVideoCards = function(results, append = false, startIndex = 0) {
         
         const animClass = (index % 2 === 0) ? 'animate-slide-left' : 'animate-slide-right';
         const mediaTypeBadge = (d.images && d.images.length > 0) 
-            ? `<div class="absolute top-2 left-2 bg-white/90 text-black text-[9px] font-bold px-1.5 py-0.5 rounded shadow-md z-20"><i class="fa-regular fa-images"></i> ${d.images.length}</div>` 
+            ? `<div class="absolute top-2 left-2 bg-white text-black text-[10px] font-bold px-2 py-1 border-2 border-black shadow-[2px_2px_0_#000] z-20 pixel-ui"><i class="fa-regular fa-images"></i> ${d.images.length}</div>` 
             : '';
 
         html += `
             <div class="grid-item w-full ${animClass}" onclick="window.openVideoDetail(${currentIndex})" style="animation-delay: ${(index % 10) * 0.04}s">
-                <img src="${d.urls.cover}" class="thumb absolute inset-0 w-full h-full object-cover" loading="lazy" referrerpolicy="no-referrer" onerror="this.src='https://placehold.co/400x600/111/444?text=Lỗi+Ảnh'">
+                <img src="${d.urls.cover}" class="thumb absolute inset-0 w-full h-full object-cover" loading="lazy" referrerpolicy="no-referrer" onerror="this.src='https://placehold.co/400x600/111/444?text=ERROR'">
                 ${mediaTypeBadge}
-                <div class="absolute top-2 right-2 bg-black/80 backdrop-blur border border-zinc-700 text-white text-[9px] font-bold px-1.5 py-0.5 rounded z-20 flex items-center gap-1">
-                    <i class="fa-solid fa-play text-blue-400"></i> ${window.formatStatsClient(d.stats.play)}
+                <div class="absolute top-2 right-2 bg-[#000] border-2 border-white text-[#00ffff] text-[10px] font-bold px-2 py-1 shadow-[2px_2px_0_#ff00ff] z-20 flex items-center gap-1 pixel-ui">
+                    <i class="fa-solid fa-play"></i> ${window.formatStatsClient(d.stats.play)}
                 </div>
                 <div class="absolute inset-0 overlay-gradient z-10 flex flex-col justify-end p-3 pointer-events-none">
                     <div class="flex items-center gap-2 mb-1.5">
-                        <img src="${d.author.avatar}" class="w-6 h-6 rounded-full object-cover border border-zinc-600 bg-black shrink-0" loading="lazy" referrerpolicy="no-referrer" onerror="this.src='https://ui-avatars.com/api/?name=${d.author.uniqueId}&background=random'">
-                        <span class="text-white font-semibold text-[11px] truncate shadow-sm">${d.author.nickname}</span>
+                        <img src="${d.author.avatar}" class="w-6 h-6 object-cover border-2 border-white bg-black shrink-0" loading="lazy" referrerpolicy="no-referrer" onerror="this.src='https://ui-avatars.com/api/?name=${d.author.uniqueId}&background=random'">
+                        <span class="text-white font-bold text-[11px] truncate shadow-sm pixel-ui">${d.author.nickname}</span>
                     </div>
-                    <div class="flex gap-2 text-[9.5px] font-bold text-zinc-300">
-                        <span class="flex items-center gap-1"><i class="fa-solid fa-heart text-white"></i> ${window.formatStatsClient(d.stats.like)}</span>
+                    <div class="flex gap-2 text-[10px] font-bold text-yellow-400 pixel-ui">
+                        <span class="flex items-center gap-1"><i class="fa-solid fa-heart text-magenta-400"></i> ${window.formatStatsClient(d.stats.like)}</span>
                     </div>
                 </div>
             </div>
@@ -670,7 +610,6 @@ window.renderVideoCards = function(results, append = false, startIndex = 0) {
 
 window.appendVideoCards = function(newItems, startIndex) {
     window.renderVideoCards(newItems, true, startIndex);
-    
     const scroller = document.getElementById('tk-feed-scroller');
     if(scroller && document.getElementById('tk-player-modal').classList.contains('active')) {
         const slidesHtml = newItems.map((v, i) => window.createFeedSlideHTML(v, startIndex + i)).join('');
@@ -679,27 +618,23 @@ window.appendVideoCards = function(newItems, startIndex) {
     }
 }
 
-// ================= INFINITE SCROLL OBSERVER (TỰ ĐỘNG LOAD THÊM NGẦM) =================
 window.startScrollObserver = function() {
     if(window.scrollObserver) window.scrollObserver.disconnect();
     const sentinel = document.getElementById('scroll-sentinel');
     if (!sentinel) return;
-    
     window.scrollObserver = new IntersectionObserver((entries) => {
         if (entries[0].isIntersecting) {
             if (window.currentMode === 'search' && window.searchHasMore) window.searchTikTok(true);
             else if (window.currentMode === 'info' && window.userHasMore) window.fetchUserInfo(true);
         }
     }, { rootMargin: '300px' });
-    
     window.scrollObserver.observe(sentinel);
 }
-
 window.stopScrollObserver = function() {
     if (window.scrollObserver) { window.scrollObserver.disconnect(); window.scrollObserver = null; }
 }
 
-// ================= TIKTOK PLAYER VERTICAL FEED =================
+// TIKTOK PLAYER VERTICAL FEED
 window.createFeedSlideHTML = function(item, index) {
     const d = item.data;
     const isImg = d.images && d.images.length > 0;
@@ -707,42 +642,42 @@ window.createFeedSlideHTML = function(item, index) {
     const sidebar = `
         <div class="tk-sidebar" onclick="event.stopPropagation()">
             <div class="tk-avatar-wrap" onclick="window.searchUserFromDetail('${d.author.uniqueId}')">
-                <img src="${d.author.avatar}" class="tk-avatar" referrerpolicy="no-referrer" onerror="this.src='https://ui-avatars.com/api/?name=${d.author.uniqueId}&background=random'">
-                <div class="tk-plus-btn"><i class="fa-solid fa-plus text-[10px]"></i></div>
+                <img src="${d.author.avatar}" class="tk-avatar border-2 border-white" referrerpolicy="no-referrer" onerror="this.src='https://ui-avatars.com/api/?name=${d.author.uniqueId}&background=random'">
+                <div class="tk-plus-btn bg-[#ff00ff] border-2 border-white"><i class="fa-solid fa-plus text-[10px] text-white"></i></div>
             </div>
-            <div class="tk-icon-wrap"><i class="fa-solid fa-heart tk-icon"></i><span class="text-[11px] font-bold mt-1 text-shadow">${window.formatStatsClient(d.stats.like)}</span></div>
+            <div class="tk-icon-wrap"><i class="fa-solid fa-heart tk-icon text-white"></i><span class="text-[11px] font-bold mt-1 text-shadow pixel-ui text-white">${window.formatStatsClient(d.stats.like)}</span></div>
             
             <div class="tk-icon-wrap" onclick="window.openCommentSheet(${index}, event)">
-                <i class="fa-solid fa-comment-dots tk-icon"></i>
-                <span class="text-[11px] font-bold mt-1 text-shadow">${window.formatStatsClient(d.stats.comment)}</span>
+                <i class="fa-solid fa-comment-dots tk-icon text-white"></i>
+                <span class="text-[11px] font-bold mt-1 text-shadow pixel-ui text-white">${window.formatStatsClient(d.stats.comment)}</span>
             </div>
             
-            <div class="tk-icon-wrap"><i class="fa-solid fa-bookmark tk-icon"></i><span class="text-[11px] font-bold mt-1 text-shadow">${window.formatStatsClient(d.stats.download||0)}</span></div>
+            <div class="tk-icon-wrap"><i class="fa-solid fa-bookmark tk-icon text-white"></i><span class="text-[11px] font-bold mt-1 text-shadow pixel-ui text-white">${window.formatStatsClient(d.stats.download||0)}</span></div>
             
             <div class="tk-icon-wrap" onclick="window.openShareSheet(${index}, event)">
-                <i class="fa-solid fa-share tk-icon"></i>
-                <span class="text-[11px] font-bold mt-1 text-shadow">${window.formatStatsClient(d.stats.share)}</span>
+                <i class="fa-solid fa-share tk-icon text-white"></i>
+                <span class="text-[11px] font-bold mt-1 text-shadow pixel-ui text-white">${window.formatStatsClient(d.stats.share)}</span>
             </div>
             
             <div class="tk-icon-wrap mt-2" onclick="window.openAnalyticsSheet(${index}, event)">
-                <div class="w-9 h-9 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center border border-white/30 shadow-lg">
-                    <i class="fa-solid fa-ellipsis text-white text-xl"></i>
+                <div class="w-9 h-9 bg-black border-2 border-white flex items-center justify-center shadow-[2px_2px_0_#00ffff]">
+                    <i class="fa-solid fa-bars text-white text-xl"></i>
                 </div>
             </div>
 
-            <div class="tk-vinyl-record mt-1">
-                <i class="fa-solid fa-music text-[10px] text-zinc-400"></i>
+            <div class="w-10 h-10 border-4 border-[#fff] bg-[#000] flex items-center justify-center animate-spin-slow shadow-[2px_2px_0_#ff00ff] mt-2">
+                <i class="fa-solid fa-music text-[12px] text-cyan-400"></i>
             </div>
         </div>
     `;
 
     const info = `
         <div class="tk-bottom-info" onclick="event.stopPropagation()">
-            <h3 class="tk-username" onclick="window.searchUserFromDetail('${d.author.uniqueId}')">@${d.author.uniqueId}</h3>
-            <p class="tk-caption">${(d.video_data.description||'').replace(/</g,'&lt;')}</p>
-            <div class="tk-music-ticker">
-                <i class="fa-solid fa-music text-[10px]"></i>
-                <div class="tk-marquee-container"><span class="tk-marquee">${d.music?.title || 'Âm thanh gốc'}</span></div>
+            <h3 class="font-bold text-lg mb-2 pixel-ui text-yellow-400" onclick="window.searchUserFromDetail('${d.author.uniqueId}')">@${d.author.uniqueId}</h3>
+            <p class="text-sm mb-3 leading-relaxed lowercase font-mono">${(d.video_data.description||'').replace(/</g,'&lt;')}</p>
+            <div class="flex items-center gap-2 text-[11px] font-bold bg-black/60 w-fit px-2 py-1 border border-white pixel-ui">
+                <i class="fa-solid fa-music text-magenta-400"></i>
+                <div class="w-32 overflow-hidden whitespace-nowrap"><span class="tk-marquee text-white">${d.music?.title || 'ORIGINAL AUDIO'}</span></div>
             </div>
         </div>
     `;
@@ -752,13 +687,13 @@ window.createFeedSlideHTML = function(item, index) {
         const slides = d.images.map((img, i) => `
             <div class="tk-slide">
                 <img src="${img}" referrerpolicy="no-referrer">
-                <span class="absolute top-[80px] right-4 bg-black/60 text-white text-[11px] font-bold px-3 py-1.5 rounded-lg border border-white/10 shadow-lg">${i+1}/${d.images.length}</span>
+                <span class="absolute top-[80px] right-4 bg-[#000] border-2 border-white text-[#00ff00] text-[12px] font-bold px-3 py-1 shadow-[2px_2px_0_#fff] pixel-ui">${i+1}/${d.images.length}</span>
             </div>
         `).join('');
         media = `
             <div id="tk-img-scroller-${index}" class="tk-image-scroller" onclick="event.stopPropagation()">${slides}</div>
-            <button onclick="event.stopPropagation(); let c=document.getElementById('tk-img-scroller-${index}'); c.scrollBy({left: -c.clientWidth, behavior: 'smooth'})" class="absolute left-2 top-1/2 -translate-y-1/2 w-8 h-8 bg-black/60 hover:bg-white text-white hover:text-black rounded-full flex items-center justify-center opacity-0 hover:opacity-100 transition z-20"><i class="fa-solid fa-chevron-left text-xs"></i></button>
-            <button onclick="event.stopPropagation(); let c=document.getElementById('tk-img-scroller-${index}'); c.scrollBy({left: c.clientWidth, behavior: 'smooth'})" class="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 bg-black/60 hover:bg-white text-white hover:text-black rounded-full flex items-center justify-center opacity-0 hover:opacity-100 transition z-20"><i class="fa-solid fa-chevron-right text-xs"></i></button>
+            <button onclick="event.stopPropagation(); let c=document.getElementById('tk-img-scroller-${index}'); c.scrollBy({left: -c.clientWidth, behavior: 'smooth'})" class="absolute left-2 top-1/2 -translate-y-1/2 w-10 h-10 bg-[#000] border-2 border-white text-white flex items-center justify-center shadow-[4px_4px_0_#ff00ff] z-20 hover:bg-white hover:text-black"><i class="fa-solid fa-chevron-left text-lg"></i></button>
+            <button onclick="event.stopPropagation(); let c=document.getElementById('tk-img-scroller-${index}'); c.scrollBy({left: c.clientWidth, behavior: 'smooth'})" class="absolute right-2 top-1/2 -translate-y-1/2 w-10 h-10 bg-[#000] border-2 border-white text-white flex items-center justify-center shadow-[4px_4px_0_#ff00ff] z-20 hover:bg-white hover:text-black"><i class="fa-solid fa-chevron-right text-lg"></i></button>
         `;
     } else {
         media = `<video data-src="${d.urls.no_watermark}" poster="${d.urls.cover}" loop playsinline class="w-full h-full object-cover"></video>`;
@@ -768,7 +703,7 @@ window.createFeedSlideHTML = function(item, index) {
         <div class="tk-feed-item" data-index="${index}" id="feed-item-${index}" onclick="window.togglePlayPause(${index})">
             ${media}
             <div id="tk-pause-${index}" class="tk-pause-icon">
-                <i class="fa-solid fa-play text-white opacity-80" style="font-size: 65px; filter: drop-shadow(0 0 10px rgba(0,0,0,0.5));"></i>
+                <i class="fa-solid fa-play text-white opacity-80" style="font-size: 80px; filter: drop-shadow(4px 4px 0px #00ffff);"></i>
             </div>
             ${sidebar}
             ${info}
@@ -778,7 +713,6 @@ window.createFeedSlideHTML = function(item, index) {
 
 window.openVideoDetail = function(startIndex) {
     const scroller = document.getElementById('tk-feed-scroller');
-    
     let toRender = window.fetchedVideos;
     if(window.fetchedVideos.length > 100) {
         let start = Math.max(0, startIndex - 10);
@@ -810,11 +744,9 @@ window.openVideoDetail = function(startIndex) {
                     if(vid) {
                         window.currentVideoPlayer = vid;
                         if(vid.dataset.src) { vid.src = vid.dataset.src; vid.removeAttribute('data-src'); }
-                        
                         const playPromise = vid.play();
                         if (playPromise !== undefined) {
-                            playPromise.then(() => { if(icon) icon.classList.remove('show'); })
-                                       .catch(() => { if(icon) icon.classList.add('show'); });
+                            playPromise.then(() => { if(icon) icon.classList.remove('show'); }).catch(() => { if(icon) icon.classList.add('show'); });
                         }
                     } else {
                         window.currentVideoPlayer = null; 
@@ -826,14 +758,10 @@ window.openVideoDetail = function(startIndex) {
                     }
 
                 } else {
-                    if(vid && !vid.paused) {
-                        vid.pause();
-                        if(icon) icon.classList.add('show');
-                    }
+                    if(vid && !vid.paused) { vid.pause(); if(icon) icon.classList.add('show'); }
                 }
             });
         }, { threshold: 0.6 });
-
         document.querySelectorAll('.tk-feed-item').forEach(el => window.feedObserver.observe(el));
     }, 50);
 }
@@ -848,24 +776,16 @@ window.updateBottomActionBar = function(index) {
     if(!item) return;
     const d = item.data;
     const isImg = d.images && d.images.length > 0;
-
     const fnMp4 = window.generateFileName(d.author.uniqueId, d.video_data.id, 'mp4');
     const fnMp3 = window.generateFileName(d.author.uniqueId, d.video_data.id, 'mp3');
     
-    document.getElementById('tk-lbl-media').innerText = isImg ? "Lưu Bộ Ảnh" : "Lưu Video";
+    document.getElementById('tk-lbl-media').innerText = isImg ? "LƯU BỘ ẢNH" : "LƯU VIDEO";
     
     const btnMedia = document.getElementById('tk-btn-dl-media');
-    btnMedia.onclick = function(e) {
-        e.stopPropagation();
-        if(isImg) window.downloadImages(index, this);
-        else window.forceDownload(d.urls.no_watermark, fnMp4, this);
-    };
+    btnMedia.onclick = function(e) { e.stopPropagation(); if(isImg) window.downloadImages(index, this); else window.forceDownload(d.urls.no_watermark, fnMp4, this); };
     
     const btnMusic = document.getElementById('tk-btn-dl-music');
-    btnMusic.onclick = function(e) {
-        e.stopPropagation();
-        window.forceDownload(d.music?.playUrl, fnMp3, this);
-    };
+    btnMusic.onclick = function(e) { e.stopPropagation(); window.forceDownload(d.music?.playUrl, fnMp3, this); };
 }
 
 window.togglePlayPause = function(index) {
@@ -874,17 +794,10 @@ window.togglePlayPause = function(index) {
     const vid = item.querySelector('video');
     const icon = document.getElementById(`tk-pause-${index}`);
     if(!vid) return; 
-
-    if (vid.paused) {
-        vid.play();
-        if(icon) icon.classList.remove('show');
-    } else {
-        vid.pause();
-        if(icon) icon.classList.add('show');
-    }
+    if (vid.paused) { vid.play(); if(icon) icon.classList.remove('show'); } else { vid.pause(); if(icon) icon.classList.add('show'); }
 }
 
-// BẢNG BÌNH LUẬN
+// ================= BẢNG BÌNH LUẬN & TRẢ LỜI (REPLIES) & ẢNH STICKER =================
 window.openCommentSheet = function(index, event) {
     if(event) event.stopPropagation();
     const item = window.fetchedVideos[index];
@@ -901,7 +814,8 @@ window.openCommentSheet = function(index, event) {
         window.currentCommentLink = item.link;
         window.commentCursor = 0;
         window.commentHasMore = true;
-        document.getElementById('tk-comment-content').innerHTML = '<div class="text-center text-zinc-500 text-xs py-6"><i class="fa-solid fa-spinner fa-spin text-lg mb-2 block"></i> Đang tải dữ liệu bình luận...</div>';
+        window.activeReplyCursors = {};
+        document.getElementById('tk-comment-content').innerHTML = '<div class="text-center text-cyan-400 text-xs py-6 pixel-ui"><i class="fa-solid fa-spinner fa-spin text-lg mb-2 block"></i> ĐANG TẢI...</div>';
         window.fetchComments(false);
     }
 }
@@ -917,7 +831,7 @@ window.fetchComments = async function(isLoadMore = false) {
     
     const contentDiv = document.getElementById('tk-comment-content');
     if (isLoadMore) {
-        contentDiv.insertAdjacentHTML('beforeend', '<div id="comment-loading-more" class="text-center text-zinc-500 text-xs py-3"><i class="fa-solid fa-spinner fa-spin"></i> Đang tải thêm 30 bình luận...</div>');
+        contentDiv.insertAdjacentHTML('beforeend', '<div id="comment-loading-more" class="text-center text-yellow-400 text-xs py-3 pixel-ui"><i class="fa-solid fa-spinner fa-spin"></i> ĐANG TẢI THÊM...</div>');
     }
 
     try {
@@ -929,19 +843,11 @@ window.fetchComments = async function(isLoadMore = false) {
         });
         
         const response = await fetch(`/api/comment?${urlParams.toString()}`);
-        
         const textData = await response.text();
         let resData;
-        try {
-            resData = JSON.parse(textData);
-        } catch (e) {
-            throw new Error(`Bạn cần tạo file route API cho bình luận (ví dụ: /api/comment.js) trên máy chủ. Máy chủ trả về HTML thay vì JSON: "${textData.substring(0, 40)}..."`);
-        }
+        try { resData = JSON.parse(textData); } catch (e) { throw new Error(`MÁY CHỦ BÁO LỖI HTML HOẶC API CHƯA SẴN SÀNG.`); }
         
-        if (document.getElementById('comment-loading-more')) {
-            document.getElementById('comment-loading-more').remove();
-        }
-        
+        if (document.getElementById('comment-loading-more')) document.getElementById('comment-loading-more').remove();
         if (!isLoadMore) contentDiv.innerHTML = '';
 
         const comments = resData.comments || resData.data?.comments || [];
@@ -949,51 +855,107 @@ window.fetchComments = async function(isLoadMore = false) {
         window.commentHasMore = resData.hasMore ?? resData.has_more ?? resData.data?.hasMore ?? resData.data?.has_more ?? false;
 
         if (comments.length === 0 && !isLoadMore) {
-            contentDiv.innerHTML = '<div class="text-center text-zinc-500 text-xs py-4">Chưa có bình luận nào hoặc video đã khóa bình luận.</div>';
+            contentDiv.innerHTML = '<div class="text-center text-[#888] text-xs py-4 pixel-ui">CHƯA CÓ BÌNH LUẬN NÀO.</div>';
         } else {
-            let html = comments.map(c => {
-                const user = c.user || c.author || {};
-                const uniqueId = user.unique_id || user.uniqueId || 'user';
-                const nickname = user.nickname || uniqueId;
-                const avatar = user.avatar || user.avatar_thumb || user.avatarLarger || `https://ui-avatars.com/api/?name=${uniqueId}&background=random`;
-                const text = c.text || c.comment || '';
-                const verified = user.is_verify || user.verified || user.custom_verify || false;
-                const diggCount = window.formatStatsClient(c.digg_count || c.like_count || c.diggCount || 0);
-
-                return `
-                    <div class="flex gap-3 items-start animate-slide-up mb-4">
-                        <img src="${avatar}" class="w-9 h-9 rounded-full object-cover shrink-0 cursor-pointer border border-[#333] bg-black transition hover:scale-105" onclick="window.searchUserFromDetail('${uniqueId}')" referrerpolicy="no-referrer" onerror="this.src='https://ui-avatars.com/api/?name=${uniqueId}&background=random'">
-                        <div class="flex-1 min-w-0">
-                            <div class="flex items-center gap-1 cursor-pointer w-fit" onclick="window.searchUserFromDetail('${uniqueId}')">
-                                <span class="text-zinc-400 font-bold text-xs truncate max-w-[200px] hover:text-white transition">${nickname}</span>
-                                ${verified ? '<i class="fa-solid fa-circle-check text-blue-500 text-[11px]" title="Đã xác minh"></i>' : ''}
-                            </div>
-                            <p class="text-white text-[13px] mt-1 break-words">${text}</p>
-                        </div>
-                        <div class="flex flex-col items-center gap-1 shrink-0 text-zinc-500 ml-2 mt-1">
-                            <i class="fa-regular fa-heart text-[13px]"></i>
-                            <span class="text-[10px] font-bold">${diggCount}</span>
-                        </div>
-                    </div>
-                `;
-            }).join('');
+            let html = comments.map(c => window.createCommentHTML(c, window.currentCommentVideoId, false)).join('');
             contentDiv.insertAdjacentHTML('beforeend', html);
         }
     } catch (error) {
-        if (document.getElementById('comment-loading-more')) {
-            document.getElementById('comment-loading-more').remove();
+        if (document.getElementById('comment-loading-more')) document.getElementById('comment-loading-more').remove();
+        if (!isLoadMore) contentDiv.innerHTML = `<div class="text-center text-red-400 text-xs py-4 px-2 pixel-ui"><i class="fa-solid fa-triangle-exclamation block text-xl mb-2"></i>${error.message}</div>`;
+    } finally { window.isLoadingComments = false; }
+}
+
+window.createCommentHTML = function(c, vId, isReply = false) {
+    const user = c.user || c.author || {};
+    const uniqueId = user.unique_id || user.uniqueId || 'user';
+    const nickname = user.nickname || uniqueId;
+    const avatar = user.avatar || user.avatar_thumb || user.avatarLarger || `https://ui-avatars.com/api/?name=${uniqueId}&background=random`;
+    const text = c.text || c.comment || '';
+    const verified = user.is_verify || user.verified || user.custom_verify || false;
+    const diggCount = window.formatStatsClient(c.digg_count || c.like_count || c.diggCount || 0);
+    const hasReplies = c.reply_comment_total > 0;
+    
+    // Hiển thị ảnh & sticker
+    let mediaHtml = '';
+    if (c.image_list && c.image_list.length > 0) {
+        mediaHtml += `<div class="flex gap-2 mt-2 overflow-x-auto scrollbar-hide py-1">`;
+        c.image_list.forEach(img => {
+            const imgUrl = img.image_url?.url_list?.[0] || '';
+            if(imgUrl) mediaHtml += `<img src="${imgUrl}" class="h-24 w-auto object-contain border-2 border-white shadow-[2px_2px_0_#ff00ff]" referrerpolicy="no-referrer" />`;
+        });
+        mediaHtml += `</div>`;
+    }
+    if (c.sticker && c.sticker.static_url) {
+        mediaHtml += `<div class="mt-2"><img src="${c.sticker.static_url}" class="h-16 w-auto object-contain bg-[#111] border-2 border-[#444] shadow-[2px_2px_0_#00ffff]" referrerpolicy="no-referrer" /></div>`;
+    }
+
+    const paddingClass = isReply ? "pl-1 border-l-2 border-dashed border-[#555] ml-2 mt-3" : "mt-4";
+    const avatarSize = isReply ? "w-7 h-7" : "w-10 h-10";
+
+    return `
+        <div class="flex gap-3 items-start animate-slide-up ${paddingClass}">
+            <img src="${avatar}" class="${avatarSize} object-cover shrink-0 cursor-pointer border-2 border-white bg-black shadow-[2px_2px_0_#ff00ff] hover:scale-110 transition" onclick="window.searchUserFromDetail('${uniqueId}')" referrerpolicy="no-referrer" onerror="this.src='https://ui-avatars.com/api/?name=${uniqueId}&background=random'">
+            <div class="flex-1 min-w-0">
+                <div class="flex items-center gap-1 cursor-pointer w-fit" onclick="window.searchUserFromDetail('${uniqueId}')">
+                    <span class="text-cyan-400 font-bold text-[11px] truncate max-w-[200px] hover:text-white pixel-ui">${nickname}</span>
+                    ${verified ? '<i class="fa-solid fa-circle-check text-yellow-400 text-[10px]"></i>' : ''}
+                </div>
+                <p class="text-white text-[13px] mt-1 break-words font-mono lowercase leading-relaxed">${text}</p>
+                ${mediaHtml}
+                
+                ${(!isReply && hasReplies) ? `
+                    <button onclick="window.fetchReplies('${c.cid}', '${vId}', this)" class="text-magenta-400 font-bold text-[10px] mt-2 px-2 py-1 border-2 border-magenta-400 hover:bg-magenta-400 hover:text-white pixel-ui flex items-center gap-1 shadow-[2px_2px_0_#000]"><i class="fa-solid fa-reply"></i> Xem ${c.reply_comment_total} Câu Trả Lời...</button>
+                ` : ''}
+                <div id="replies-${c.cid}" class="space-y-1"></div>
+            </div>
+            <div class="flex flex-col items-center gap-1 shrink-0 text-[#888] ml-2 mt-1 pixel-ui">
+                <i class="fa-solid fa-heart text-[12px] text-red-500 hover:scale-125 transition"></i>
+                <span class="text-[9px] font-bold">${diggCount}</span>
+            </div>
+        </div>
+    `;
+}
+
+// NÚT BẤM LOAD TRẢ LỜI (REPLIES)
+window.fetchReplies = async function(commentId, videoId, btnObj) {
+    let cursor = window.activeReplyCursors[commentId] || 0;
+    
+    if(btnObj) {
+        btnObj.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Đang tải...';
+        btnObj.disabled = true;
+    }
+    
+    try {
+        const response = await fetch(`/api/comment?id=${videoId}&commentId=${commentId}&cursor=${cursor}`);
+        const textData = await response.text();
+        let resData = JSON.parse(textData);
+        
+        const comments = resData.comments || resData.data?.comments || [];
+        window.activeReplyCursors[commentId] = resData.cursor ?? resData.data?.cursor ?? (cursor + 30);
+        let hasMore = resData.hasMore ?? resData.has_more ?? resData.data?.hasMore ?? resData.data?.has_more ?? false;
+        
+        let html = comments.map(c => window.createCommentHTML(c, videoId, true)).join('');
+        
+        const replyContainer = document.getElementById(`replies-${commentId}`);
+        replyContainer.insertAdjacentHTML('beforeend', html);
+        
+        if (hasMore) {
+            if(btnObj) {
+                btnObj.innerHTML = `<i class="fa-solid fa-reply"></i> Xem tiếp câu trả lời...`;
+                btnObj.disabled = false;
+            }
+        } else {
+            if(btnObj) btnObj.remove();
         }
-        if (!isLoadMore) {
-            contentDiv.innerHTML = `
-                <div class="text-center text-red-400 text-xs py-4 px-2">
-                    <i class="fa-solid fa-triangle-exclamation block text-xl mb-2"></i>
-                    ${error.message}
-                </div>`;
+    } catch(e) {
+        if(btnObj) {
+            btnObj.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> Lỗi máy chủ';
+            btnObj.disabled = false;
         }
-    } finally {
-        window.isLoadingComments = false;
     }
 }
+
 
 // BẢNG PHÂN TÍCH
 window.openAnalyticsSheet = function(index, event) {
@@ -1004,72 +966,64 @@ window.openAnalyticsSheet = function(index, event) {
     const dateStr = d.video_data.create_time ? new Date(d.video_data.create_time * 1000).toLocaleString('vi-VN') : 'N/A';
     
     document.getElementById('tk-analytics-content').innerHTML = `
-        <div class="flex items-center justify-between bg-[#1a1a1a] rounded-xl p-3 border border-[#333]">
-            <span class="text-zinc-400 text-xs font-bold">ID Tệp</span><span class="text-white text-xs font-bold">${d.video_data.id}</span>
+        <div class="flex items-center justify-between bg-[#111] border-4 border-white shadow-[4px_4px_0_#00ffff] p-3 mb-2">
+            <span class="text-cyan-400 text-[10px] font-bold pixel-ui">ID DATA BLOCK</span><span class="text-white text-xs font-bold pixel-ui">${d.video_data.id}</span>
         </div>
-        <div class="flex items-center justify-between bg-[#1a1a1a] rounded-xl p-3 border border-[#333]">
-            <span class="text-zinc-400 text-xs font-bold">Ngày Đăng</span><span class="text-white text-xs font-bold">${dateStr}</span>
+        <div class="flex items-center justify-between bg-[#111] border-4 border-white shadow-[4px_4px_0_#ff00ff] p-3 mb-2">
+            <span class="text-magenta-400 text-[10px] font-bold pixel-ui">CREATED AT</span><span class="text-white text-xs font-bold pixel-ui">${dateStr}</span>
         </div>
-        <div class="flex items-center justify-between bg-[#1a1a1a] rounded-xl p-3 border border-[#333]">
-            <span class="text-zinc-400 text-xs font-bold">Tỷ Lệ Tương Tác ER</span><span class="text-cyan-400 text-sm font-black">${er}%</span>
+        <div class="flex items-center justify-between bg-[#111] border-4 border-white shadow-[4px_4px_0_#ffff00] p-3 mb-2">
+            <span class="text-yellow-400 text-[10px] font-bold pixel-ui">ENGAGEMENT ER%</span><span class="text-white text-sm font-black pixel-ui">${er}%</span>
         </div>
-        <div class="flex items-center justify-between bg-[#1a1a1a] rounded-xl p-3 border border-[#333]">
-            <span class="text-zinc-400 text-xs font-bold">Chuyển Đổi Tim</span><span class="text-pink-400 text-xs font-bold">${lr}%</span>
+        <div class="flex items-center justify-between bg-[#111] border-4 border-white shadow-[4px_4px_0_#00ff00] p-3 mb-2">
+            <span class="text-lime-400 text-[10px] font-bold pixel-ui">LIKE RATE</span><span class="text-white text-xs font-bold pixel-ui">${lr}%</span>
         </div>
-        <div class="flex items-center justify-between bg-[#1a1a1a] rounded-xl p-3 border border-[#333]">
-            <span class="text-zinc-400 text-xs font-bold">Khu Vực Phân Phối</span><span class="text-white text-xs font-bold uppercase">${d.video_data.region || 'Quốc tế'}</span>
+        <div class="flex items-center justify-between bg-[#111] border-4 border-white shadow-[4px_4px_0_#fff] p-3">
+            <span class="text-[#888] text-[10px] font-bold pixel-ui">REGION</span><span class="text-white text-xs font-bold uppercase pixel-ui">${d.video_data.region || 'GLOBAL'}</span>
         </div>
     `;
     document.getElementById('tk-share-sheet').classList.remove('show');
     document.getElementById('tk-comment-sheet').classList.remove('show');
     document.getElementById('tk-analytics-sheet').classList.add('show');
 }
+window.closeAnalyticsSheet = function(event) { if(event) event.stopPropagation(); document.getElementById('tk-analytics-sheet').classList.remove('show'); }
 
-window.closeAnalyticsSheet = function(event) {
-    if(event) event.stopPropagation();
-    document.getElementById('tk-analytics-sheet').classList.remove('show');
-}
-
-// BẢNG CHIA SẺ (SHARE) VÀ MỞ NATIVE TIKTOK
+// BẢNG CHIA SẺ
 window.openShareSheet = function(index, event) {
     if(event) event.stopPropagation();
     const item = window.fetchedVideos[index];
     const link = item.link;
 
     document.getElementById('tk-share-content').innerHTML = `
-        <div class="flex flex-col items-center gap-2 cursor-pointer transition transform active:scale-90" onclick="window.copyToClipboard('${link}', this)">
-            <div class="w-12 h-12 rounded-full bg-[#222] flex items-center justify-center text-white text-lg">
+        <div class="flex flex-col items-center gap-2 cursor-pointer transition transform active:translate-y-1" onclick="window.copyToClipboard('${link}', this)">
+            <div class="w-14 h-14 bg-[#111] border-4 border-white shadow-[4px_4px_0_#00ffff] flex items-center justify-center text-cyan-400 text-xl">
                 <i class="fa-solid fa-link"></i>
             </div>
-            <span class="text-[10px] text-zinc-300 font-bold">Sao chép link</span>
+            <span class="text-[10px] text-white font-bold pixel-ui mt-1">COPY LINK</span>
         </div>
         
-        <a href="${link}" target="_blank" class="flex flex-col items-center gap-2 cursor-pointer transition transform active:scale-90">
-            <div class="w-12 h-12 rounded-full bg-black border border-[#333] shadow-lg flex items-center justify-center text-white text-lg">
+        <a href="${link}" target="_blank" class="flex flex-col items-center gap-2 cursor-pointer transition transform active:translate-y-1">
+            <div class="w-14 h-14 bg-[#111] border-4 border-white shadow-[4px_4px_0_#ff00ff] flex items-center justify-center text-magenta-400 text-xl">
                 <i class="fa-brands fa-tiktok"></i>
             </div>
-            <span class="text-[10px] text-zinc-300 font-bold">Mở bằng TikTok</span>
+            <span class="text-[10px] text-white font-bold pixel-ui mt-1">OPEN TIKTOK</span>
         </a>
     `;
     document.getElementById('tk-analytics-sheet').classList.remove('show');
     document.getElementById('tk-comment-sheet').classList.remove('show');
     document.getElementById('tk-share-sheet').classList.add('show');
 }
-
-window.closeShareSheet = function(event) {
-    if(event) event.stopPropagation();
-    document.getElementById('tk-share-sheet').classList.remove('show');
-}
+window.closeShareSheet = function(event) { if(event) event.stopPropagation(); document.getElementById('tk-share-sheet').classList.remove('show'); }
 
 window.copyToClipboard = function(text, btn) {
     navigator.clipboard.writeText(text).then(() => {
         const icon = btn.querySelector('i');
         const span = btn.querySelector('span');
-        icon.className = "fa-solid fa-check text-green-400";
-        span.innerText = "Đã chép";
+        icon.className = "fa-solid fa-check text-[#00ff00]";
+        span.innerText = "COPIED!";
         setTimeout(() => {
-            icon.className = "fa-solid fa-link";
-            span.innerText = "Sao chép link";
+            icon.className = "fa-solid fa-link text-cyan-400";
+            span.innerText = "COPY LINK";
         }, 2000);
     });
 }
@@ -1080,16 +1034,8 @@ window.closeTkPlayer = function() {
     document.getElementById('tk-share-sheet').classList.remove('show');
     document.getElementById('tk-comment-sheet').classList.remove('show');
     document.body.style.overflow = '';
-    
     if(window.feedObserver) { window.feedObserver.disconnect(); window.feedObserver = null; }
-    
-    if(window.currentVideoPlayer) {
-        window.currentVideoPlayer.pause();
-        window.currentVideoPlayer.src = '';
-        window.currentVideoPlayer.load();
-        window.currentVideoPlayer = null;
-    }
-    
+    if(window.currentVideoPlayer) { window.currentVideoPlayer.pause(); window.currentVideoPlayer.src = ''; window.currentVideoPlayer.load(); window.currentVideoPlayer = null; }
     document.getElementById('tk-feed-scroller').innerHTML = '';
 }
 
@@ -1101,49 +1047,45 @@ window.searchUserFromDetail = function(username) {
     window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
-// ================= TRÌNH DOWNLOADER =================
+// DOWNLOADING
 window.forceDownload = async function(url, filename, btnObj) {
     if (!url) return;
     const origHTML = btnObj.innerHTML;
-    btnObj.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Đang tải...`;
+    btnObj.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> LOADING...`;
     btnObj.style.pointerEvents = 'none';
 
     try {
-        const r = await fetch(url);
-        const blob = await r.blob();
+        const r = await fetch(url); const blob = await r.blob();
         const a = Object.assign(document.createElement('a'), { href: URL.createObjectURL(blob), download: filename, style: 'display:none' });
         document.body.appendChild(a); a.click(); URL.revokeObjectURL(a.href); a.remove();
     } catch { window.open(url, '_blank'); }
     
-    btnObj.innerHTML = `<i class="fa-solid fa-check"></i> Xong`;
+    btnObj.innerHTML = `<i class="fa-solid fa-check"></i> SAVED`;
     setTimeout(() => { btnObj.innerHTML = origHTML; btnObj.style.pointerEvents = 'auto'; }, 2000);
 }
-
 window.downloadImages = async function(index, btnObj) {
     const d = window.fetchedVideos[index].data;
     if (!d.images?.length) return;
     const origHTML = btnObj.innerHTML;
-    btnObj.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Đang tải ${d.images.length} ảnh...`;
+    btnObj.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> DOWNLOADING...`;
     btnObj.style.pointerEvents = 'none';
 
     for (let i = 0; i < d.images.length; i++) {
         const fname = `${d.author.uniqueId}_${d.video_data.id}_${i+1}.jpg`;
         try {
-            const r = await fetch(d.images[i]);
-            const blob = await r.blob();
+            const r = await fetch(d.images[i]); const blob = await r.blob();
             const a = Object.assign(document.createElement('a'), { href: URL.createObjectURL(blob), download: fname, style: 'display:none' });
             document.body.appendChild(a); a.click(); URL.revokeObjectURL(a.href); a.remove();
         } catch { window.open(d.images[i], '_blank'); }
         await new Promise(r => setTimeout(r, 400));
     }
-    btnObj.innerHTML = `<i class="fa-solid fa-check"></i> Hoàn tất`;
+    btnObj.innerHTML = `<i class="fa-solid fa-check"></i> COMPLETE`;
     setTimeout(() => { btnObj.innerHTML = origHTML; btnObj.style.pointerEvents = 'auto'; }, 2000);
 }
-
 window.downloadAllVideos = async function(btnObj) {
     if (!window.fetchedVideos || window.fetchedVideos.length === 0) return;
     const orig = btnObj.innerHTML;
-    btnObj.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Đang tải hàng loạt...`;
+    btnObj.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> DOWNLOADING ALL...`;
     btnObj.style.pointerEvents = 'none';
 
     for (let i = 0; i < window.fetchedVideos.length; i++) {
@@ -1152,8 +1094,7 @@ window.downloadAllVideos = async function(btnObj) {
             for (let j=0; j<d.images.length; j++){
                 const fname = `${d.author.uniqueId}_${d.video_data.id}_${j+1}.jpg`;
                 try {
-                    const r = await fetch(d.images[j]);
-                    const blob = await r.blob();
+                    const r = await fetch(d.images[j]); const blob = await r.blob();
                     const a = Object.assign(document.createElement('a'),{href:URL.createObjectURL(blob),download:fname,style:'display:none'});
                     document.body.appendChild(a); a.click(); URL.revokeObjectURL(a.href); a.remove();
                 } catch(e) { window.open(d.images[j], '_blank'); }
@@ -1162,14 +1103,13 @@ window.downloadAllVideos = async function(btnObj) {
         } else {
             const fname = window.generateFileName(d.author.uniqueId, d.video_data.id, 'mp4');
             try {
-                const r = await fetch(d.urls.no_watermark);
-                const blob = await r.blob();
+                const r = await fetch(d.urls.no_watermark); const blob = await r.blob();
                 const a = Object.assign(document.createElement('a'),{href:URL.createObjectURL(blob),download:fname,style:'display:none'});
                 document.body.appendChild(a); a.click(); URL.revokeObjectURL(a.href); a.remove();
             } catch(e) { window.open(d.urls.no_watermark, '_blank'); }
         }
         await new Promise(r => setTimeout(r, 800)); 
     }
-    btnObj.innerHTML = `<i class="fa-solid fa-check"></i> Hoàn Tất`;
+    btnObj.innerHTML = `<i class="fa-solid fa-check"></i> COMPLETE`;
     setTimeout(() => { btnObj.innerHTML = orig; btnObj.style.pointerEvents = 'auto'; }, 3000);
 }
