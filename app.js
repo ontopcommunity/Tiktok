@@ -66,18 +66,13 @@ window.formatStatsClient = function(num) {
     return (Math.floor(rawNum / 100000) / 10).toString().replace('.', ',') + "M";
 }
 
-// ================= UNIVERSAL MAPPER (ĐÃ FIX: ĐỌC CHUẨN BIẾN COVER TỪ INDEX.JS) =================
+// ================= UNIVERSAL MAPPER =================
 window.universalVideoMapper = function(videosArray, fallbackAuthor = null) {
     return videosArray.map(v => {
         const a = v.author || fallbackAuthor || {};
         const uId = a.unique_id || a.uniqueId || 'user';
-        
-        // Đọc đúng ID từ index.js hoặc raw data
         const vId = v.id || v.video_id || '';
-        
         const avatar = a.avatar || a.avatarLarger || `https://ui-avatars.com/api/?name=${uId}&background=random`;
-        
-        // FIX LỖI: Nhắm thẳng vào biến "cover" bên trong "urls" mà index.js trả về
         const cover = (v.urls && v.urls.cover) ? v.urls.cover : (v.cover || '');
 
         return {
@@ -105,7 +100,7 @@ window.universalVideoMapper = function(videosArray, fallbackAuthor = null) {
                     download: window.parseRawStats(v.stats?.download || v.download_count || 0) 
                 },
                 urls: { 
-                    cover: cover, // Truyền đúng biến cover vừa móc ra
+                    cover: cover, 
                     no_watermark: (v.urls && v.urls.no_watermark) ? v.urls.no_watermark : (v.hdplay || v.play || v.video?.playAddr) 
                 }, 
                 music: { 
@@ -162,7 +157,8 @@ window.setSkeletonState = function(isActive, isChannel = false, loadingText = "�
 
     if (isActive) {
         if(skelArea) skelArea.classList.remove('hidden');
-        if(txt) txt.innerText = loadingText;
+        if(txt && loadingText) txt.innerText = loadingText;
+        if(txt && !loadingText) txt.innerText = '';
         if (isChannel) {
             if(skelProfile) skelProfile.classList.remove('hidden');
             if(resArea) resArea.innerHTML = '';
@@ -198,6 +194,12 @@ window.clearResults = function() {
     
     const specAction = document.getElementById('special-action-container');
     if(specAction) { specAction.innerHTML = ''; specAction.classList.add('hidden'); }
+    
+    const pBarContainer = document.getElementById('scan-progress-container');
+    if(pBarContainer) { pBarContainer.classList.add('hidden'); }
+    
+    const txt = document.getElementById('loading-text');
+    if(txt) txt.classList.remove('hidden');
     
     window.setSkeletonState(false);
     window.showError('');
@@ -330,16 +332,16 @@ window.searchTikTok = async function(isLoadMore = false) {
     }
 }
 
-// SOI KÊNH
+// TRA CỨU KÊNH (TÊN MỚI THAY CHO SOI KÊNH)
 window.fetchUserInfo = async function(isLoadMore = false) {
     let user = isLoadMore ? window.currentUserProfile : document.getElementById('tiktok-username').value.trim();
     if (user.startsWith('@')) user = user.substring(1);
-    if (!user) return window.showError("Nhập ID vô mới quét được!");
+    if (!user) return window.showError("Nhập ID vô mới tra cứu được!");
 
     if(!isLoadMore) {
         window.clearResults();
         window.currentUserProfile = user;
-        window.setSkeletonState(true, true, "Đang nạp hồ sơ...");
+        window.setSkeletonState(true, true, "Đang trích xuất hồ sơ kênh...");
     }
 
     if(window.isLoadingMore) return;
@@ -360,17 +362,20 @@ window.fetchUserInfo = async function(isLoadMore = false) {
             const safeNickname = u.nickname || u.uniqueId || user;
             const safeUniqueId = u.uniqueId || user;
             
+            // Lấy chính xác tổng video từ dữ liệu
+            const totalVideos = window.formatStatsClient(u.videoCount || u.video || s.videoCount || s.video || 0);
+            
             const container = document.getElementById('user-info-area');
             container.innerHTML = `
-                <div class="w-full bento-card p-6 md:p-8 animate-slide-up">
+                <div class="w-full bento-card p-6 md:p-8 animate-slide-up shadow-xl border-t border-t-zinc-800">
                     <div class="text-center">
-                        <img src="${safeAvatar}" class="w-24 h-24 rounded-full mx-auto object-cover border-4 border-[#222] bg-[#0a0a0a]" referrerpolicy="no-referrer" onerror="this.src='https://ui-avatars.com/api/?name=${safeUniqueId}&background=random'">
+                        <img src="${safeAvatar}" class="w-24 h-24 rounded-full mx-auto object-cover border-4 border-[#222] bg-[#0a0a0a] shadow-lg" referrerpolicy="no-referrer" onerror="this.src='https://ui-avatars.com/api/?name=${safeUniqueId}&background=random'">
                         <h2 class="text-xl font-bold mt-4 text-white flex items-center justify-center gap-1">
                             ${safeNickname} 
                             ${u.verified ? '<i class="fa-solid fa-circle-check text-blue-500 text-sm"></i>' : ''}
                         </h2>
                         <p class="text-zinc-500 font-medium text-xs mt-1">@${safeUniqueId}</p>
-                        <p id="channel-bio-text" class="mt-4 text-zinc-400 text-sm max-w-xl mx-auto min-h-[40px]"></p>
+                        <p id="channel-bio-text" class="mt-4 text-zinc-400 text-sm max-w-xl mx-auto min-h-[40px] px-2 leading-relaxed"></p>
                         ${u.bioLink ? `
                             <div class="inline-flex w-full mb-4">
                                 <a href="${u.bioLink}" target="_blank" class="flex w-full max-w-sm mx-auto items-center justify-center gap-2 text-blue-400 text-xs font-bold bg-[#0d0d0d] border border-blue-500/30 px-3.5 py-3 rounded-xl hover:border-blue-500 hover:bg-[#111] transition shadow-md">
@@ -380,10 +385,16 @@ window.fetchUserInfo = async function(isLoadMore = false) {
                             </div>
                         ` : ''}
                         
-                        <div class="grid grid-cols-3 gap-3 mt-4 pt-6 border-t border-[#222]">
-                            <div class="bg-[#0a0a0a] p-3 rounded-2xl border border-[#262626] flex flex-col"><span class="text-lg font-black text-white">${s.following || '0'}</span><span class="text-[9px] text-zinc-500 uppercase mt-0.5 font-bold">Đang FL</span></div>
-                            <div class="bg-[#0a0a0a] p-3 rounded-2xl border border-[#262626] flex flex-col"><span class="text-lg font-black text-white">${s.follower || '0'}</span><span class="text-[9px] text-zinc-500 uppercase mt-0.5 font-bold">Follower</span></div>
-                            <div class="bg-[#0a0a0a] p-3 rounded-2xl border border-[#262626] flex flex-col"><span class="text-lg font-black text-white">${s.heart || '0'}</span><span class="text-[9px] text-zinc-500 uppercase mt-0.5 font-bold">Thích</span></div>
+                        <!-- Lưới Grid được chia làm 4 để hiển thị thêm số lượng Video -->
+                        <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mt-4 pt-6 border-t border-[#222]">
+                            <div class="bg-[#0a0a0a] p-3 rounded-2xl border border-[#262626] flex flex-col hover:border-zinc-500 transition cursor-default shadow-inner"><span class="text-lg font-black text-white">${s.following || '0'}</span><span class="text-[9px] text-zinc-500 uppercase mt-0.5 font-bold tracking-widest">Đang FL</span></div>
+                            <div class="bg-[#0a0a0a] p-3 rounded-2xl border border-[#262626] flex flex-col hover:border-zinc-500 transition cursor-default shadow-inner"><span class="text-lg font-black text-white">${s.follower || '0'}</span><span class="text-[9px] text-zinc-500 uppercase mt-0.5 font-bold tracking-widest">Follower</span></div>
+                            <div class="bg-[#0a0a0a] p-3 rounded-2xl border border-[#262626] flex flex-col hover:border-zinc-500 transition cursor-default shadow-inner"><span class="text-lg font-black text-white">${s.heart || '0'}</span><span class="text-[9px] text-zinc-500 uppercase mt-0.5 font-bold tracking-widest">Lượt Thích</span></div>
+                            <div class="bg-gradient-to-br from-[#0a0a0a] to-[#111] p-3 rounded-2xl border border-cyan-900/50 flex flex-col hover:border-cyan-500 transition cursor-default shadow-inner relative overflow-hidden">
+                                <div class="absolute -right-4 -bottom-4 opacity-10"><i class="fa-solid fa-film text-5xl text-cyan-500"></i></div>
+                                <span class="text-lg font-black text-cyan-400 relative z-10">${totalVideos}</span>
+                                <span class="text-[9px] text-zinc-500 uppercase mt-0.5 font-bold tracking-widest relative z-10">Số Video</span>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -421,7 +432,40 @@ window.fetchAnalytics = async function() {
 
     window.clearResults();
     window.currentMode = 'analytics';
-    window.setSkeletonState(true, true, "Đang khởi chạy cỗ máy vét 100% video...");
+    
+    // Tắt chữ Loading cũ đi để nhường chỗ cho thanh Progress Bar
+    window.setSkeletonState(true, true, "");
+    document.getElementById('loading-text').classList.add('hidden');
+
+    const skelArea = document.getElementById('skeleton-area');
+    let pBarContainer = document.getElementById('scan-progress-container');
+    
+    // Khởi tạo giao diện thanh Progress Bar nếu chưa có
+    if (!pBarContainer) {
+        skelArea.insertAdjacentHTML('afterbegin', `
+            <div id="scan-progress-container" class="w-full mx-auto mb-6 bg-[#0d0d0d] border border-[#262626] p-5 rounded-3xl hidden shadow-2xl relative overflow-hidden">
+                <div class="absolute inset-0 bg-gradient-to-r from-cyan-500/5 to-blue-500/5 animate-pulse"></div>
+                <div class="relative z-10">
+                    <div class="flex justify-between items-center mb-3">
+                        <span class="text-[11px] font-bold text-cyan-400 uppercase tracking-widest flex items-center gap-2"><i class="fa-solid fa-satellite-dish text-cyan-500 animate-pulse"></i> Radar Phân Tích</span>
+                        <span id="scan-progress-text" class="text-[12px] font-black text-white bg-black border border-[#333] px-3 py-1 rounded-lg shadow-inner">0 Video</span>
+                    </div>
+                    <div class="w-full h-3.5 bg-black rounded-full overflow-hidden border border-[#333] shadow-inner relative">
+                        <div id="scan-progress-bar" class="h-full bg-gradient-to-r from-blue-600 via-cyan-400 to-emerald-400 transition-all duration-300 ease-out relative" style="width: 0%">
+                            <div class="absolute inset-0 w-full h-full progress-shimmer"></div>
+                        </div>
+                    </div>
+                    <p id="scan-status-text" class="text-center text-[10.5px] text-zinc-500 mt-4 font-bold tracking-widest uppercase">Đang khởi động kết nối máy chủ...</p>
+                </div>
+            </div>
+        `);
+        pBarContainer = document.getElementById('scan-progress-container');
+    }
+    
+    pBarContainer.classList.remove('hidden');
+    document.getElementById('scan-progress-bar').style.width = '0%';
+    document.getElementById('scan-progress-text').innerText = '0 Video';
+    document.getElementById('scan-status-text').innerText = 'Đang thiết lập đường ống nạp dữ liệu...';
 
     try {
         let allVideos = [];
@@ -429,6 +473,7 @@ window.fetchAnalytics = async function() {
         let pAuthor = null;
         let hasMore = true;
         let videosInCurrentSecond = 0;
+        let expectedTotal = 0;
 
         while(hasMore) {
             const response = await fetch(`/api/index?username=${user}&cursor=${cur}`);
@@ -436,6 +481,12 @@ window.fetchAnalytics = async function() {
             if (data.status !== "Live") break;
             
             if(!pAuthor && data.author) pAuthor = data.author;
+            
+            // Tìm tổng video của người dùng để tính % cho thanh Progress
+            if (expectedTotal === 0) {
+                expectedTotal = pAuthor?.videoCount || pAuthor?.video || data.stats_formatted?.videoCount || data.stats_formatted?.video || 0;
+            }
+
             if(data.videos) {
                 allVideos.push(...data.videos);
                 videosInCurrentSecond += data.videos.length;
@@ -444,7 +495,13 @@ window.fetchAnalytics = async function() {
             cur = data.cursor;
             hasMore = data.hasMore;
             
-            document.getElementById('loading-text').innerText = `XUNG NHỊP QUÉT: ĐÃ THU GOM ĐƯỢC ${allVideos.length} BÀI ĐĂNG TỪ MÁY CHỦ...`;
+            if (expectedTotal < allVideos.length) expectedTotal = allVideos.length;
+            let percentage = expectedTotal > 0 ? Math.min((allVideos.length / expectedTotal) * 100, 100) : 100;
+            
+            // Cập nhật Animation Thanh Progress Bar
+            document.getElementById('scan-progress-bar').style.width = `${percentage}%`;
+            document.getElementById('scan-progress-text').innerText = expectedTotal > 0 ? `${allVideos.length} / ${expectedTotal} Video` : `${allVideos.length} Video`;
+            document.getElementById('scan-status-text').innerText = `XUNG NHỊP QUÉT: ĐÃ THU GOM ĐƯỢC ${allVideos.length} BÀI ĐĂNG...`;
             
             if (videosInCurrentSecond >= 200) {
                 await new Promise(r => setTimeout(r, 1000));
@@ -497,18 +554,23 @@ window.fetchAnalytics = async function() {
                     </div>
                 </div>
 
-                <div class="flex justify-between items-center bg-[#0a0a0a] p-4 rounded-[20px] border border-[#222] mb-6">
-                    <div class="text-center flex-1 border-r border-[#222]">
-                        <span class="block text-[10px] text-zinc-500 uppercase font-bold mb-1">Ngày Lập Kênh</span>
+                <!-- Lưới hiển thị Tổng Video trong báo cáo phân tích -->
+                <div class="grid grid-cols-2 md:grid-cols-4 bg-[#0a0a0a] p-4 rounded-[20px] border border-[#222] mb-6 gap-y-4 gap-x-2">
+                    <div class="text-center flex-1 md:border-r border-[#222]">
+                        <span class="block text-[10px] text-zinc-500 uppercase font-bold mb-1 tracking-widest">Ngày Lập Kênh</span>
                         <span class="font-black text-white text-sm md:text-base">${createDate}</span>
                     </div>
-                    <div class="text-center flex-1 border-r border-[#222]">
-                        <span class="block text-[10px] text-zinc-500 uppercase font-bold mb-1">Video Mới Nhất</span>
-                        <a href="${newestVid.link}" target="_blank" class="font-bold text-cyan-400 text-xs md:text-sm hover:text-white transition"><i class="fa-solid fa-arrow-up-right-from-square"></i> Xem</a>
+                    <div class="text-center flex-1 md:border-r border-[#222]">
+                        <span class="block text-[10px] text-zinc-500 uppercase font-bold mb-1 tracking-widest">Tổng Video</span>
+                        <span class="font-black text-cyan-400 text-sm md:text-base">${window.formatStatsClient(parsedVideos.length)}</span>
+                    </div>
+                    <div class="text-center flex-1 md:border-r border-[#222]">
+                        <span class="block text-[10px] text-zinc-500 uppercase font-bold mb-1 tracking-widest">Video Gần Nhất</span>
+                        <a href="${newestVid.link}" target="_blank" class="font-bold text-blue-400 text-xs md:text-sm hover:text-white transition"><i class="fa-solid fa-arrow-up-right-from-square"></i> Xem</a>
                     </div>
                     <div class="text-center flex-1">
-                        <span class="block text-[10px] text-zinc-500 uppercase font-bold mb-1">Video Đầu Tiên</span>
-                        <a href="${oldestVid.link}" target="_blank" class="font-bold text-cyan-400 text-xs md:text-sm hover:text-white transition"><i class="fa-solid fa-arrow-up-right-from-square"></i> Xem</a>
+                        <span class="block text-[10px] text-zinc-500 uppercase font-bold mb-1 tracking-widest">Video Đầu Tiên</span>
+                        <a href="${oldestVid.link}" target="_blank" class="font-bold text-blue-400 text-xs md:text-sm hover:text-white transition"><i class="fa-solid fa-arrow-up-right-from-square"></i> Xem</a>
                     </div>
                 </div>
 
@@ -516,22 +578,22 @@ window.fetchAnalytics = async function() {
                     <div class="bg-[#0a0a0a] border border-[#222] p-5 rounded-[20px] flex flex-col items-center justify-center">
                         <i class="fa-solid fa-fire text-orange-500 text-xl mb-2"></i>
                         <span class="text-xl font-black text-white">${window.formatStatsClient(avgViews)}</span>
-                        <span class="text-[10px] text-zinc-500 uppercase mt-1 font-bold">View TB Toàn Kênh</span>
+                        <span class="text-[10px] text-zinc-500 uppercase mt-1 font-bold tracking-widest text-center">View Trung Bình</span>
                     </div>
                     <div class="bg-[#0a0a0a] border border-[#222] p-5 rounded-[20px] flex flex-col items-center justify-center">
                         <i class="fa-solid fa-percent text-cyan-500 text-xl mb-2"></i>
                         <span class="text-xl font-black text-white">${er}%</span>
-                        <span class="text-[10px] text-zinc-500 uppercase mt-1 font-bold">Tỷ lệ ER Thực Tế</span>
+                        <span class="text-[10px] text-zinc-500 uppercase mt-1 font-bold tracking-widest text-center">Tỷ lệ ER Thực</span>
                     </div>
                     <div class="bg-[#0a0a0a] border border-[#222] p-5 rounded-[20px] flex flex-col items-center justify-center">
                         <i class="fa-solid fa-heart text-violet-500 text-xl mb-2"></i>
                         <span class="text-xl font-black text-white">${window.formatStatsClient(totalLikes / parsedVideos.length)}</span>
-                        <span class="text-[10px] text-zinc-500 uppercase mt-1 font-bold">Tim TB Toàn Kênh</span>
+                        <span class="text-[10px] text-zinc-500 uppercase mt-1 font-bold tracking-widest text-center">Tim Trung Bình</span>
                     </div>
                     <div class="bg-[#0a0a0a] border border-[#222] p-5 rounded-[20px] flex flex-col items-center justify-center">
                         <i class="fa-solid fa-play text-emerald-500 text-xl mb-2"></i>
                         <span class="text-xl font-black text-white">${window.formatStatsClient(totalPlays)}</span>
-                        <span class="text-[10px] text-zinc-500 uppercase mt-1 font-bold">Tổng View Đã Quét</span>
+                        <span class="text-[10px] text-zinc-500 uppercase mt-1 font-bold tracking-widest text-center">Tổng View Đã Quét</span>
                     </div>
                 </div>
                 
@@ -540,7 +602,7 @@ window.fetchAnalytics = async function() {
                     <div class="flex flex-wrap gap-2">${tagsHtml}</div>
                 </div>
             </div>
-            <h3 class="text-center text-sm font-bold text-zinc-400 mt-10 mb-2 uppercase tracking-[0.2em]">CÁC BÀI ĐĂNG VIRAL NHẤT</h3>
+            <h3 class="text-center text-sm font-bold text-zinc-400 mt-10 mb-2 uppercase tracking-[0.2em]">CÁC BÀI ĐĂNG VIRAL NHẤT KÊNH</h3>
         `;
         container.classList.remove('hidden');
 
