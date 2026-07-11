@@ -443,7 +443,7 @@ window.fetchAnalytics = async function() {
     try {
         while(hasMore) {
             // Ép API đẩy tối đa 1000 video/lượt quét
-            const response = await fetch(`/api/index?username=${user}&cursor=${cur}&count=1000`);
+            const response = await fetch(`/api/index?username=${user}&cursor=${cur}&count=10000`);
             const data = await response.json();
             if (data.status !== "Live") break;
             
