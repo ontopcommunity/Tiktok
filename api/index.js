@@ -53,6 +53,15 @@ export default async function handler(req, res) {
     }
 
     const postsRes = await fetch(`https://www.tikwm.com/api/user/posts?unique_id=${username}&count=30&cursor=${cursor}`);
+    const contentType = postsRes.headers.get("content-type");
+
+    if (!contentType || !contentType.includes("application/json")) {
+        return res.status(500).json({ 
+            status: "Error", 
+            error: "TikWM API trả về định dạng HTML thay vì JSON. Có thể server đang chặn request." 
+        });
+    }
+
     const postsData = await postsRes.json();
 
     if (cursor == 0 && !result.author && postsData.code === 0 && postsData.data && postsData.data.videos && postsData.data.videos.length > 0) {
@@ -62,7 +71,7 @@ export default async function handler(req, res) {
 
     if (postsData.code === 0 && postsData.data && postsData.data.videos) {
         result.videos = postsData.data.videos.map(v => ({
-            id: v.video_id, caption: v.title, createTime: v.create_time, // TRÍCH XUẤT NGÀY TẠO
+            id: v.video_id, caption: v.title, createTime: v.create_time,
             link: `https://www.tiktok.com/@${username}/video/${v.video_id}`,
             urls: { cover: v.cover, no_watermark: v.play }, music: { playUrl: v.music, title: v.music_info?.title || "Âm thanh gốc" },
             stats: { play: formatStats(v.play_count), like: formatStats(v.digg_count), comment: formatStats(v.comment_count), share: formatStats(v.share_count) }, images: v.images || null
