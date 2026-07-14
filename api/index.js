@@ -52,7 +52,14 @@ export default async function handler(req, res) {
         } catch (err) { }
     }
 
-    const postsRes = await fetch(`https://www.tikwm.com/api/user/posts?unique_id=${username}&count=30&cursor=${cursor}`);
+    const postsRes = await fetch(`https://www.tikwm.com/api/user/posts?unique_id=${username}&count=30&cursor=${cursor}`, {
+        headers: {
+            "User-Agent": userAgent,
+            "Accept": "application/json, text/plain, */*",
+            "Accept-Language": "vi-VN,vi;q=0.9,en-US;q=0.8,en;q=0.7",
+            "Referer": "https://www.tikwm.com/"
+        }
+    });
     const contentType = postsRes.headers.get("content-type");
 
     if (!contentType || !contentType.includes("application/json")) {
