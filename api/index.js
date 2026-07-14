@@ -1,6 +1,32 @@
 import fs from 'fs';
 import path from 'path';
 
+async function safeFetch(url, headers) {
+  try {
+    const res = await fetch(url, { headers });
+    const contentType = res.headers.get("content-type");
+    if (res.ok && contentType && contentType.includes("application/json")) {
+      return await res.json();
+    }
+  } catch (err) {}
+
+  const proxies = [
+    `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
+    `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(url)}`
+  ];
+
+  for (const proxyUrl of proxies) {
+    try {
+      const res = await fetch(proxyUrl);
+      const contentType = res.headers.get("content-type");
+      if (res.ok && contentType && contentType.includes("application/json")) {
+        return await res.json();
+      }
+    } catch (err) {}
+  }
+  return null;
+}
+
 export default async function handler(req, res) {
   const username = req.query.username || req.body?.username;
   const cursor = req.query.cursor || 0; 
@@ -36,47 +62,37 @@ export default async function handler(req, res) {
     };
 
     if (cursor == 0) {
-        try {
-            const infoRes = await fetch(`https://www.tikwm.com/api/user/info?unique_id=${username}`, { headers });
-            const contentType = infoRes.headers.get("content-type");
-            
-            if (contentType && contentType.includes("application/json")) {
-                const infoData = await infoRes.json();
-                if (infoData.code === 0 && infoData.data) {
-                    const u = infoData.data.user;
-                    const s = infoData.data.stats;
-                    result.author = {
-                        id: u.id || "",
-                        uniqueId: u.unique_id || u.uniqueId || username,
-                        nickname: u.nickname || "",
-                        avatar: u.avatar_larger || u.avatarLarger || u.avatar || "",
-                        signature: u.signature || "",
-                        verified: u.is_verify || u.verified || false,
-                        createTime: u.create_time || u.createTime || null,
-                        bioLink: u.bio_link?.link || u.bioLink?.link || ""
-                    };
-                    result.stats_formatted = {
-                        follower: formatStats(s.followerCount || s.follower_count || 0),
-                        following: formatStats(s.followingCount || s.following_count || 0),
-                        heart: formatStats(s.heartCount || s.heart_count || 0),
-                        video: formatStats(s.videoCount || s.video_count || 0)
-                    };
-                }
-            }
-        } catch (err) {}
+        const infoData = await safeFetch(`https://www.tikwm.com/api/user/info?unique_id=${username}`, headers);
+        if (infoData && infoData.code === 0 && infoData.data) {
+            const u = infoData.data.user;
+            const s = infoData.data.stats;
+            result.author = {
+                id: u.id || "",
+                uniqueId: u.unique_id || u.uniqueId || username,
+                nickname: u.nickname || "",
+                avatar: u.avatar_larger || u.avatarLarger || u.avatar || "",
+                signature: u.signature || "",
+                verified: u.is_verify || u.verified || false,
+                createTime: u.create_time || u.createTime || null,
+                bioLink: u.bio_link?.link || u.bioLink?.link || ""
+            };
+            result.stats_formatted = {
+                follower: formatStats(s.followerCount || s.follower_count || 0),
+                following: formatStats(s.followingCount || s.following_count || 0),
+                heart: formatStats(s.heartCount || s.heart_count || 0),
+                video: formatStats(s.videoCount || s.video_count || 0)
+            };
+        }
     }
 
-    const postsRes = await fetch(`https://www.tikwm.com/api/user/posts?unique_id=${username}&count=30&cursor=${cursor}`, { headers });
-    const contentType = postsRes.headers.get("content-type");
+    const postsData = await safeFetch(`https://www.tikwm.com/api/user/posts?unique_id=${username}&count=30&cursor=${cursor}`, headers);
 
-    if (!contentType || !contentType.includes("application/json")) {
+    if (!postsData) {
         return res.status(500).json({ 
             status: "Error", 
-            error: "TikWM API trả về định dạng HTML thay vì JSON. Có thể server đang chặn request." 
+            error: "TikWM API không thể truy cập qua cả kết nối trực tiếp và Proxy trung gian." 
         });
     }
-
-    const postsData = await postsRes.json();
 
     if (cursor == 0 && !result.author && postsData.code === 0 && postsData.data && postsData.data.videos && postsData.data.videos.length > 0) {
         const sample = postsData.data.videos[0].author;
