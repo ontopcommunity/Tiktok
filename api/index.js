@@ -1,5 +1,7 @@
 import fs from 'fs';
 import path from 'path';
+import fetch from 'node-fetch';
+import { HttpsProxyAgent } from 'https-proxy-agent';
 
 async function safeFetch(url, headers) {
   try {
@@ -10,20 +12,27 @@ async function safeFetch(url, headers) {
     }
   } catch (err) {}
 
-  const proxies = [
-    `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
-    `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(url)}`
-  ];
-
-  for (const proxyUrl of proxies) {
-    try {
-      const res = await fetch(proxyUrl);
-      const contentType = res.headers.get("content-type");
-      if (res.ok && contentType && contentType.includes("application/json")) {
-        return await res.json();
+  try {
+    const proxyRes = await fetch("https://api.proxyscrape.com/v4/free-proxy-list/get?request=display_proxies&proxy_format=protocolipport&format=text&country=all");
+    if (proxyRes.ok) {
+      const proxyText = await proxyRes.text();
+      const proxies = proxyText.split('\n').map(p => p.trim()).filter(p => p.startsWith('http'));
+      
+      for (let i = 0; i < 5; i++) {
+        if (proxies.length === 0) break;
+        const randomIndex = Math.floor(Math.random() * proxies.length);
+        const proxyUrl = proxies.splice(randomIndex, 1)[0];
+        try {
+          const agent = new HttpsProxyAgent(proxyUrl);
+          const res = await fetch(url, { headers, agent });
+          const contentType = res.headers.get("content-type");
+          if (res.ok && contentType && contentType.includes("application/json")) {
+            return await res.json();
+          }
+        } catch (err) {}
       }
-    } catch (err) {}
-  }
+    }
+  } catch (err) {}
   return null;
 }
 
@@ -90,7 +99,7 @@ export default async function handler(req, res) {
     if (!postsData) {
         return res.status(500).json({ 
             status: "Error", 
-            error: "TikWM API không thể truy cập qua cả kết nối trực tiếp và Proxy trung gian." 
+            error: "TikWM API không thể truy cập qua cả kết nối trực tiếp và Proxy." 
         });
     }
 
