@@ -27,39 +27,46 @@ export default async function handler(req, res) {
 
   try {
     let result = { status: "Live" };
+    
+    const headers = {
+        "User-Agent": userAgent,
+        "Accept": "application/json, text/plain, */*",
+        "Accept-Language": "vi-VN,vi;q=0.9,en-US;q=0.8,en;q=0.7",
+        "Referer": "https://www.tikwm.com/"
+    };
 
     if (cursor == 0) {
         try {
-            const response = await fetch(`https://www.tiktok.com/@${username}`, { headers: { "User-Agent": userAgent } });
-            if (response.ok) {
-                const html = await response.text();
-                const dataMatch = html.match(/<script id="__UNIVERSAL_DATA_FOR_REHYDRATION__"[^>]*>([^<]+)<\/script>/) || html.match(/<script id="SIGI_STATE"[^>]*>([^<]+)<\/script>/);
-                if (dataMatch) {
-                    const jsonData = JSON.parse(dataMatch[1]);
-                    const defaultScope = jsonData.__DEFAULT_SCOPE__ || jsonData;
-                    const userDetail = defaultScope['webapp.user-detail'];
-                    if (userDetail && userDetail.userInfo) {
-                        const u = userDetail.userInfo.user;
-                        const s = userDetail.userInfo.stats;
-                        result.author = {
-                            id: u.id, uniqueId: u.uniqueId, nickname: u.nickname, avatar: u.avatarLarger || u.avatarThumb,
-                            signature: u.signature, verified: u.verified, createTime: u.createTime || null, bioLink: u.bioLink?.link || ""
-                        };
-                        result.stats_formatted = { follower: formatStats(s.followerCount), following: formatStats(s.followingCount), heart: formatStats(s.heartCount), video: formatStats(s.videoCount) };
-                    }
+            const infoRes = await fetch(`https://www.tikwm.com/api/user/info?unique_id=${username}`, { headers });
+            const contentType = infoRes.headers.get("content-type");
+            
+            if (contentType && contentType.includes("application/json")) {
+                const infoData = await infoRes.json();
+                if (infoData.code === 0 && infoData.data) {
+                    const u = infoData.data.user;
+                    const s = infoData.data.stats;
+                    result.author = {
+                        id: u.id || "",
+                        uniqueId: u.unique_id || u.uniqueId || username,
+                        nickname: u.nickname || "",
+                        avatar: u.avatar_larger || u.avatarLarger || u.avatar || "",
+                        signature: u.signature || "",
+                        verified: u.is_verify || u.verified || false,
+                        createTime: u.create_time || u.createTime || null,
+                        bioLink: u.bio_link?.link || u.bioLink?.link || ""
+                    };
+                    result.stats_formatted = {
+                        follower: formatStats(s.followerCount || s.follower_count || 0),
+                        following: formatStats(s.followingCount || s.following_count || 0),
+                        heart: formatStats(s.heartCount || s.heart_count || 0),
+                        video: formatStats(s.videoCount || s.video_count || 0)
+                    };
                 }
             }
-        } catch (err) { }
+        } catch (err) {}
     }
 
-    const postsRes = await fetch(`https://www.tikwm.com/api/user/posts?unique_id=${username}&count=30&cursor=${cursor}`, {
-        headers: {
-            "User-Agent": userAgent,
-            "Accept": "application/json, text/plain, */*",
-            "Accept-Language": "vi-VN,vi;q=0.9,en-US;q=0.8,en;q=0.7",
-            "Referer": "https://www.tikwm.com/"
-        }
-    });
+    const postsRes = await fetch(`https://www.tikwm.com/api/user/posts?unique_id=${username}&count=30&cursor=${cursor}`, { headers });
     const contentType = postsRes.headers.get("content-type");
 
     if (!contentType || !contentType.includes("application/json")) {
@@ -73,20 +80,36 @@ export default async function handler(req, res) {
 
     if (cursor == 0 && !result.author && postsData.code === 0 && postsData.data && postsData.data.videos && postsData.data.videos.length > 0) {
         const sample = postsData.data.videos[0].author;
-        result.author = { uniqueId: sample.unique_id, nickname: sample.nickname, avatar: sample.avatar || sample.avatar_larger, verified: sample.is_verify || false };
+        result.author = { 
+            uniqueId: sample.unique_id || sample.uniqueId, 
+            nickname: sample.nickname, 
+            avatar: sample.avatar_larger || sample.avatar, 
+            verified: sample.is_verify || sample.verified || false 
+        };
     }
 
     if (postsData.code === 0 && postsData.data && postsData.data.videos) {
         result.videos = postsData.data.videos.map(v => ({
-            id: v.video_id, caption: v.title, createTime: v.create_time,
-            link: `https://www.tiktok.com/@${username}/video/${v.video_id}`,
-            urls: { cover: v.cover, no_watermark: v.play }, music: { playUrl: v.music, title: v.music_info?.title || "Âm thanh gốc" },
-            stats: { play: formatStats(v.play_count), like: formatStats(v.digg_count), comment: formatStats(v.comment_count), share: formatStats(v.share_count) }, images: v.images || null
+            id: v.video_id || v.id, 
+            caption: v.title || v.desc || "", 
+            createTime: v.create_time,
+            link: `https://www.tiktok.com/@${username}/video/${v.video_id || v.id}`,
+            urls: { cover: v.cover, no_watermark: v.play }, 
+            music: { playUrl: v.music, title: v.music_info?.title || "Âm thanh gốc" },
+            stats: { 
+                play: formatStats(v.play_count), 
+                like: formatStats(v.digg_count), 
+                comment: formatStats(v.comment_count), 
+                share: formatStats(v.share_count) 
+            }, 
+            images: v.images || null
         }));
         result.hasMore = postsData.data.hasMore;
         result.cursor = postsData.data.cursor;
     } else {
-        result.videos = []; result.hasMore = false; result.cursor = cursor;
+        result.videos = []; 
+        result.hasMore = false; 
+        result.cursor = cursor;
     }
 
     if (!result.author && result.videos.length === 0) return res.status(404).json({ status: "Die", error: "Không tìm thấy user hoặc bị chặn lấy dữ liệu." });
