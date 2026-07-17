@@ -1,40 +1,5 @@
 import fs from 'fs';
 import path from 'path';
-import fetch from 'node-fetch';
-import { HttpsProxyAgent } from 'https-proxy-agent';
-
-async function safeFetch(url, headers) {
-  try {
-    const res = await fetch(url, { headers });
-    const contentType = res.headers.get("content-type");
-    if (res.ok && contentType && contentType.includes("application/json")) {
-      return await res.json();
-    }
-  } catch (err) {}
-
-  try {
-    const proxyRes = await fetch("https://api.proxyscrape.com/v4/free-proxy-list/get?request=display_proxies&proxy_format=protocolipport&format=text&country=all");
-    if (proxyRes.ok) {
-      const proxyText = await proxyRes.text();
-      const proxies = proxyText.split('\n').map(p => p.trim()).filter(p => p.startsWith('http'));
-      
-      for (let i = 0; i < 5; i++) {
-        if (proxies.length === 0) break;
-        const randomIndex = Math.floor(Math.random() * proxies.length);
-        const proxyUrl = proxies.splice(randomIndex, 1)[0];
-        try {
-          const agent = new HttpsProxyAgent(proxyUrl);
-          const res = await fetch(url, { headers, agent });
-          const contentType = res.headers.get("content-type");
-          if (res.ok && contentType && contentType.includes("application/json")) {
-            return await res.json();
-          }
-        } catch (err) {}
-      }
-    }
-  } catch (err) {}
-  return null;
-}
 
 export default async function handler(req, res) {
   const username = req.query.username || req.body?.username;
@@ -70,75 +35,155 @@ export default async function handler(req, res) {
         "Referer": "https://www.tikwm.com/"
     };
 
-    if (cursor == 0) {
-        const infoData = await safeFetch(`https://www.tikwm.com/api/user/info?unique_id=${username}`, headers);
-        if (infoData && infoData.code === 0 && infoData.data) {
-            const u = infoData.data.user;
-            const s = infoData.data.stats;
-            result.author = {
-                id: u.id || "",
-                uniqueId: u.unique_id || u.uniqueId || username,
-                nickname: u.nickname || "",
-                avatar: u.avatar_larger || u.avatarLarger || u.avatar || "",
-                signature: u.signature || "",
-                verified: u.is_verify || u.verified || false,
-                createTime: u.create_time || u.createTime || null,
-                bioLink: u.bio_link?.link || u.bioLink?.link || ""
-            };
-            result.stats_formatted = {
-                follower: formatStats(s.followerCount || s.follower_count || 0),
-                following: formatStats(s.followingCount || s.following_count || 0),
-                heart: formatStats(s.heartCount || s.heart_count || 0),
-                video: formatStats(s.videoCount || s.video_count || 0)
-            };
+    let parsedCursor = parseInt(cursor) || 0;
+
+    if (parsedCursor === 0) {
+        try {
+            const infoRes = await fetch(`https://www.tikwm.com/api/user/info?unique_id=${username}`, { headers });
+            const contentType = infoRes.headers.get("content-type");
+            if (infoRes.ok && contentType && contentType.includes("application/json")) {
+                const infoData = await infoRes.json();
+                if (infoData && infoData.code === 0 && infoData.data) {
+                    const u = infoData.data.user;
+                    const s = infoData.data.stats;
+                    result.author = {
+                        id: u.id || "",
+                        uniqueId: u.unique_id || u.uniqueId || username,
+                        nickname: u.nickname || "",
+                        avatar: u.avatar_larger || u.avatarLarger || u.avatar || "",
+                        signature: u.signature || "",
+                        verified: u.is_verify || u.verified || false,
+                        createTime: u.create_time || u.createTime || null,
+                        bioLink: u.bio_link?.link || u.bioLink?.link || ""
+                    };
+                    result.stats_formatted = {
+                        follower: formatStats(s.followerCount || s.follower_count || 0),
+                        following: formatStats(s.followingCount || s.following_count || 0),
+                        heart: formatStats(s.heartCount || s.heart_count || 0),
+                        video: formatStats(s.videoCount || s.video_count || 0)
+                    };
+                }
+            }
+        } catch (err) {}
+    }
+
+    const channelRes = await fetch(`https://superinternetapi.vercel.app/api/channel?url=https://tiktok.com/@${username}`);
+    let channelData = null;
+    try {
+        channelData = await channelRes.json();
+    } catch (err) {}
+
+    let videoLinks = [];
+    const extractLinks = (obj) => {
+        if (!obj) return;
+        if (typeof obj === 'object') {
+            if (obj.source && typeof obj.source === 'string') {
+                videoLinks.push(obj.source);
+            }
+            for (let key in obj) {
+                if (typeof obj[key] === 'object') extractLinks(obj[key]);
+            }
         }
+    };
+    extractLinks(channelData);
+    videoLinks = [...new Set(videoLinks)];
+
+    const start = parsedCursor;
+    const end = start + 30;
+    const currentLinks = videoLinks.slice(start, end);
+
+    const videoPromises = currentLinks.map(async (videoUrl) => {
+        try {
+            let scrapedData = {};
+            let scrapedImages = null;
+            let createTime = null;
+            
+            try {
+                const htmlRes = await fetch(videoUrl, { headers: { "User-Agent": userAgent } });
+                const html = await htmlRes.text();
+                const dataMatch = html.match(/<script id="__UNIVERSAL_DATA_FOR_REHYDRATION__"[^>]*>([^<]+)<\/script>/) || html.match(/<script id="SIGI_STATE"[^>]*>([^<]+)<\/script>/);
+                
+                if (dataMatch) {
+                    const jsonData = JSON.parse(dataMatch[1]);
+                    const defaultScope = jsonData.__DEFAULT_SCOPE__ || jsonData;
+                    const itemStruct = defaultScope['webapp.video-detail']?.itemInfo?.itemStruct || defaultScope.ItemModule?.[Object.keys(defaultScope.ItemModule)[0]];
+                    
+                    if (itemStruct) {
+                        scrapedData = itemStruct;
+                        createTime = itemStruct.createTime;
+                        if (itemStruct.imagePost && itemStruct.imagePost.images) {
+                            scrapedImages = itemStruct.imagePost.images.map(img => img.imageURL.urlList[0]);
+                        }
+                    }
+                }
+            } catch (e) {}
+
+            const response = await fetch(`https://www.tikwm.com/api/?url=${encodeURIComponent(videoUrl)}`);
+            let v = {};
+            try {
+                const tikwmData = await response.json();
+                v = tikwmData.data || {};
+            } catch (e) {}
+
+            if (!v.id && !scrapedData.id) {
+                return null;
+            }
+
+            const finalCreateTime = v.create_time || createTime || null;
+            const finalImages = scrapedImages || v.images || null;
+
+            return {
+                id: v.id || scrapedData.id,
+                caption: v.title || scrapedData.desc || "",
+                createTime: finalCreateTime,
+                link: videoUrl,
+                urls: { 
+                    cover: v.cover || scrapedData.video?.cover, 
+                    no_watermark: v.play || scrapedData.video?.playAddr 
+                },
+                music: { 
+                    playUrl: v.music || scrapedData.music?.playUrl, 
+                    title: v.music_info?.title || scrapedData.music?.title || "Âm thanh gốc" 
+                },
+                stats: { 
+                    play: formatStats(v.play_count || scrapedData.stats?.playCount || 0), 
+                    like: formatStats(v.digg_count || scrapedData.stats?.diggCount || 0), 
+                    comment: formatStats(v.comment_count || scrapedData.stats?.commentCount || 0), 
+                    share: formatStats(v.share_count || scrapedData.stats?.shareCount || 0) 
+                },
+                images: finalImages,
+                authorSample: {
+                    uniqueId: v.author?.unique_id || scrapedData.author?.uniqueId,
+                    nickname: v.author?.nickname || scrapedData.author?.nickname,
+                    avatar: v.author?.avatar_larger || v.author?.avatar || scrapedData.author?.avatarLarger,
+                    verified: v.author?.is_verify || scrapedData.author?.verified || false
+                }
+            };
+        } catch (err) {
+            return null;
+        }
+    });
+
+    const resolvedVideos = (await Promise.all(videoPromises)).filter(v => v !== null);
+
+    if (parsedCursor === 0 && !result.author && resolvedVideos.length > 0) {
+        result.author = resolvedVideos[0].authorSample;
     }
 
-    const postsData = await safeFetch(`https://www.tikwm.com/api/user/posts?unique_id=${username}&count=30&cursor=${cursor}`, headers);
+    result.videos = resolvedVideos.map(v => {
+        delete v.authorSample;
+        return v;
+    });
 
-    if (!postsData) {
-        return res.status(500).json({ 
-            status: "Error", 
-            error: "TikWM API không thể truy cập qua cả kết nối trực tiếp và Proxy." 
-        });
+    result.hasMore = end < videoLinks.length;
+    result.cursor = result.hasMore ? end : parsedCursor;
+
+    if (!result.author && result.videos.length === 0) {
+        return res.status(404).json({ status: "Die", error: "Không tìm thấy user hoặc bị chặn lấy dữ liệu." });
     }
-
-    if (cursor == 0 && !result.author && postsData.code === 0 && postsData.data && postsData.data.videos && postsData.data.videos.length > 0) {
-        const sample = postsData.data.videos[0].author;
-        result.author = { 
-            uniqueId: sample.unique_id || sample.uniqueId, 
-            nickname: sample.nickname, 
-            avatar: sample.avatar_larger || sample.avatar, 
-            verified: sample.is_verify || sample.verified || false 
-        };
-    }
-
-    if (postsData.code === 0 && postsData.data && postsData.data.videos) {
-        result.videos = postsData.data.videos.map(v => ({
-            id: v.video_id || v.id, 
-            caption: v.title || v.desc || "", 
-            createTime: v.create_time,
-            link: `https://www.tiktok.com/@${username}/video/${v.video_id || v.id}`,
-            urls: { cover: v.cover, no_watermark: v.play }, 
-            music: { playUrl: v.music, title: v.music_info?.title || "Âm thanh gốc" },
-            stats: { 
-                play: formatStats(v.play_count), 
-                like: formatStats(v.digg_count), 
-                comment: formatStats(v.comment_count), 
-                share: formatStats(v.share_count) 
-            }, 
-            images: v.images || null
-        }));
-        result.hasMore = postsData.data.hasMore;
-        result.cursor = postsData.data.cursor;
-    } else {
-        result.videos = []; 
-        result.hasMore = false; 
-        result.cursor = cursor;
-    }
-
-    if (!result.author && result.videos.length === 0) return res.status(404).json({ status: "Die", error: "Không tìm thấy user hoặc bị chặn lấy dữ liệu." });
 
     return res.status(200).json(result);
-  } catch (error) { return res.status(500).json({ status: "Error", error: error.message }); }
+  } catch (error) { 
+    return res.status(500).json({ status: "Error", error: error.message }); 
+  }
 }
