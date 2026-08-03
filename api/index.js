@@ -1,19 +1,19 @@
 import fs from 'fs';
 import path from 'path';
 
-// Helper to perform fetch with a timeout using AbortController
-async function fetchWithTimeout(resource, options = {}) {
-  const { timeout = 10000, ...rest } = options;
+async function fetchWithTimeout(url, options = {}, timeout = 15000) {
   const controller = new AbortController();
   const id = setTimeout(() => controller.abort(), timeout);
+
   try {
-    const res = await fetch(resource, { ...rest, signal: controller.signal });
-    return res;
+    return await fetch(url, {
+      ...options,
+      signal: controller.signal,
+    });
   } finally {
     clearTimeout(id);
   }
-}
-
+  }
 export default async function handler(req, res) {
   // CORS
 res.setHeader("Access-Control-Allow-Origin", "*");
