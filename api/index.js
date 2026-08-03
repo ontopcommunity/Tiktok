@@ -15,6 +15,17 @@ async function fetchWithTimeout(resource, options = {}) {
 }
 
 export default async function handler(req, res) {
+  // CORS
+res.setHeader("Access-Control-Allow-Origin", "*");
+res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+res.setHeader(
+  "Access-Control-Allow-Headers",
+  "Origin, X-Requested-With, Content-Type, Accept, Authorization"
+);
+
+if (req.method === "OPTIONS") {
+  return res.status(200).end();
+}
   const username = req.query.username || req.body?.username;
   const cursor = req.query.cursor || 0; 
   
