@@ -1,6 +1,19 @@
 import fs from 'fs';
 import path from 'path';
 
+// Helper to perform fetch with a timeout using AbortController
+async function fetchWithTimeout(resource, options = {}) {
+  const { timeout = 10000, ...rest } = options;
+  const controller = new AbortController();
+  const id = setTimeout(() => controller.abort(), timeout);
+  try {
+    const res = await fetch(resource, { ...rest, signal: controller.signal });
+    return res;
+  } finally {
+    clearTimeout(id);
+  }
+}
+
 export default async function handler(req, res) {
   const username = req.query.username || req.body?.username;
   const cursor = req.query.cursor || 0; 
@@ -39,7 +52,7 @@ export default async function handler(req, res) {
 
     if (parsedCursor === 0) {
         try {
-            const infoRes = await fetch(`https://www.tikwm.com/api/user/info?unique_id=${username}`, { headers });
+            const infoRes = await fetchWithTimeout(`https://www.tikwm.com/api/user/info?unique_id=${username}`, { headers });
             const contentType = infoRes.headers.get("content-type");
             if (infoRes.ok && contentType && contentType.includes("application/json")) {
                 const infoData = await infoRes.json();
@@ -67,7 +80,7 @@ export default async function handler(req, res) {
         } catch (err) {}
     }
 
-    const channelRes = await fetch(`https://superinternetapi.vercel.app/api/channel?url=https://tiktok.com/@${username}`);
+    const channelRes = await fetchWithTimeout(`https://superinternetapi.vercel.app/api/channel?url=https://tiktok.com/@${username}`);
     let channelData = null;
     try {
         channelData = await channelRes.json();
@@ -99,7 +112,7 @@ export default async function handler(req, res) {
             let createTime = null;
             
             try {
-                const htmlRes = await fetch(videoUrl, { headers: { "User-Agent": userAgent } });
+                const htmlRes = await fetchWithTimeout(videoUrl, { headers: { "User-Agent": userAgent } });
                 const html = await htmlRes.text();
                 const dataMatch = html.match(/<script id="__UNIVERSAL_DATA_FOR_REHYDRATION__"[^>]*>([^<]+)<\/script>/) || html.match(/<script id="SIGI_STATE"[^>]*>([^<]+)<\/script>/);
                 
@@ -118,7 +131,7 @@ export default async function handler(req, res) {
                 }
             } catch (e) {}
 
-            const response = await fetch(`https://www.tikwm.com/api/?url=${encodeURIComponent(videoUrl)}`);
+            const response = await fetchWithTimeout(`https://www.tikwm.com/api/?url=${encodeURIComponent(videoUrl)}`);
             let v = {};
             try {
                 const tikwmData = await response.json();
