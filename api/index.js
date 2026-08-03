@@ -15,6 +15,7 @@ async function fetchWithTimeout(url, options = {}, timeout = 15000) {
   }
   }
 export default async function handler(req, res) {
+  console.log("API HIT", req.method, req.url);
   // CORS
 res.setHeader("Access-Control-Allow-Origin", "*");
 res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
