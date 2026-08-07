@@ -1,4 +1,15 @@
 export default async function handler(req, res) {
+    // --- CORS HEADERS ---
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+  res.setHeader(
+    "Access-Control-Allow-Headers",
+    "Origin, X-Requested-With, Content-Type, Accept, Authorization"
+  );
+
+  if (req.method === "OPTIONS") {
+    return res.status(200).end();
+  }
     const type = req.query.type || 'video'; // 'video', 'image', hoặc 'music'
     const cursor = req.query.cursor || req.body?.cursor || 0;
     const count = req.query.count || req.body?.count || 20;
