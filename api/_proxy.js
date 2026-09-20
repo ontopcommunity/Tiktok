@@ -109,8 +109,8 @@ export async function proxyStatus() {
  * fetch qua proxy ngẫu nhiên; thử tối đa 3 proxy nếu fail
  */
 export async function proxyFetch(url, options = {}) {
-  const timeoutMs = options.timeoutMs || 20000;
-  const maxTries = options.maxProxyTries || 3;
+  const timeoutMs = options.timeoutMs || 6000;
+  const maxTries = options.maxProxyTries || 2;
   const opts = { ...options };
   delete opts.timeoutMs;
   delete opts.maxProxyTries;
