@@ -15,7 +15,7 @@ export default async function handler(req, res) {
   const count = Math.min(parseInt(req.query.count || req.body?.count || 20, 10) || 20, 30);
 
   if (type !== "music" && !keywords) {
-    return res.status(400).json({ code: -1, error: "Thiếu từ khóa (keywords)", proxy: proxyStatus() });
+    return res.status(400).json({ code: -1, error: "Thiếu từ khóa (keywords)", proxy: await proxyStatus() });
   }
 
   const UA =
@@ -36,7 +36,7 @@ export default async function handler(req, res) {
           return res.status(502).json({
             code: -1,
             error: "tikwm bị chặn — kiểm tra PROXY_URLS",
-            proxy: proxyStatus(),
+            proxy: await proxyStatus(),
           });
         }
         const vidData = JSON.parse(text);
@@ -49,9 +49,9 @@ export default async function handler(req, res) {
       );
       const postsText = await postsRes.text();
       if (!postsText.trim().startsWith("{")) {
-        return res.status(502).json({ code: -1, error: "tikwm music bị CF", proxy: proxyStatus() });
+        return res.status(502).json({ code: -1, error: "tikwm music bị CF", proxy: await proxyStatus() });
       }
-      return res.status(200).json({ code: 0, data: JSON.parse(postsText).data, music_id, proxy: proxyStatus() });
+      return res.status(200).json({ code: 0, data: JSON.parse(postsText).data, music_id, proxy: await proxyStatus() });
     }
 
     let videos = [];
@@ -147,11 +147,11 @@ export default async function handler(req, res) {
     if (videos.length === 0) {
       return res.status(200).json({
         code: -1,
-        error: hasProxyConfigured()
+        error: await hasProxyConfigured()
           ? "Search vẫn fail dù đã có proxy — kiểm tra proxy còn sống / format đúng"
           : "Chưa cấu hình PROXY_URLS. Thêm env PROXY_URLS trên Vercel rồi redeploy.",
         data: { videos: [], cursor: 0, hasMore: false, source: null },
-        proxy: proxyStatus(),
+        proxy: await proxyStatus(),
       });
     }
 
@@ -167,10 +167,10 @@ export default async function handler(req, res) {
         hasMore,
         source,
       },
-      proxy: proxyStatus(),
+      proxy: await proxyStatus(),
     });
   } catch (error) {
-    return res.status(500).json({ code: -1, error: error.message, proxy: proxyStatus() });
+    return res.status(500).json({ code: -1, error: error.message, proxy: await proxyStatus() });
   }
 }
 
