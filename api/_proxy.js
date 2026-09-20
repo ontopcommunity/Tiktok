@@ -48,24 +48,34 @@ async function fetchProxyScrape() {
 }
 
 async function getProxyList() {
-  // Manual env always first
   const manual = parseList(process.env.PROXY_URLS || process.env.PROXY_LIST || "");
-  if (manual.length) return manual;
+  const auto = process.env.PROXY_AUTO !== "0";
 
-  // Auto free list
-  const auto = process.env.PROXY_AUTO !== "0"; // default on
-  if (!auto) return [];
-
-  if (cachedProxies.length && Date.now() - cacheAt < CACHE_MS) {
-    return cachedProxies;
+  let scraped = [];
+  if (auto) {
+    if (cachedProxies.length && Date.now() - cacheAt < CACHE_MS) {
+      scraped = cachedProxies;
+    } else {
+      scraped = await fetchProxyScrape();
+      if (scraped.length) {
+        cachedProxies = scraped;
+        cacheAt = Date.now();
+      } else {
+        scraped = cachedProxies; // keep old cache if scrape fails
+      }
+    }
   }
 
-  const scraped = await fetchProxyScrape();
-  if (scraped.length) {
-    cachedProxies = scraped;
-    cacheAt = Date.now();
+  // Gộp manual + scraped, bỏ trùng
+  const seen = new Set();
+  const merged = [];
+  for (const p of [...manual, ...scraped]) {
+    if (!seen.has(p)) {
+      seen.add(p);
+      merged.push(p);
+    }
   }
-  return cachedProxies;
+  return merged;
 }
 
 export async function pickProxy() {
@@ -85,7 +95,7 @@ export async function proxyStatus() {
   return {
     count: list.length,
     enabled: list.length > 0,
-    source: manual.length ? "PROXY_URLS" : "proxyscrape_auto",
+    source: manual.length && (await getProxyList()).length > manual.length ? "manual+auto" : manual.length ? "PROXY_URLS" : "proxyscrape_auto",
     cache_age_sec: cacheAt ? Math.floor((Date.now() - cacheAt) / 1000) : null,
     samples: list.slice(0, 3).map((u) => u.replace(/\/\/([^:@/]+):([^@/]+)@/, "//***:***@")),
   };
