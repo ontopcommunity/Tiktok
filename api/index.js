@@ -1,5 +1,6 @@
 import fs from 'fs';
 import path from 'path';
+import { proxyFetch, proxyStatus } from './_proxy.js';
 
 export default async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
@@ -38,7 +39,7 @@ export default async function handler(req, res) {
   };
 
   try {
-    const response = await fetch(`https://www.tiktok.com/@${username}`, {
+    const response = await proxyFetch(`https://www.tiktok.com/@${username}`, {
       headers: {
         "User-Agent": userAgent,
         Accept: "text/html",
@@ -69,7 +70,7 @@ export default async function handler(req, res) {
     let recentVideos = [];
 
     try {
-      const postsRes = await fetch(
+      const postsRes = await proxyFetch(
         `https://tikwm.com/api/user/posts?unique_id=${encodeURIComponent(u.uniqueId)}&count=10`,
         { headers: { "User-Agent": userAgent } }
       );

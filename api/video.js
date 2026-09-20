@@ -1,5 +1,6 @@
 import fs from 'fs';
 import path from 'path';
+import { proxyFetch } from './_proxy.js';
 
 export default async function handler(req, res) {
     const videoUrl = req.query.video || req.body?.video;
@@ -23,7 +24,7 @@ export default async function handler(req, res) {
 
         // BƯỚC 1: CÀO HTML (Ưu tiên lấy mảng Ảnh gốc và thông tin siêu tốc)
         try {
-            const htmlRes = await fetch(videoUrl, { headers: { "User-Agent": userAgent } });
+            const htmlRes = await proxyFetch(videoUrl, { headers: { "User-Agent": userAgent } });
             const html = await htmlRes.text();
             const dataMatch = html.match(/<script id="__UNIVERSAL_DATA_FOR_REHYDRATION__"[^>]*>([^<]+)<\/script>/) || html.match(/<script id="SIGI_STATE"[^>]*>([^<]+)<\/script>/);
             
@@ -46,7 +47,7 @@ export default async function handler(req, res) {
         }
 
         // BƯỚC 2: GỌI TIKWM (Lấy chính xác create_time, link video MP4 gốc)
-        const response = await fetch(`https://tikwm.com/api/?url=${encodeURIComponent(videoUrl)}`);
+        const response = await proxyFetch(`https://tikwm.com/api/?url=${encodeURIComponent(videoUrl)}`, { headers: { "User-Agent": userAgent } });
         const tikwmData = await response.json();
         const v = tikwmData.data || {};
 

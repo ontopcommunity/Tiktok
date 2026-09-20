@@ -1,8 +1,4 @@
-/**
- * Search API — bypass CF tối đa trên Vercel free
- * 1) tikwm.com feed/search
- * 2) nếu keyword giống username → user posts + scrape profile IDs
- */
+import { proxyFetch, hasProxyConfigured, proxyStatus } from "./_proxy.js";
 
 export default async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
@@ -19,7 +15,7 @@ export default async function handler(req, res) {
   const count = Math.min(parseInt(req.query.count || req.body?.count || 20, 10) || 20, 30);
 
   if (type !== "music" && !keywords) {
-    return res.status(400).json({ code: -1, error: "Thiếu từ khóa (keywords)" });
+    return res.status(400).json({ code: -1, error: "Thiếu từ khóa (keywords)", proxy: proxyStatus() });
   }
 
   const UA =
@@ -32,26 +28,30 @@ export default async function handler(req, res) {
       const url = req.query.url || req.body?.url;
       if (!music_id) {
         if (!url) return res.status(400).json({ code: -1, error: "Thiếu url video" });
-        const vidRes = await fetch(`${TIKWM}/api/?url=${encodeURIComponent(url)}`, {
+        const vidRes = await proxyFetch(`${TIKWM}/api/?url=${encodeURIComponent(url)}`, {
           headers: { "User-Agent": UA },
         });
         const text = await vidRes.text();
         if (!text.trim().startsWith("{")) {
-          return res.status(502).json({ code: -1, error: "tikwm bị Cloudflare chặn" });
+          return res.status(502).json({
+            code: -1,
+            error: "tikwm bị chặn — kiểm tra PROXY_URLS",
+            proxy: proxyStatus(),
+          });
         }
         const vidData = JSON.parse(text);
         music_id = vidData?.data?.music_info?.id;
         if (!music_id) return res.status(404).json({ code: -1, error: "Không lấy được music_id" });
       }
-      const postsRes = await fetch(
+      const postsRes = await proxyFetch(
         `${TIKWM}/api/music/posts?music_id=${music_id}&count=${count}&cursor=${cursor}`,
         { headers: { "User-Agent": UA } }
       );
       const postsText = await postsRes.text();
       if (!postsText.trim().startsWith("{")) {
-        return res.status(502).json({ code: -1, error: "tikwm music/posts bị CF" });
+        return res.status(502).json({ code: -1, error: "tikwm music bị CF", proxy: proxyStatus() });
       }
-      return res.status(200).json({ code: 0, data: JSON.parse(postsText).data, music_id });
+      return res.status(200).json({ code: 0, data: JSON.parse(postsText).data, music_id, proxy: proxyStatus() });
     }
 
     let videos = [];
@@ -59,14 +59,14 @@ export default async function handler(req, res) {
     let hasMore = false;
     let nextCursor = cursor;
 
-    // 1) tikwm search
+    // 1) tikwm search via proxy
     try {
       const formData = new URLSearchParams();
       formData.append("keywords", keywords);
       formData.append("count", String(count));
       formData.append("cursor", String(cursor));
 
-      const response = await fetch(`${TIKWM}/api/feed/search`, {
+      const response = await proxyFetch(`${TIKWM}/api/feed/search`, {
         method: "POST",
         headers: {
           "Content-Type": "application/x-www-form-urlencoded",
@@ -91,11 +91,12 @@ export default async function handler(req, res) {
       console.error("tikwm search:", e.message);
     }
 
-    // 2) username-like → user posts
     const possibleUser = keywords.replace(/^@/, "").split(/\s+/)[0];
+
+    // 2) user posts
     if (videos.length === 0 && /^[a-zA-Z0-9._]{2,24}$/.test(possibleUser)) {
       try {
-        const up = await fetch(
+        const up = await proxyFetch(
           `${TIKWM}/api/user/posts?unique_id=${encodeURIComponent(possibleUser)}&count=${count}`,
           { headers: { "User-Agent": UA } }
         );
@@ -113,10 +114,10 @@ export default async function handler(req, res) {
       }
     }
 
-    // 3) scrape profile for /video/IDs
+    // 3) profile scrape
     if (videos.length === 0 && /^[a-zA-Z0-9._]{2,24}$/.test(possibleUser)) {
       try {
-        const page = await fetch(`https://www.tiktok.com/@${possibleUser}`, {
+        const page = await proxyFetch(`https://www.tiktok.com/@${possibleUser}`, {
           headers: { "User-Agent": UA, Accept: "text/html" },
         });
         const html = await page.text();
@@ -146,9 +147,11 @@ export default async function handler(req, res) {
     if (videos.length === 0) {
       return res.status(200).json({
         code: -1,
-        error:
-          "Search đang bị Cloudflare chặn (datacenter IP). Thử /tiktok {username} hoặc /video {link}. Bypass full cần residential proxy / Playwright.",
+        error: hasProxyConfigured()
+          ? "Search vẫn fail dù đã có proxy — kiểm tra proxy còn sống / format đúng"
+          : "Chưa cấu hình PROXY_URLS. Thêm env PROXY_URLS trên Vercel rồi redeploy.",
         data: { videos: [], cursor: 0, hasMore: false, source: null },
+        proxy: proxyStatus(),
       });
     }
 
@@ -164,9 +167,10 @@ export default async function handler(req, res) {
         hasMore,
         source,
       },
+      proxy: proxyStatus(),
     });
   } catch (error) {
-    return res.status(500).json({ code: -1, error: error.message });
+    return res.status(500).json({ code: -1, error: error.message, proxy: proxyStatus() });
   }
 }
 
