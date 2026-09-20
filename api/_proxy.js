@@ -92,10 +92,14 @@ export async function hasProxyConfigured() {
 export async function proxyStatus() {
   const manual = parseList(process.env.PROXY_URLS || process.env.PROXY_LIST || "");
   const list = await getProxyList();
+  let source = "none";
+  if (manual.length && list.length > manual.length) source = "manual+auto";
+  else if (manual.length) source = "PROXY_URLS";
+  else if (list.length) source = "proxyscrape_auto";
   return {
     count: list.length,
     enabled: list.length > 0,
-    source: manual.length && (await getProxyList()).length > manual.length ? "manual+auto" : manual.length ? "PROXY_URLS" : "proxyscrape_auto",
+    source,
     cache_age_sec: cacheAt ? Math.floor((Date.now() - cacheAt) / 1000) : null,
     samples: list.slice(0, 3).map((u) => u.replace(/\/\/([^:@/]+):([^@/]+)@/, "//***:***@")),
   };
