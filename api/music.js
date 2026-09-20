@@ -5,7 +5,7 @@ export default async function handler(req, res) {
     try {
         if (!music_id) {
             if (!url) return res.status(400).json({ code: -1, error: "Thiếu link video hoặc ID nhạc" });
-            const vidRes = await fetch(`https://www.tikwm.com/api/?url=${encodeURIComponent(url)}`);
+            const vidRes = await fetch(`https://tikwm.com/api/?url=${encodeURIComponent(url)}`);
             const vidData = await vidRes.json();
 
             if (vidData.code !== 0 || !vidData.data || !vidData.data.music_info) {
@@ -14,7 +14,7 @@ export default async function handler(req, res) {
             music_id = vidData.data.music_info.id;
         }
 
-        const postsRes = await fetch(`https://www.tikwm.com/api/music/posts?music_id=${music_id}&count=20&cursor=${cursor}`);
+        const postsRes = await fetch(`https://tikwm.com/api/music/posts?music_id=${music_id}&count=20&cursor=${cursor}`);
         const postsData = await postsRes.json();
 
         return res.status(200).json({

@@ -46,7 +46,7 @@ export default async function handler(req, res) {
         }
 
         // BƯỚC 2: GỌI TIKWM (Lấy chính xác create_time, link video MP4 gốc)
-        const response = await fetch(`https://www.tikwm.com/api/?url=${encodeURIComponent(videoUrl)}`);
+        const response = await fetch(`https://tikwm.com/api/?url=${encodeURIComponent(videoUrl)}`);
         const tikwmData = await response.json();
         const v = tikwmData.data || {};
 

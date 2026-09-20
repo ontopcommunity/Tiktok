@@ -70,7 +70,7 @@ export default async function handler(req, res) {
 
     try {
       const postsRes = await fetch(
-        `https://www.tikwm.com/api/user/posts?unique_id=${encodeURIComponent(u.uniqueId)}&count=10`,
+        `https://tikwm.com/api/user/posts?unique_id=${encodeURIComponent(u.uniqueId)}&count=10`,
         { headers: { "User-Agent": userAgent } }
       );
       const postsText = await postsRes.text();

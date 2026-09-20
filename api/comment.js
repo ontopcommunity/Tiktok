@@ -15,11 +15,11 @@ export default async function handler(req, res) {
         let apiUrl = '';
         if (commentId) {
             // Nếu có commentId -> Gọi API lấy bình luận trả lời (replies)
-            apiUrl = `https://www.tikwm.com/api/comment/reply/?comment_id=${commentId}&video_id=${id}&cursor=${cursor}&count=${count}`;
+            apiUrl = `https://tikwm.com/api/comment/reply/?comment_id=${commentId}&video_id=${id}&cursor=${cursor}&count=${count}`;
         } else {
             // Nếu không -> Gọi API lấy bình luận gốc
             const targetUrl = url || `https://www.tiktok.com/@user/video/${id}`;
-            apiUrl = `https://www.tikwm.com/api/comment/list/?url=${encodeURIComponent(targetUrl)}&count=${count}&cursor=${cursor}`;
+            apiUrl = `https://tikwm.com/api/comment/list/?url=${encodeURIComponent(targetUrl)}&count=${count}&cursor=${cursor}`;
         }
 
         const response = await fetch(apiUrl);

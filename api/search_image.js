@@ -16,7 +16,7 @@ export default async function handler(req, res) {
             formData.append('count', 30); // Kéo nhiều để lọc
             formData.append('cursor', cursor);
 
-            const response = await fetch('https://www.tikwm.com/api/feed/search', {
+            const response = await fetch('https://tikwm.com/api/feed/search', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
                 body: formData
