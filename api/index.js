@@ -1,18 +1,11 @@
 import fs from 'fs';
 import path from 'path';
-import { proxyFetch, proxyStatus } from './_proxy.js';
 
 export default async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
-  res.setHeader(
-    "Access-Control-Allow-Headers",
-    "Origin, X-Requested-With, Content-Type, Accept, Authorization"
-  );
-
-  if (req.method === "OPTIONS") {
-    return res.status(200).end();
-  }
+  res.setHeader("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
+  if (req.method === "OPTIONS") return res.status(200).end();
 
   const { username } = req.query;
   if (!username) return res.status(400).json({ error: "Thieu username" });
@@ -22,13 +15,10 @@ export default async function handler(req, res) {
   try {
     const filePath = path.join(process.cwd(), "user-agents.txt");
     if (fs.existsSync(filePath)) {
-      const fileContent = fs.readFileSync(filePath, "utf8");
-      const agents = fileContent.split("\n").filter((line) => line.trim() !== "");
-      if (agents.length > 0) userAgent = agents[Math.floor(Math.random() * agents.length)].trim();
+      const agents = fs.readFileSync(filePath, "utf8").split("\n").filter((l) => l.trim());
+      if (agents.length) userAgent = agents[Math.floor(Math.random() * agents.length)].trim();
     }
-  } catch (err) {
-    console.error("Loi doc file user-agent:", err);
-  }
+  } catch {}
 
   const formatStats = (num) => {
     num = parseInt(num);
@@ -39,7 +29,7 @@ export default async function handler(req, res) {
   };
 
   try {
-    const response = await proxyFetch(`https://www.tiktok.com/@${username}`, {
+    const response = await fetch(`https://www.tiktok.com/@${username}`, {
       headers: {
         "User-Agent": userAgent,
         Accept: "text/html",
@@ -52,47 +42,15 @@ export default async function handler(req, res) {
     const dataMatch =
       html.match(/<script id="__UNIVERSAL_DATA_FOR_REHYDRATION__"[^>]*>([^<]+)<\/script>/) ||
       html.match(/<script id="SIGI_STATE"[^>]*>([^<]+)<\/script>/);
-
     if (!dataMatch) return res.status(404).json({ status: "Die", error: "Khong tim thay data" });
 
     const jsonData = JSON.parse(dataMatch[1]);
     const defaultScope = jsonData.__DEFAULT_SCOPE__ || jsonData;
     const userDetail = defaultScope["webapp.user-detail"];
-
     if (!userDetail) return res.status(404).json({ status: "Die", error: "Lỗi cấu trúc dữ liệu" });
 
     const u = userDetail.userInfo.user;
     const s = userDetail.userInfo.stats;
-
-    // Try get newest videos via tikwm (may fail CF)
-    let newestVideo = null;
-    let oldestVideo = null;
-    let recentVideos = [];
-
-    try {
-      const postsRes = await proxyFetch(
-        `https://tikwm.com/api/user/posts?unique_id=${encodeURIComponent(u.uniqueId)}&count=10`,
-        { headers: { "User-Agent": userAgent } }
-      );
-      const postsText = await postsRes.text();
-      if (postsText.trim().startsWith("{")) {
-        const postsData = JSON.parse(postsText);
-        const list = postsData?.data?.videos || postsData?.data || [];
-        if (Array.isArray(list) && list.length > 0) {
-          recentVideos = list.map((v) => ({
-            id: v.video_id || v.id,
-            link: `https://www.tiktok.com/@${u.uniqueId}/video/${v.video_id || v.id}`,
-            create_time: v.create_time || 0,
-            title: v.title || v.desc || "",
-          }));
-          newestVideo = recentVideos[0];
-          // oldest among fetched (tikwm returns newest first)
-          oldestVideo = recentVideos[recentVideos.length - 1];
-        }
-      }
-    } catch (e) {
-      console.error("user posts fetch fail:", e.message);
-    }
 
     const result = {
       status: "Live",
@@ -126,21 +84,15 @@ export default async function handler(req, res) {
         friend: s.friendCount,
       },
       videos: {
-        newest: newestVideo,
-        oldest_fetched: oldestVideo,
-        recent: recentVideos.slice(0, 5),
-        note: newestVideo
-          ? null
-          : "Không lấy được danh sách video (tikwm có thể bị chặn). Dùng /search để tìm video.",
+        newest: null,
+        oldest_fetched: null,
+        recent: [],
+        note: "Danh sách video mới/cũ không lấy được (API search/posts bị hạn chế). Dùng /video {link}.",
       },
     };
 
     if (u.isLive || (u.roomId && u.roomId !== "0")) {
-      result.live_info = {
-        is_live: true,
-        status: "Đang Livestream 🔴",
-        roomId: u.roomId,
-      };
+      result.live_info = { is_live: true, status: "Đang Livestream 🔴", roomId: u.roomId };
     }
 
     return res.status(200).json(result);

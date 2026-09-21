@@ -1,8 +1,5 @@
 {
   "name": "tiktok-api",
   "version": "1.0.0",
-  "type": "module",
-  "dependencies": {
-    "undici": "^6.21.0"
-  }
+  "type": "module"
 }
